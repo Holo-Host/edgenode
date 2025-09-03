@@ -1,2 +1,2 @@
 # pioneer
-The DIY image for technical users
+The DIY image for technical Holo users.
