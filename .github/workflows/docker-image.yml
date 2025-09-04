@@ -7,12 +7,28 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag pioneer:$(date +%s)
+      run: |
+        export IMAGE_TAG=$(date +%s)
+        docker build . --file Dockerfile --tag ghcr.io/holo-host/pioneer:${IMAGE_TAG}
+        echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+
+    - name: Push Docker image to GHCR
+      run: docker push ghcr.io/holo-host/pioneer:${{ env.IMAGE_TAG }}
