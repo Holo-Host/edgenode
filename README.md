@@ -23,7 +23,7 @@ docker pull ghcr.io/holo-host/pioneer:latest
 ### Quick One Off Test for Functional Image
 Use either the specific version tag or `:latest`:
 ```
-docker run -it --rm ghcr.io/holo-host/pioneer:1756983968
+docker run -it --rm ghcr.io/holo-host/pioneer:<tag>
 ```
 or
 ```
@@ -32,7 +32,7 @@ docker run -it --rm ghcr.io/holo-host/pioneer:latest
 
 ### Test for Functional Holochain and hc
 ```
-docker run --name pioneer -dit ghcr.io/holo-host/pioneer:1756983968
+docker run --name pioneer -dit ghcr.io/holo-host/pioneer:latest
 docker exec -it pioneer sh
 which holochain
 which hc
