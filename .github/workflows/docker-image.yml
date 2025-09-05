@@ -26,7 +26,8 @@ jobs:
 
     - name: Build the Docker image
       run: |
-        export IMAGE_TAG=$(date +%s)
+        export HOLOCHAIN_VERSION="v0.5.6"
+        export IMAGE_TAG=${HOLOCHAIN_VERSION}-$(date +%s)
         docker build . --file Dockerfile --tag ghcr.io/holo-host/pioneer:${IMAGE_TAG}
         echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
 
