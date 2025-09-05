@@ -15,8 +15,20 @@ docker login ghcr.io
 docker pull ghcr.io/holo-host/pioneer:<tag>
 ```
 
+**Note:** The `:latest` tag is also available for the most recent build:
+```
+docker pull ghcr.io/holo-host/pioneer:latest
+```
+
 ### Quick One Off Test for Functional Image
-`docker run -it --rm ghcr.io/holo-host/pioneer:1756983968`
+Use either the specific version tag or `:latest`:
+```
+docker run -it --rm ghcr.io/holo-host/pioneer:1756983968
+```
+or
+```
+docker run -it --rm ghcr.io/holo-host/pioneer:latest
+```
 
 ### Test for Functional Holochain and hc
 ```
