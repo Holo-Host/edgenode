@@ -3,6 +3,8 @@ The DIY image for technical Holo users.
 
 ## User Instructions
 
+
+
 ## Developer Instructions
 ### Obtaining Private Images
 Private images are available from here:
@@ -38,6 +40,7 @@ which holochain
 which hc
 holochain --version
 hc --version
+lair-keystore --version
 ```
 
 ### Interactive Shell Access
@@ -50,7 +53,22 @@ Or if you want to run commands directly:
 ```
 docker exec -it pioneer holochain --version
 docker exec -it pioneer hc --version
+docker exec -it pioneer lair-keystore --version
 ```
+
+## Creating a Conductor Configuration
+```
+su nonroot
+holochain --create-config
+```
+Take a note of the path for the resulting `conductor-config.yaml`
+
+## Creating a Sandbox
+```
+hc sandbox create --root /home/nonroot/
+```
+
+Take a note of the path for the resulting `conductor-config.yaml`
 
 ### Notes
 - The container is designed to stay running with a custom entrypoint script
