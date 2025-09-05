@@ -5,4 +5,9 @@ RUN wget https://github.com/matthme/holochain-binaries/releases/download/holocha
 
 SHELL ["/bin/sh", "-c"]
 
-CMD holochain --version && hc --version
+# Copy and set up entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set entrypoint to keep container running and allow interactive shell access
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
