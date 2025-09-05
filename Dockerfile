@@ -5,4 +5,4 @@ RUN wget https://github.com/matthme/holochain-binaries/releases/download/holocha
 
 SHELL ["/bin/sh", "-c"]
 
-CMD curl -s https://api.adviceslip.com/advice --http1.1 | jq .slip.advice
+CMD holochain --version && hc --version
