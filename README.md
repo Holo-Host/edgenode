@@ -67,7 +67,6 @@ Take a note of the path for the resulting `conductor-config.yaml`
 ```
 hc sandbox create --root /home/nonroot/
 ```
-
 Take a note of the path for the resulting `conductor-config.yaml`
 
 ### Notes
