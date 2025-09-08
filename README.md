@@ -86,17 +86,24 @@ hc sandbox create --root /home/nonroot/
 hc sandbox run 0
 ```
 
-Note the `admin_port`.
+Note the `admin_port` displayed after the sandbox is run.  You will also need relevant details for your happ.
 
 ```sh
 export ADMIN_PORT=<admin_port>
-hc s -f $ADMIN_PORT call new-agent
+export AGENT_KEY=$(./hc s -f 4444 call new-agent | awk '{print $NF}')
+export APP_ID="kando::v0.13.0::$AGENT_KEY"
+wget https://github.com/holochain-apps/kando/releases/download/v0.13.0/kando.happ"
+export NETWORK_SEED="<network_seed>"
+hc s -f $ADMIN_PORT call install-app ./kando.happ $NETWORK_SEED --agent-key "$AGENT_KEY" --app-id "$APP_ID"
+
 ```
 
-Note the `agent` key.
+Kando is now installed in the sandbox.
 
 ```sh
-export AGENT_KEY="<agent_key>"
+hc s -f $ADMIN_PORT call list-app
+hc s -f $ADMIN_PORT call dump-network-stats
+
 ```
 
 ### Notes
