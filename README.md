@@ -86,6 +86,19 @@ hc sandbox create --root /home/nonroot/
 hc sandbox run 0
 ```
 
+Note the `admin_port`.
+
+```sh
+export ADMIN_PORT=<admin_port>
+hc s -f $ADMIN_PORT call new-agent
+```
+
+Note the `agent` key.
+
+```sh
+export AGENT_KEY="<agent_key>"
+```
+
 ### Notes
 
 - The container is designed to stay running with a custom entrypoint script
