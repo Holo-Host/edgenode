@@ -66,22 +66,13 @@ docker exec -it pioneer hc --version
 docker exec -it pioneer lair-keystore --version
 ```
 
-## Creating a Conductor Configuration
-
-In an interactive shell, do as follows:
-
-```sh
-su nonroot
-holochain --create-config
-```
-
-Take a note of the path for the resulting `conductor-config.yaml`
-
 ## Create a Sandbox and Run a Conductor
 
 In an interactive shell, do as follows:
 
 ```sh
+su nonroot
+cd ~
 hc sandbox create --root /home/nonroot/
 hc sandbox run 0
 ```
@@ -101,7 +92,7 @@ hc s -f $ADMIN_PORT call install-app ./kando.happ $NETWORK_SEED --agent-key "$AG
 Kando is now installed in the sandbox.
 
 ```sh
-hc s -f $ADMIN_PORT call list-app
+hc s -f $ADMIN_PORT call list-apps
 hc s -f $ADMIN_PORT call dump-network-stats
 
 ```
