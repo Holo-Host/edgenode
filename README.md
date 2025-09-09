@@ -72,8 +72,31 @@ In an interactive shell, do as follows:
 
 ```sh
 su nonroot
-cd ~
+cd 
 hc sandbox create --root /home/nonroot/
+```
+
+You need to add webrtc details to the conductor config.
+
+```sh
+vi <sandbox_path>/conductor-config.yaml
+```
+
+
+You will need to find the `webrtc_config` stanza and replace it with the following:
+
+```sh
+  webrtc_config:
+    iceServers:
+      - urls:
+          - stun:stun.cloudflare.com:3478
+      - urls:
+          - stun:stun.l.google.com:19302
+```
+
+Now you can launch the sandbox!
+
+```sh
 hc sandbox run 0
 ```
 
@@ -81,9 +104,9 @@ Note the `admin_port` displayed after the sandbox is run.  You will also need re
 
 ```sh
 export ADMIN_PORT=<admin_port>
-export AGENT_KEY=$(./hc s -f 4444 call new-agent | awk '{print $NF}')
+export AGENT_KEY=$(hc s -f $ADMIN_PORT call new-agent | awk '{print $NF}')
 export APP_ID="kando::v0.13.0::$AGENT_KEY"
-wget https://github.com/holochain-apps/kando/releases/download/v0.13.0/kando.happ"
+wget https://github.com/holochain-apps/kando/releases/download/v0.13.0/kando.happ
 export NETWORK_SEED="<network_seed>"
 hc s -f $ADMIN_PORT call install-app ./kando.happ $NETWORK_SEED --agent-key "$AGENT_KEY" --app-id "$APP_ID"
 
