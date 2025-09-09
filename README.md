@@ -120,6 +120,12 @@ hc s -f $ADMIN_PORT call dump-network-stats
 
 ```
 
+## Run the Sandbox in Debug Mode
+
+```sh
+RUST_LOG=debug hc sandbox run 0
+```
+
 ### Notes
 
 - The container is designed to stay running with a custom entrypoint script
