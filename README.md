@@ -51,8 +51,7 @@ docker exec -it pioneer lair-keystore --version
 In an interactive shell, do as follows:
 
 ```sh
-su nonroot
-cd 
+su - nonroot
 hc sandbox create --root /home/nonroot/
 ```
 
@@ -85,8 +84,7 @@ Now you need another terminal with an interactive shell on the running container
 Then you will need to perform the following commands:
 
 ```sh
-su nonroot
-cd 
+su - nonroot
 export ADMIN_PORT=<admin_port>
 export AGENT_KEY=$(hc s -f $ADMIN_PORT call new-agent | awk '{print $NF}')
 export APP_ID="kando::v0.13.0::$AGENT_KEY"
