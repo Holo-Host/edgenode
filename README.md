@@ -15,18 +15,18 @@ https://github.com/Holo-Host/pioneer/pkgs/container/pioneer
 
 ```sh
 docker login ghcr.io
-docker pull ghcr.io/holo-host/pioneer:<tag>
-```
-
-**Note:** The `:latest` tag is also available for the most recent build:
-
-```sh
-docker pull ghcr.io/holo-host/pioneer:latest
+docker pull ghcr.io/holo-host/pioneer
 ```
 
 ### Quick One Off Test for Functional Image
 
-Use either the specific version tag or `:latest`:
+To just run it:
+
+```sh
+docker run -it --rm ghcr.io/holo-host/pioneer
+```
+
+To use either a specific version tag or `:latest`:
 
 ```sh
 docker run -it --rm ghcr.io/holo-host/pioneer:<tag>
@@ -41,7 +41,7 @@ docker run -it --rm ghcr.io/holo-host/pioneer:latest
 ### Test for Functional Holochain and hc
 
 ```sh
-docker run --name pioneer -dit ghcr.io/holo-host/pioneer:latest
+docker run --name pioneer -dit ghcr.io/holo-host/pioneer
 docker exec -it pioneer sh
 which holochain
 which hc
