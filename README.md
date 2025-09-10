@@ -79,6 +79,19 @@ hc sandbox run 0
 ```
 
 Note the `admin_port` displayed after the sandbox is run.  You will also need relevant details for your happ.  
+
+## Scripted hApp install
+Now you need another terminal with an interactive shell on the running container.  See previous instructions for how to do that.
+
+Then you will need to perform the following commands:
+
+```sh
+su - nonroot
+export ADMIN_PORT=<admin_port>
+install_happ <config.json> $ADMIN_PORT
+```
+
+## Manual hApp install: Kando example
 Now you need another terminal with an interactive shell on the running container.  See previous instructions for how to do that.
 
 Then you will need to perform the following commands:
