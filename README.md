@@ -11,7 +11,7 @@ The DIY image for technical Holo users.
 Private images are available from here:
 https://github.com/Holo-Host/pioneer/pkgs/container/pioneer
 
-`docker login` needs a *classic* github personal access token with `read:packages` access on the Pioneer repo.
+`docker login ghcr.io` needs a *classic* github personal access token with `read:packages` access on the Pioneer repo.  This token will need to be passed instead of the password.
 
 ```sh
 docker login ghcr.io
@@ -81,7 +81,6 @@ You need to add webrtc details to the conductor config.
 ```sh
 vi <sandbox_path>/conductor-config.yaml
 ```
-
 
 You will need to find the `webrtc_config` stanza and replace it with the following:
 
