@@ -18,31 +18,11 @@ docker login ghcr.io
 docker pull ghcr.io/holo-host/pioneer
 ```
 
-### Quick One Off Test for Functional Image
-
-To just run it:
-
-```sh
-docker run -it --rm ghcr.io/holo-host/pioneer
-```
-
-To use either a specific version tag or `:latest`:
-
-```sh
-docker run -it --rm ghcr.io/holo-host/pioneer:<tag>
-```
-
-or
-
-```sh
-docker run -it --rm ghcr.io/holo-host/pioneer:latest
-```
-
 ### Test for Functional Holochain and hc
 
 ```sh
 docker run --name pioneer -dit ghcr.io/holo-host/pioneer
-docker exec -it pioneer sh
+docker exec -it pioneer /bin/sh
 which holochain
 which hc
 holochain --version
@@ -99,9 +79,14 @@ Now you can launch the sandbox!
 hc sandbox run 0
 ```
 
-Note the `admin_port` displayed after the sandbox is run.  You will also need relevant details for your happ.
+Note the `admin_port` displayed after the sandbox is run.  You will also need relevant details for your happ.  
+Now you need another terminal with an interactive shell on the running container.  See previous instructions for how to do that.
+
+Then you will need to perform the following commands:
 
 ```sh
+su nonroot
+cd 
 export ADMIN_PORT=<admin_port>
 export AGENT_KEY=$(hc s -f $ADMIN_PORT call new-agent | awk '{print $NF}')
 export APP_ID="kando::v0.13.0::$AGENT_KEY"
@@ -129,5 +114,4 @@ RUST_LOG=debug hc sandbox run 0
 
 - The container is designed to stay running with a custom entrypoint script
 - Use `-it` flags for interactive terminal access
-- The entrypoint script displays version information on container start
 
