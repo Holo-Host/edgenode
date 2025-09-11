@@ -17,12 +17,7 @@ echo "[*] Downloading happ from $HAPP_URL ..."
 curl -sSL "$HAPP_URL" -o "$HAPP_FILE"
 
 # ---- Generate agent key ----
-echo "[*] Generating agent key..."
-if hc s -f "$ADMIN_PORT" call new-agent | jq -e . >/dev/null 2>&1; then
-  AGENT_KEY=$(hc s -f "$ADMIN_PORT" call new-agent | jq -r '.')
-else
-  AGENT_KEY=$(hc s -f "$ADMIN_PORT" call new-agent | awk '{print $NF}')
-fi
+AGENT_KEY=$(hc s -f "$ADMIN_PORT" call new-agent | awk '{print $NF}')
 
 # ---- Build App ID ----
 APP_ID="${APP_NAME}::${APP_VERSION}::${AGENT_KEY}"
