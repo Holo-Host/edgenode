@@ -6,7 +6,10 @@ RUN wget https://github.com/matthme/holochain-binaries/releases/download/lair-bi
 
 SHELL ["/bin/sh", "-c"]
 
-# Copy and set up install_happ
+# Copy and set up turnserver config template 
+COPY turnserver.conf.template /etc/turnserver.conf
+
+# Copy and set up happ install script
 COPY install_happ /usr/local/bin/install_happ
 RUN chmod +x /usr/local/bin/install_happ
 
