@@ -1,13 +1,10 @@
 FROM cgr.dev/chainguard/wolfi-base
 
+VOLUME ["/data"]
+
 RUN apk update && apk add --no-cache --update-cache bash curl wget htop jq strace tcpdump coturn netcat
 RUN wget https://github.com/matthme/holochain-binaries/releases/download/holochain-binaries-0.5.6/holochain-v0.5.6-x86_64-unknown-linux-gnu && wget https://github.com/matthme/holochain-binaries/releases/download/hc-binaries-0.5.6/hc-v0.5.6-x86_64-unknown-linux-gnu && mv holochain-v0.5.6-x86_64-unknown-linux-gnu /bin/holochain && mv hc-v0.5.6-x86_64-unknown-linux-gnu /bin/hc && chmod +x /bin/holochain && chmod +x /bin/hc
 RUN wget https://github.com/matthme/holochain-binaries/releases/download/lair-binaries-0.6.2/lair-keystore-v0.6.2-x86_64-unknown-linux-gnu && mv lair-keystore-v0.6.2-x86_64-unknown-linux-gnu /bin/lair-keystore && chmod +x /bin/lair-keystore
-
-SHELL ["/bin/sh", "-c"]
-
-# Copy and set up turnserver config template 
-COPY turnserver.conf.template /etc/turnserver.conf
 
 # Copy and set up happ install script
 COPY install_happ /usr/local/bin/install_happ
@@ -16,6 +13,8 @@ RUN chmod +x /usr/local/bin/install_happ
 # Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+SHELL ["/bin/sh", "-c"]
 
 # Set entrypoint to keep container running and allow interactive shell access
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
