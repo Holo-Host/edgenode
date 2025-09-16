@@ -1,4 +1,4 @@
-# pioneer
+# Trailblazer
 
 The DIY image for technical Holo users.
 
@@ -9,19 +9,19 @@ The DIY image for technical Holo users.
 ### Obtaining Private Images
 
 Private images are available from here:
-https://github.com/Holo-Host/pioneer/pkgs/container/pioneer
+https://github.com/Holo-Host/trailblazer/pkgs/container/trailblazer
 
-`docker login ghcr.io` needs a *classic* github personal access token with `read:packages` access on the Pioneer repo.  This token will need to be passed instead of the password.
+`docker login ghcr.io` needs a *classic* github personal access token with `read:packages` access on the Trailblazer repo.  This token will need to be passed instead of the password.
 
 ```sh
 docker login ghcr.io
-docker pull ghcr.io/holo-host/pioneer
+docker pull ghcr.io/holo-host/trailblazer
 ```
 
 ### Test for Functional Holochain and hc
 
 ```sh
-docker run --name pioneer -dit ghcr.io/holo-host/pioneer
+docker run --name trailblazer -dit ghcr.io/holo-host/trailblazer
 docker exec -it pioneer /bin/sh
 which holochain
 which hc
@@ -41,9 +41,9 @@ docker exec -it pioneer /bin/sh
 Or if you want to run commands directly:
 
 ```sh
-docker exec -it pioneer holochain --version
-docker exec -it pioneer hc --version
-docker exec -it pioneer lair-keystore --version
+docker exec -it trailblazer holochain --version
+docker exec -it trailblazer hc --version
+docker exec -it trailblazer lair-keystore --version
 ```
 
 ## Create a Sandbox and Run a Conductor
