@@ -22,7 +22,7 @@ docker pull ghcr.io/holo-host/trailblazer
 
 ```sh
 docker run --name trailblazer -dit ghcr.io/holo-host/trailblazer
-docker exec -it pioneer /bin/sh
+docker exec -it trailblazer /bin/sh
 which holochain
 which hc
 holochain --version
@@ -35,7 +35,7 @@ lair-keystore --version
 To access an interactive shell in the running container:
 
 ```sh
-docker exec -it pioneer /bin/sh
+docker exec -it trailblazer /bin/sh
 ```
 
 Or if you want to run commands directly:
