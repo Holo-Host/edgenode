@@ -23,6 +23,10 @@ This initial commit also doesn't set a root password, which is blank while we're
 
 The operating system runs entirely in memory, and does not currently install or write to any permanent storage. This will change in the near future.
 
+### Via Make Target
+
+There is a `make run` target in the Makefile that will use kvm/qemu on Linux to boot the image in a small VM, using the _curses_ display driver. This gives you the VM console in your terminal window, making is suitable over things like `ssh(1)`. To quit and shut the VM down, hit _Alt+2_ to change to the qemu monitor, and then type `quit` and hit enter. For this, you will want to boot using the `text` isolinux boot target. The default starts a VGA framebuffer console at 1024x768.
+
 ## Configure Networking
 
 As of this initial commit, there is no automatic configuration present. In the meantime, to bring up the network on a Holoport or Holoport Plus, the following commands ought to suffice:
@@ -66,4 +70,10 @@ This operating system is deliberately minimal, and uses the MUSL C library for s
 2. Use the buildroot `menuconfig` target to make the desired changes using `make -C tmp/buildroot-2025.08 O=../br-build menuconfig`.
 3. Replace the holos configuration file with the buildroot-generated configuration file using `cp tmp/br-build/.config holos-buildroot-2025.08.config`
 4. Build the changes using `make iso`
+
+
+## Known Issues
+
+1. The Makefile dependencies could use some fixing. After a full and complete build, re-running `make iso`, or even `make run` will still see certain targets re-run. Probably a case of touching a few files here and there.
+2. The Makefile has some copy/pasted boilerplate code for copying files that could probably be replaced with some GNU Makefile magic I'm too lazy to look up.
 

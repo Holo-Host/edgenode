@@ -56,27 +56,33 @@ ${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BU
 ${TMPDIR}/isoroot/boot: ${TMPDIR}
 	mkdir -p $@
 
+${TMPDIR}/isoroot/isolinux: ${TMPDIR}
+	mkdir -p $@
+
 # There's probably some GNU Make magic incantation to handle this in one target, but I'm
 # too lazy to read the docs. We need the kernel and initrd artifacts from the buildroot
 # build, and also some of the host-side syslinux binaries (guest-side binaries would also
 # work too, but this is a version-independent source path).
-${TMPDIR}/isoroot/boot/bzImage: ${BR_BUILD_DIR}/images/bzImage
+${TMPDIR}/isoroot/boot/bzImage: ${BR_BUILD_DIR}/images/bzImage ${TMPDIR}/isoroot/boot
 	cp $< $@
-${TMPDIR}/isoroot/boot/rootfs.cpio.gz: ${BR_BUILD_DIR}/images/rootfs.cpio.gz
+${TMPDIR}/isoroot/boot/rootfs.cpio.gz: ${BR_BUILD_DIR}/images/rootfs.cpio
+	# Compress it on the fly
+	gzip -c9 $< > $@
+${TMPDIR}/isoroot/isolinux/isolinux.bin: ${BR_BUILD_DIR}/host/share/syslinux/isolinux.bin ${TMPDIR}/isoroot/isolinux
 	cp $< $@
-${TMPDIR}/isoroot/boot/isolinux.bin: ${BR_BUILD_DIR}/host/share/syslinux/isolinux.bin
+${TMPDIR}/isoroot/isolinux/ldlinux.c32: ${BR_BUILD_DIR}/host/share/syslinux/ldlinux.c32
 	cp $< $@
-${TMPDIR}/isoroot/boot/ldlinux.c32: ${BR_BUILD_DIR}/host/share/syslinux/ldlinux.c32
+${TMPDIR}/isoroot/isolinux/isolinux.cfg: isolinux.cfg
 	cp $< $@
 
 # Now that we have the artifacts we need, build a bootable hybrid ISO artifact
-${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/boot/isolinux.bin ${TMPDIR}/isoroot/boot/ldlinux.c32
+${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg
 	echo ${HOLOS_VERSION} > ${TMPDIR}/isoroot/holos-version
 	cd ${TMPDIR}/isoroot && xorriso -as mkisofs \
 		-r \
 		-V HolOS \
-		-o $@ \
-		-b boot/isolinux.bin \
+		-o ../holos-${HOLOS_VERSION}.iso \
+		-b isolinux/isolinux.bin \
 		-c boot/boot.cat \
 		-no-emul-boot \
 		-boot-load-size 4 \
@@ -84,12 +90,12 @@ ${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/i
 		.
 
 ${TMPDIR}/vm_system.qcow2:
-	qemu-img create -f qcow2 $@.qcow2 ${QCOW_SIZE}
+	qemu-img create -f qcow2 $@ ${QCOW_SIZE}
 
 qcow2:	${TMPDIR}/vm_system.qcow2
 
-# Attempt to use KVM to boot our operating system
-run: iso
+# Attempt to use KVM to boot our operating system with a terminal-friendly console.
+run: ${TMPDIR}/vm_system.qcow2 ${TMPDIR}/holos-${HOLOS_VERSION}.iso
 	qemu-system-x86_64 \
 		-enable-kvm \
 		-smp 1 \
@@ -97,10 +103,10 @@ run: iso
 		-name "holos" \
 		-cpu host \
 		-drive file=${TMPDIR}/vm_system.qcow2,if=virtio \
-		-cdrom file=${TMPROOT}/holos-${HOLOS_VERSION}.iso \
+		-cdrom file=${TMPDIR}/holos-${HOLOS_VERSION}.iso \
 		-nic user,model=virtio \
 		-vga virtio \
-		-display sdl \
+		-display curses \
 		-boot menu=on
 
 iso: ${TMPDIR}/holos-${HOLOS_VERSION}.iso
