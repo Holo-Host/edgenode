@@ -16,11 +16,21 @@ BUILDROOT_URL := https://buildroot.org/downloads/buildroot-${BUILDROOT_VERSION}.
 BUILDROOT_CONFIG := holos-buildroot-${BUILDROOT_VERSION}.config
 BR_BUILD_DIR := ${TMPDIR}/br-build
 
+# There's a make target to create a qcow2 file and boot the holos ISO inside KVM
+# with the qcow2 image attached as its primary drive. This governs the size of 
+# that qcow2 image.
+QCOW_SIZE := 1g
+
 help:
 	@echo "Make targets:"
+	@echo ""
+	@echo "	- help		This output"
 	@echo "	- all		Build whole set of artifacts"
 	@echo "	- iso		Build hybrid-boot ISO"
+	@echo "	- run		Boot the ISO image inside KVM with QEMU on Linux"
 	@echo "	- distclean	Remove all build artifacts"
+	@echo "	- clean		Remove build artifacts, keeping downloaded sources"
+	@echo ""
 
 # Make sure various directories and configuration files are all in the right place
 ${TMPDIR}:
@@ -61,6 +71,7 @@ ${TMPDIR}/isoroot/boot/ldlinux.c32: ${BR_BUILD_DIR}/host/share/syslinux/ldlinux.
 
 # Now that we have the artifacts we need, build a bootable hybrid ISO artifact
 ${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/boot/isolinux.bin ${TMPDIR}/isoroot/boot/ldlinux.c32
+	echo ${HOLOS_VERSION} > ${TMPDIR}/isoroot/holos-version
 	cd ${TMPDIR}/isoroot && xorriso -as mkisofs \
 		-r \
 		-V HolOS \
@@ -72,10 +83,33 @@ ${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/i
 		-boot-info-table \
 		.
 
+${TMPDIR}/vm_system.qcow2:
+	qemu-img create -f qcow2 $@.qcow2 ${QCOW_SIZE}
+
+qcow2:	${TMPDIR}/vm_system.qcow2
+
+# Attempt to use KVM to boot our operating system
+run: iso
+	qemu-system-x86_64 \
+		-enable-kvm \
+		-smp 1 \
+		-m 1G \
+		-name "holos" \
+		-cpu host \
+		-drive file=${TMPDIR}/vm_system.qcow2,if=virtio \
+		-cdrom file=${TMPROOT}/holos-${HOLOS_VERSION}.iso \
+		-nic user,model=virtio \
+		-vga virtio \
+		-display sdl \
+		-boot menu=on
+
 iso: ${TMPDIR}/holos-${HOLOS_VERSION}.iso
 
 distclean:
 	rm -rf ${TMPDIR}
 
-all: iso
+clean:
+	rm -rf ${BR_BUILD_DIR} ${TMPDIR}/isoroot
+
+all: iso qcow2
 
