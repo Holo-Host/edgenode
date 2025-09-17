@@ -3,6 +3,10 @@ set -eu
 
 # Create persistent storage directories
 mkdir -p /data/holochain/etc /data/holochain/var
+chown -R nonroot:nonroot /data
+
+# Ensure parent directories exist for symlinks
+mkdir -p /var/local/lib
 
 # Create symlinks for persistent storage
 ln -sf /data/holochain/etc /etc/holochain
