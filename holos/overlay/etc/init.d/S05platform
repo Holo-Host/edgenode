@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+# Set up any hardware/platform stuff.
+#
+
+start() {
+	printf "Loading platform drivers: "
+	# This should really be done during the build, *after* compression
+	/sbin/depmod -a
+
+	# Load any PCI or USB devices we can. We could add other bus types later
+	for bus in pci usb
+	do
+		for i in /sys/bus/$bus/devices/*
+		do
+			# Read the uevent file from sysfs and load the driver
+			# by alias.
+			MODALIAS=""
+			. $i/uevent
+			[ -z "$MODALIAS" ] || modprobe "$MODALIAS" 2>/dev/null
+		done
+	done
+	echo "OK"
+
+}
+
+stop() {
+	# We don't currently have anything we need to do here, but may later.
+	printf "Shutting down platform: "
+	echo "OK"
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart|reload)
+		restart
+		;;
+	*)
+		echo "Usage: $0 (start|stop|restart)"
+		exit 1
+esac
