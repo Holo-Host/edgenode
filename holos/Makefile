@@ -1,5 +1,5 @@
 # Version string
-HOLOS_VERSION := 0.0.1
+HOLOS_VERSION := 0.0.2
 
 # We need some temporary scratch space for build artifacts. Everything generated
 # by this build process will be under this tree and we shouldn't be modifying
@@ -82,6 +82,7 @@ ${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/i
 		-r \
 		-V HolOS \
 		-o ../holos-${HOLOS_VERSION}.iso \
+		-isohybrid-mbr ../br-build/host/share/syslinux/isohdpfx.bin \
 		-b isolinux/isolinux.bin \
 		-c boot/boot.cat \
 		-no-emul-boot \
