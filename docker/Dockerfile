@@ -13,8 +13,11 @@ RUN chmod +x /usr/local/bin/install_happ
 # Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN mkdir -p /usr/local/share/holochain
+COPY conductor-config.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
 
 SHELL ["/bin/sh", "-c"]
+EXPOSE 4444
 
 # Set entrypoint to keep container running and allow interactive shell access
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -11,13 +11,14 @@ The DIY image for technical Holo users.
 
 - [Usage](#usage)
    - [Interactive Shell Access](#interactive-shell-access)
-   - [Creating a Holochain Sandbox](#creating-a-sandbox)
-   - [Installing a hApp in the Sandbox](#installing-a-happ)
+   - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
+   - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
       - [Scripted Install](#scripted-install)
       - [Manual Install (Kando Example)](#manual-install-kando-example)
 
    - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
 
+- [Production Deployment with Conductor](#production-deployment-with-conductor)
 - [Persistent Storage](#persistent-storage)
    - [Overview](#overview)
    - [Testing Persistence](#testing-persistence)
@@ -172,6 +173,36 @@ To get more verbose output from your sandbox, you can run it with the `RUST_LOG`
 ```sh
 RUST_LOG=debug hc sandbox run 0
 ```
+
+### Production Deployment with Conductor
+
+To deploy in production using the Holochain conductor:
+
+1. **Enable Conductor Mode**
+   Set the `CONDUCTOR_MODE` environment variable when running the container:
+   ```sh
+   docker run --name trailblazer -dit \
+     -e CONDUCTOR_MODE=true \
+     -v $(pwd)/holo-data:/data \
+     ghcr.io/holo-host/trailblazer
+   ```
+
+2. **Configuration Validation**
+   The entrypoint performs automatic validation:
+   - Admin port must be `4444`
+   - `lair_root` must be empty
+   - Configuration must use LSB-compliant paths
+
+3. **Starting the Conductor**
+   The conductor will automatically start using the validated configuration:
+   ```sh
+   holochain -c /etc/holochain/conductor-config.yaml
+   ```
+
+4. **Persistent Configuration**
+   The conductor configuration is persisted through the same volume mount structure as sandbox mode:
+   - `/etc/holochain` → `/data/holochain/etc`
+   - `/var/local/lib/holochain` → `/data/holochain/var`
 
 ## Persistent Storage
 
