@@ -1,29 +1,27 @@
 # Trailblazer
 
-The DIY image for technical Holo users.
+A docker container for running Holochain and installing hApps to host them as allways-on-nodes.
 
 ## Table of Contents
 
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-   - [Obtaining the Image](#obtaining-the-image)
-   - [Running the Container](#running-the-container)
-
-- [Usage](#usage)
-   - [Interactive Shell Access](#interactive-shell-access)
-   - [Creating a Holochain Sandbox](#creating-a-sandbox)
-   - [Installing a hApp in the Sandbox](#installing-a-happ)
+- [Trailblazer](#trailblazer)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Getting Started](#getting-started)
+    - [Obtaining the Image](#obtaining-the-image)
+    - [Running the Container](#running-the-container)
+  - [Usage](#usage)
+    - [Interactive Shell Access](#interactive-shell-access)
+    - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
+    - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
       - [Scripted Install](#scripted-install)
       - [Manual Install (Kando Example)](#manual-install-kando-example)
-
-   - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
-
-- [Persistent Storage](#persistent-storage)
-   - [Overview](#overview)
-   - [Testing Persistence](#testing-persistence)
-
-- [Developer Instructions](#developer-instructions)
-   - [Testing Holochain and hc](#testing-holochain-and-hc)
+    - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
+  - [Persistent Storage](#persistent-storage)
+    - [Overview](#overview)
+    - [Testing Persistence](#testing-persistence)
+  - [Developer Instructions](#developer-instructions)
+    - [Testing Holochain and hc](#testing-holochain-and-hc)
 
 ## Prerequisites
 
