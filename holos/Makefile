@@ -1,5 +1,5 @@
 # Version string
-HOLOS_VERSION := 0.0.2
+HOLOS_VERSION := 0.0.3
 
 # We need some temporary scratch space for build artifacts. Everything generated
 # by this build process will be under this tree and we shouldn't be modifying
