@@ -1,0 +1,6 @@
+# Ignore build artifacts
+/target/
+
+# Ignore JSON files at root and in subdirectories
+*.json
+**/*.json
