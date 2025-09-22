@@ -184,6 +184,7 @@ To deploy in production using the Holochain conductor:
    docker run --name trailblazer -dit \
      -e CONDUCTOR_MODE=true \
      -v $(pwd)/holo-data:/data \
+     -p 4444:4444 \
      ghcr.io/holo-host/trailblazer
    ```
 
@@ -194,7 +195,7 @@ To deploy in production using the Holochain conductor:
    - Configuration must use LSB-compliant paths
 
 3. **Starting the Conductor**
-   The conductor will automatically start using the validated configuration:
+   Start an interactive shell in the container and then enter:
    ```sh
    holochain -c /etc/holochain/conductor-config.yaml
    ```
