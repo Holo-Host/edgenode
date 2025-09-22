@@ -15,7 +15,7 @@ ln -sf /data/holochain/var /var/local/lib/holochain
 # Conductor mode activation
 if [ "$CONDUCTOR_MODE" = "true" ]; then
   # Copy conductor config template
-  cp /docker/conductor-config.template.yaml /etc/holochain/conductor-config.yaml
+  cp /usr/local/share/holochain/conductor-config.template.yaml /etc/holochain/conductor-config.yaml
   
   # Validate admin port configuration
   if ! grep -q "port: 4444" /etc/holochain/conductor-config.yaml; then
