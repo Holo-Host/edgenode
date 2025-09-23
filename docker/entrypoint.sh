@@ -2,7 +2,7 @@
 set -eu
 
 # Create persistent storage directories
-mkdir -p /data/holochain/etc /data/holochain/var
+mkdir -p /data/holochain/etc /data/holochain/var /data/logs
 chown -R nonroot:nonroot /data
 
 # Ensure parent directories exist for symlinks
@@ -32,6 +32,17 @@ if [ "$CONDUCTOR_MODE" = "true" ]; then
   fi
 fi
 
+# Start background logrotate every 24 hours
+while true; do
+  logrotate /etc/logrotate.d/holochain.conf
+  sleep 86400
+done &
+
 # Keep the container running for interactive access
 echo "Container is running. Use 'docker exec -it <container_name> /bin/sh' to access interactive shell."
-exec tail -f /dev/null
+
+if [ "$CONDUCTOR_MODE" = "true" ]; then
+  exec tini -- runuser -u nonroot -- holochain run --config-path /etc/holochain/conductor-config.yaml > /data/logs/holochain.log 2>&1
+else
+  exec tini -- tail -f /dev/null
+fi
