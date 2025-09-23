@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
+use holo_hash::{ActionHash, ActionHashB64, AgentPubKey, AgentPubKeyB64};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -85,7 +86,7 @@ impl ConfigFile {
             bail!("app.name must be lowercase alphanumeric with underscores");
         }
 
-        // app.version: semver-ish (simple)
+        // app.version: semver-ish (simple)ActionHash::try_from("uhCkkWCsAgoKkkfwyJAglj30xX_GLLV-3BXuFy436a2SqpcEwyBzm").unwrap().into(),
         let version_re = Regex::new(r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$").unwrap();
         if self.app.version.is_empty() || !version_re.is_match(&self.app.version) {
             bail!("app.version must be semantic version like 0.1.0");
@@ -110,13 +111,17 @@ impl ConfigFile {
                 Url::parse(s).context("env.holochain.stunServerUrls must contain valid URLs")?;
             }
         }
-
-        // Optional gw and economics: nothing to do unless present
+        // Optional gw validation hook
         if let Some(_gw) = &self.env.gw {
             // placeholder for any future gateway validation
         }
-        if let Some(_eco) = &self.economics {
-            // placeholder for any future economics validation
+        if let Some(eco) = &self.economics {
+            // Validate that agreement_hash is a legal ActionHash
+            let _ = ActionHash::try_from(&eco.agreement_hash)
+                .context("economics.agreementHash must be a valid ActionHash")?;
+            // Validate that payor is a legal AgentPubKey
+            let _ = AgentPubKey::try_from(&eco.payor_unyt_agent_pub_key)
+                .context("economics.agreementHash must be a valid ActionHash")?;
         }
         if let Some(calls) = &self.app.init_zome_calls {
             for call in calls {
@@ -134,7 +139,11 @@ impl ConfigFile {
 }
 
 #[derive(Debug, Parser)]
-#[command(name = "happ_config_file", version, about = "Create and validate JSON config files")]
+#[command(
+    name = "happ_config_file",
+    version,
+    about = "Create and validate JSON config files"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -168,22 +177,38 @@ enum Commands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.command {
-        Commands::Create { name, gateway, economics, init_zome_calls } => do_create(name, gateway, economics, init_zome_calls)?,
+        Commands::Create {
+            name,
+            gateway,
+            economics,
+            init_zome_calls,
+        } => do_create(name, gateway, economics, init_zome_calls)?,
         Commands::Validate { input } => do_validate(input)?,
     }
     Ok(())
 }
 
-fn do_create(name: Option<String>, include_gateway: bool, include_economics: bool, include_init_calls: bool) -> Result<()> {
+fn do_create(
+    name: Option<String>,
+    include_gateway: bool,
+    include_economics: bool,
+    include_init_calls: bool,
+) -> Result<()> {
     // Determine output file name and app.name based on optional name
     let (output, app_name): (PathBuf, String) = if let Some(provided_name) = name {
         let name_re = Regex::new(r"^[a-z0-9_]+$").unwrap();
         if provided_name.is_empty() || !name_re.is_match(&provided_name) {
             bail!("name must be lowercase alphanumeric with underscores");
         }
-        (PathBuf::from(format!("{}_config.json", provided_name)), provided_name)
+        (
+            PathBuf::from(format!("{}_config.json", provided_name)),
+            provided_name,
+        )
     } else {
-        (PathBuf::from("example_happ_config.json"), "example_happ".to_string())
+        (
+            PathBuf::from("example_happ_config.json"),
+            "example_happ".to_string(),
+        )
     };
 
     let template = ConfigFile {
@@ -196,7 +221,10 @@ fn do_create(name: Option<String>, include_gateway: bool, include_economics: boo
                 properties: "".to_string(),
             },
             init_zome_calls: if include_init_calls {
-                Some(vec![InitZomeCall { fn_name: "some_zome_fn".to_string(), payload: JsonValue::Null }])
+                Some(vec![InitZomeCall {
+                    fn_name: "some_zome_fn".to_string(),
+                    payload: JsonValue::Null,
+                }])
             } else {
                 None
             },
@@ -220,9 +248,17 @@ fn do_create(name: Option<String>, include_gateway: bool, include_economics: boo
             },
         },
         economics: if include_economics {
+            let agent_hash: AgentPubKeyB64 =
+                AgentPubKey::try_from("uhCAkJCuynkgVdMn_bzZ2ZYaVfygkn0WCuzfFspczxFnZM1QAyXoo")
+                    .unwrap()
+                    .into();
+            let agreement_hash: ActionHashB64 =
+                ActionHash::try_from("uhCkkWCsAgoKkkfwyJAglj30xX_GLLV-3BXuFy436a2SqpcEwyBzm")
+                    .unwrap()
+                    .into();
             Some(Economics {
-                payor_unyt_agent_pub_key: "".to_string(),
-                agreement_hash: "".to_string(),
+                payor_unyt_agent_pub_key: agent_hash.to_string(),
+                agreement_hash: agreement_hash.to_string(),
                 price_sheet: "".to_string(),
             })
         } else {
@@ -237,7 +273,8 @@ fn do_create(name: Option<String>, include_gateway: bool, include_economics: boo
 }
 
 fn do_validate(input: PathBuf) -> Result<()> {
-    let content = fs::read_to_string(&input).with_context(|| format!("reading {}", input.display()))?;
+    let content =
+        fs::read_to_string(&input).with_context(|| format!("reading {}", input.display()))?;
     let cfg: ConfigFile = serde_json::from_str(&content).context("invalid JSON structure")?;
     cfg.validate()?;
     println!("{} is valid", input.display());
