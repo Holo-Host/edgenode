@@ -72,7 +72,8 @@ struct Gateway {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Economics {
-    requester_unyt_agent_pub_key: String,
+    payor_unyt_agent_pub_key: String,
+    agreement_hash: String,
     price_sheet: String,
 }
 
@@ -220,7 +221,8 @@ fn do_create(name: Option<String>, include_gateway: bool, include_economics: boo
         },
         economics: if include_economics {
             Some(Economics {
-                requester_unyt_agent_pub_key: "".to_string(),
+                payor_unyt_agent_pub_key: "".to_string(),
+                agreement_hash: "".to_string(),
                 price_sheet: "".to_string(),
             })
         } else {
