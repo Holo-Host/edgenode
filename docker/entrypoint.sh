@@ -11,9 +11,11 @@ mkdir -p /var/local/lib
 # Create symlinks for persistent storage
 ln -sf /data/holochain/etc /etc/holochain
 ln -sf /data/holochain/var /var/local/lib/holochain
+chown -R nonroot:nonroot /data/holochain
 
 # Conductor mode activation
 if [ "$CONDUCTOR_MODE" = "true" ]; then
+  mkdir -p /etc/holochain
   # Copy conductor config template
   cp /usr/local/share/holochain/conductor-config.template.yaml /etc/holochain/conductor-config.yaml
   
@@ -42,7 +44,7 @@ done &
 echo "Container is running. Use 'docker exec -it <container_name> /bin/sh' to access interactive shell."
 
 if [ "$CONDUCTOR_MODE" = "true" ]; then
-  exec tini -- runuser -u nonroot -- holochain run --config-path /etc/holochain/conductor-config.yaml > /data/logs/holochain.log 2>&1
+  exec tini -- gosu nonroot holochain --config-path /etc/holochain/conductor-config.yaml > /data/logs/holochain.log 2>&1
 else
   exec tini -- tail -f /dev/null
 fi
