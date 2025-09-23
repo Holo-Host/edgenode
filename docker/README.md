@@ -17,8 +17,10 @@ The DIY image for technical Holo users.
       - [Manual Install (Kando Example)](#manual-install-kando-example)
 
    - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
+   - [Troubleshooting Logs](#troubleshooting-logs)
 
 - [Production Deployment with Conductor](#production-deployment-with-conductor)
+- [Process Management and Logging](#process-management-and-logging)
 - [Persistent Storage](#persistent-storage)
    - [Overview](#overview)
    - [Testing Persistence](#testing-persistence)
@@ -57,13 +59,25 @@ mkdir -p ./holo-data
 
 2. **Run the container:**
 
+For basic usage (interactive mode), run without `CONDUCTOR_MODE`:
+
 ```sh
 docker run --name trailblazer -dit \
   -v $(pwd)/holo-data:/data \
   ghcr.io/holo-host/trailblazer
 ```
 
-This will start the container in detached mode and name it `trailblazer`.
+To auto-start the Holochain conductor with supervised process management and logging (see [Process Management and Logging](#process-management-and-logging)), set `CONDUCTOR_MODE=true`:
+
+```sh
+docker run --name trailblazer -dit \
+  -e CONDUCTOR_MODE=true \
+  -v $(pwd)/holo-data:/data \
+  -p 4444:4444 \
+  ghcr.io/holo-host/trailblazer
+```
+
+This will start the container in detached mode and name it `trailblazer`. Manual `hc run` commands are still possible inside the container but will now be supervised by tini.
 
 ## Usage
 
@@ -174,6 +188,16 @@ To get more verbose output from your sandbox, you can run it with the `RUST_LOG`
 RUST_LOG=debug hc sandbox run 0
 ```
 
+### Troubleshooting Logs
+
+Holochain logs are redirected to `/data/logs/holochain.log` inside the container for persistence.
+
+- If using a volume mount (e.g., `-v $(pwd)/holo-data:/data`), access logs directly from the host at `./holo-data/logs/holochain.log`.
+- To copy logs from a running container: `docker cp trailblazer:/data/logs/holochain.log .`
+- View live logs: `docker exec -it trailblazer tail -f /data/logs/holochain.log`
+
+Logs are rotated daily (see [Process Management and Logging](#process-management-and-logging)) with 7 days retention.
+
 ### Production Deployment with Conductor
 
 To deploy in production using the Holochain conductor:
@@ -204,6 +228,26 @@ To deploy in production using the Holochain conductor:
    The conductor configuration is persisted through the same volume mount structure as sandbox mode:
    - `/etc/holochain` → `/data/holochain/etc`
    - `/var/local/lib/holochain` → `/data/holochain/var`
+
+### Process Management and Logging
+
+The container uses advanced process management and logging for reliability in production.
+
+#### Process Management
+- **tini as PID 1**: The init system `tini` is used as the container's PID 1. It handles process supervision, reaps zombie processes, and can restart the Holochain conductor if it crashes (configured via entrypoint.sh).
+- **Non-root User**: All processes run as user ID 65532 (nonroot) for security.
+- **Supervisor Behavior**: When `CONDUCTOR_MODE=true`, entrypoint.sh execs `tini -- holochain run ...`, ensuring proper signal handling and restarts. Manual `hc run` commands inside the container are also supervised.
+
+#### Logging
+- **Redirection**: Holochain output is redirected to `/data/logs/holochain.log` using `> /data/logs/holochain.log 2>&1` in entrypoint.sh. This captures stdout/stderr for persistence.
+- **Persistence**: Logs are stored in the `/data` volume, ensuring they survive container restarts.
+- **Directory Setup**: entrypoint.sh creates `/data/logs` if it doesn't exist.
+
+#### Log Rotation
+- **Configuration**: Defined in `/etc/logrotate.d/holochain.conf` for daily rotation, keeping 7 days of logs, with compression (gzip).
+- **Background Loop**: entrypoint.sh starts a background loop (`while true; do logrotate /etc/logrotate.d/holochain.conf; sleep 86400; done`) to run rotation daily.
+
+This setup ensures robust logging and process reliability without manual intervention.
 
 ## Persistent Storage
 
