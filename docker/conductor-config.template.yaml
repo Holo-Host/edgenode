@@ -1,0 +1,20 @@
+# Conductor configuration template
+
+admin_interface:
+  driver:
+    type: "websocket"
+    port: 4444
+
+network:
+  bootstrap_url: "dev-test-bootstrap2.holochain.org"
+  signal_url: "dev-test-bootstrap2.holochain.org"
+  enable_mdns: false
+  enable_relaying: true
+
+  webrtc_config:
+  ice_servers:
+    - urls: ["stun:stun.cloudflare.com:3478"]
+    - urls: ["stun:stun.l.google.com:19302"]
+
+data_root_path: "/var/local/lib/holochain"
+lair_root: ""
