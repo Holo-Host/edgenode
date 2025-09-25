@@ -121,7 +121,7 @@ impl ConfigFile {
                 .context("economics.agreementHash must be a valid ActionHash")?;
             // Validate that payor is a legal AgentPubKey
             let _ = AgentPubKey::try_from(&eco.payor_unyt_agent_pub_key)
-                .context("economics.agreementHash must be a valid ActionHash")?;
+                .context("economics.payorUnytAgentPubKey must be a valid AgentPubKey")?;
         }
         if let Some(calls) = &self.app.init_zome_calls {
             for call in calls {
