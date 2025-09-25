@@ -4,16 +4,18 @@ A docker container for running Holochain and installing hApps to host them as al
 
 ## Table of Contents
 
-
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
+
    - [Obtaining the Image](#obtaining-the-image)
    - [Running the Container](#running-the-container)
 
 - [Usage](#usage)
+
    - [Interactive Shell Access](#interactive-shell-access)
    - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
    - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
+
       - [Scripted Install](#scripted-install)
       - [Manual Install (Kando Example)](#manual-install-kando-example)
 
@@ -23,10 +25,12 @@ A docker container for running Holochain and installing hApps to host them as al
 - [Production Deployment with Conductor](#production-deployment-with-conductor)
 - [Process Management and Logging](#process-management-and-logging)
 - [Persistent Storage](#persistent-storage)
+
    - [Overview](#overview)
    - [Testing Persistence](#testing-persistence)
 
 - [Developer Instructions](#developer-instructions)
+
    - [Testing Holochain and hc](#testing-holochain-and-hc)
 
 ## Prerequisites
@@ -53,7 +57,6 @@ docker pull ghcr.io/holo-host/trailblazer
 To run the container with persistent storage, you need to map a local directory on your host machine to the `/data` volume in the container.
 
 1. **Create a host directory for persistence:**
-
 2. **Run the container:**
 
 For basic usage (interactive mode), run without `CONDUCTOR_MODE`:
@@ -197,8 +200,10 @@ Logs are rotated daily (see [Process Management and Logging](#process-management
 
 To deploy in production using the Holochain conductor:
 
+0. Remove any prior containers if you need to: `docker stop trailblazer && docker rm trailblazer`
+
 1. __Enable Conductor Mode__
-Set the `CONDUCTOR_MODE` environment variable when running the container:
+   Set the `CONDUCTOR_MODE` environment variable when running the container:
 
 ```sh
 docker run --name trailblazer -dit \
@@ -217,7 +222,7 @@ docker run --name trailblazer -dit \
    - Configuration must use LSB-compliant paths
 
 3. **Starting the Conductor**
-Start an interactive shell in the container and then enter:
+   Start an interactive shell in the container and then enter:
 
 ```sh
 holochain -c /etc/holochain/conductor-config.yaml

@@ -25,11 +25,9 @@ if [ "$CONDUCTOR_MODE" = "true" ]; then
     exit 1
   fi
   
-  # Validate empty lair_root configuration
-  if ! grep -q "lair_root: \"\"" /etc/holochain/conductor-config.yaml && \
-     ! grep -q "lair_root: ''" /etc/holochain/conductor-config.yaml && \
-     ! grep -q "lair_root: " /etc/holochain/conductor-config.yaml | grep -v "lair_root: "; then
-    echo "ERROR: Conductor config must have empty lair_root" >&2
+  # Validate keystore configuration for lair_server_in_proc
+  if ! grep -q "keystore:" /etc/holochain/conductor-config.yaml || ! grep -q "type: lair_server_in_proc" /etc/holochain/conductor-config.yaml; then
+    echo "ERROR: Conductor config must have keystore with type: lair_server_in_proc" >&2
     exit 1
   fi
 fi
