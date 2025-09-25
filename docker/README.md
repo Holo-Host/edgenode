@@ -1,49 +1,33 @@
 # Trailblazer
 
-A docker container for running Holochain and installing hApps to host them as allways-on-nodes.
+A docker container for running Holochain and installing hApps to host them as always-on-nodes.
 
 ## Table of Contents
 
-<<<<<<< HEAD
+
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
-  - [Obtaining the Image](#obtaining-the-image)
-  - [Running the Container](#running-the-container)
+   - [Obtaining the Image](#obtaining-the-image)
+   - [Running the Container](#running-the-container)
+
 - [Usage](#usage)
-  - [Interactive Shell Access](#interactive-shell-access)
-  - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
-  - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
-    - [Scripted Install](#scripted-install)
-    - [Manual Install (Kando Example)](#manual-install-kando-example)
-  - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
-  - [Troubleshooting Logs](#troubleshooting-logs)
+   - [Interactive Shell Access](#interactive-shell-access)
+   - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
+   - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
+      - [Scripted Install](#scripted-install)
+      - [Manual Install (Kando Example)](#manual-install-kando-example)
+
+   - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
+   - [Troubleshooting Logs](#troubleshooting-logs)
+
 - [Production Deployment with Conductor](#production-deployment-with-conductor)
 - [Process Management and Logging](#process-management-and-logging)
 - [Persistent Storage](#persistent-storage)
-  - [Overview](#overview)
-  - [Testing Persistence](#testing-persistence)
+   - [Overview](#overview)
+   - [Testing Persistence](#testing-persistence)
+
 - [Developer Instructions](#developer-instructions)
-  - [Testing Holochain and hc](#testing-holochain-and-hc)
-=======
-- [Trailblazer](#trailblazer)
-  - [Table of Contents](#table-of-contents)
-  - [Prerequisites](#prerequisites)
-  - [Getting Started](#getting-started)
-    - [Obtaining the Image](#obtaining-the-image)
-    - [Running the Container](#running-the-container)
-  - [Usage](#usage)
-    - [Interactive Shell Access](#interactive-shell-access)
-    - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
-    - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
-      - [Scripted Install](#scripted-install)
-      - [Manual Install (Kando Example)](#manual-install-kando-example)
-    - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
-  - [Persistent Storage](#persistent-storage)
-    - [Overview](#overview)
-    - [Testing Persistence](#testing-persistence)
-  - [Developer Instructions](#developer-instructions)
-    - [Testing Holochain and hc](#testing-holochain-and-hc)
->>>>>>> origin/main
+   - [Testing Holochain and hc](#testing-holochain-and-hc)
 
 ## Prerequisites
 
@@ -69,10 +53,6 @@ docker pull ghcr.io/holo-host/trailblazer
 To run the container with persistent storage, you need to map a local directory on your host machine to the `/data` volume in the container.
 
 1. **Create a host directory for persistence:**
-
-```sh
-mkdir -p ./holo-data
-```
 
 2. **Run the container:**
 
@@ -117,7 +97,7 @@ su - nonroot
 ```
 
 2. **Create the sandbox:**
-The `entrypoint.sh` script sets up symlinks for persistent storage, so you can use the standard paths. The following command will create a sandbox in `/home/nonroot` and configure it to use persistent storage for the conductor config and data.
+   The `entrypoint.sh` script sets up symlinks for persistent storage, so you can use the standard paths. The following command will create a sandbox in `/home/nonroot` and configure it to use persistent storage for the conductor config and data.
 
 ```sh
 hc sandbox create --root /home/nonroot/ \
@@ -128,7 +108,7 @@ hc sandbox create --root /home/nonroot/ \
 _Note: The `data_root_path` and `lair_root` in the generated `conductor-config.yaml` will point to `/var/local/lib/holochain`._
 
 3. **Configure WebRTC:**
-You need to add WebRTC details to your conductor configuration file to allow for peer-to-peer communication.
+   You need to add WebRTC details to your conductor configuration file to allow for peer-to-peer communication.
 
 ```sh
 vi /home/nonroot/conductor-config.yaml
@@ -160,7 +140,6 @@ Note the `admin_port` displayed after the sandbox is run. You will need it to in
 You can use the `install_happ` script to install a hApp from a JSON configuration file.
 
 1. **Get another interactive shell to the container.**
-
 2. **Run the script:**
 
 ```sh
@@ -172,7 +151,6 @@ install_happ <config.json> $ADMIN_PORT
 #### Manual Install (Kando Example)
 
 1. **Get another interactive shell to the container.**
-
 2. **Switch to the `nonroot` user and set the admin port:**
 
 ```sh
@@ -219,30 +197,35 @@ Logs are rotated daily (see [Process Management and Logging](#process-management
 
 To deploy in production using the Holochain conductor:
 
-1. **Enable Conductor Mode**
-   Set the `CONDUCTOR_MODE` environment variable when running the container:
-   ```sh
-   docker run --name trailblazer -dit \
-     -e CONDUCTOR_MODE=true \
-     -v $(pwd)/holo-data:/data \
-     -p 4444:4444 \
-     ghcr.io/holo-host/trailblazer
-   ```
+1. __Enable Conductor Mode__
+Set the `CONDUCTOR_MODE` environment variable when running the container:
 
-2. **Configuration Validation**
-   The entrypoint performs automatic validation:
+```sh
+docker run --name trailblazer -dit \
+  -e CONDUCTOR_MODE=true \
+  -v $(pwd)/holo-data:/data \
+  -p 4444:4444 \
+  ghcr.io/holo-host/trailblazer
+```
+
+2. **Conductor Configuration**
+
+   The Conductor configuration operates on certain conventions:
+
    - Admin port must be `4444`
    - `lair_root` must be empty
    - Configuration must use LSB-compliant paths
 
 3. **Starting the Conductor**
-   Start an interactive shell in the container and then enter:
-   ```sh
-   holochain -c /etc/holochain/conductor-config.yaml
-   ```
+Start an interactive shell in the container and then enter:
+
+```sh
+holochain -c /etc/holochain/conductor-config.yaml
+```
 
 4. **Persistent Configuration**
    The conductor configuration is persisted through the same volume mount structure as sandbox mode:
+
    - `/etc/holochain` → `/data/holochain/etc`
    - `/var/local/lib/holochain` → `/data/holochain/var`
 
@@ -251,16 +234,19 @@ To deploy in production using the Holochain conductor:
 The container uses advanced process management and logging for reliability in production.
 
 #### Process Management
+
 - **tini as PID 1**: The init system `tini` is used as the container's PID 1. It handles process supervision, reaps zombie processes, and can restart the Holochain conductor if it crashes (configured via entrypoint.sh).
 - **Non-root User**: All processes run as user ID 65532 (nonroot) for security.
-- **Supervisor Behavior**: When `CONDUCTOR_MODE=true`, entrypoint.sh execs `tini -- holochain run ...`, ensuring proper signal handling and restarts. Manual `hc run` commands inside the container are also supervised.
+- __Supervisor Behavior__: When `CONDUCTOR_MODE=true`, entrypoint.sh execs `tini -- holochain run ...`, ensuring proper signal handling and restarts. Manual `hc run` commands inside the container are also supervised.
 
 #### Logging
+
 - **Redirection**: Holochain output is redirected to `/data/logs/holochain.log` using `> /data/logs/holochain.log 2>&1` in entrypoint.sh. This captures stdout/stderr for persistence.
 - **Persistence**: Logs are stored in the `/data` volume, ensuring they survive container restarts.
 - **Directory Setup**: entrypoint.sh creates `/data/logs` if it doesn't exist.
 
 #### Log Rotation
+
 - **Configuration**: Defined in `/etc/logrotate.d/holochain.conf` for daily rotation, keeping 7 days of logs, with compression (gzip).
 - **Background Loop**: entrypoint.sh starts a background loop (`while true; do logrotate /etc/logrotate.d/holochain.conf; sleep 86400; done`) to run rotation daily.
 
