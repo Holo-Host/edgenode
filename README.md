@@ -1,26 +1,30 @@
 # Trailblazer
 
-Trailblazer is the comprehensive suite for Holo ecosystem contributors, providing integrated tools for Holochain application development and HoloPort deployment. This repository contains two core components that work together to streamline the path from local development to production deployment.
+This repo contains the the tooling needed to participate in the decentralized "DIY" Holo Hosting network for decentralized hApps, and (when released) accounting for hosting provided using HoloFuel.
+
+The tooling consists of:
+
+1. a docker container specification for running Holochain in an OCI containerized environment
+2. a streamlined Linux ISO for making it easy to deploy this container, physical or virtual hardware (including Holoports)
 
 ## Core Components
 
-### 🐳 Trailblazer Toolkit
-A Docker-based environment that delivers a complete Holochain development workspace with:
-- Pre-configured Holochain and hc CLI tools
-- Persistent storage for conductor configurations and data
-- Sandbox environments for safe hApp testing
-- WebRTC networking for peer-to-peer communication
+### Container Build System
+A Docker-based environment that delivers a Holochain runtime environment:
+- Holochain binary configured to automatically run via systemd
+- Tools for installing and managing hApp from configuration files provided by hApp publishers.
+- Log-harvesting and publishing for connecting to HoloFuel accounts.
 
-### 🖥️ holos Build System
-A specialized OS builder for creating custom HoloPort firmware images using Buildroot, featuring:
-- Optimized Linux kernel for HoloPort hardware
+### Holos Build System
+A specialized OS builder for creating custom ISO images using Buildroot, featuring:
+- Optimized Linux kernel
 - Integrated Holochain services and dependencies
 - Custom init scripts for automatic network configuration
-- Ready-to-burn disk images for HoloPort deployment
+- Ready-to-burn disk images for deployment
 
 ## Quick Start
 
-### For Application Developers
+### To test the container:
 1. Pull the Docker image:
    ```sh
    docker pull ghcr.io/holo-host/trailblazer
@@ -35,16 +39,12 @@ A specialized OS builder for creating custom HoloPort firmware images using Buil
    hc sandbox create
    ```
 
-### For OS Contributors
-1. Build the Holo OS:
-   ```sh
-   cd [`holos`](holos/Makefile:1)
-   make
-   ```
-2. Find the generated image in `output/images/`
+### For Holos Users
 
-## Why This Matters
-Trailblazer solves the critical challenge of environment consistency across the development lifecycle. By providing identical tooling and configurations from your laptop to production HoloPorts, it eliminates "works on my machine" issues and accelerates time-to-deployment.
+1. Download a release of the iso from our releases page: TBD
+2. Burn a USB stick, to install on your own hardware or install it in a virtualized environment of your choosing.
+3. Follow the instructions provided to choose persistence, container instance, and other configuration options for the machine.
+4. Follow [these](TBD) instructions to install and manage hApp instances you will be hosting.
 
 ## Documentation
 - [`Trailblazer Toolkit Instructions`](docker/README.md)

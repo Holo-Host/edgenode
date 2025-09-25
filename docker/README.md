@@ -1,32 +1,49 @@
 # Trailblazer
 
-The DIY image for technical Holo users.
+A docker container for running Holochain and installing hApps to host them as allways-on-nodes.
 
 ## Table of Contents
 
+<<<<<<< HEAD
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
-   - [Obtaining the Image](#obtaining-the-image)
-   - [Running the Container](#running-the-container)
-
+  - [Obtaining the Image](#obtaining-the-image)
+  - [Running the Container](#running-the-container)
 - [Usage](#usage)
-   - [Interactive Shell Access](#interactive-shell-access)
-   - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
-   - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
-      - [Scripted Install](#scripted-install)
-      - [Manual Install (Kando Example)](#manual-install-kando-example)
-
-   - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
-   - [Troubleshooting Logs](#troubleshooting-logs)
-
+  - [Interactive Shell Access](#interactive-shell-access)
+  - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
+  - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
+    - [Scripted Install](#scripted-install)
+    - [Manual Install (Kando Example)](#manual-install-kando-example)
+  - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
+  - [Troubleshooting Logs](#troubleshooting-logs)
 - [Production Deployment with Conductor](#production-deployment-with-conductor)
 - [Process Management and Logging](#process-management-and-logging)
 - [Persistent Storage](#persistent-storage)
-   - [Overview](#overview)
-   - [Testing Persistence](#testing-persistence)
-
+  - [Overview](#overview)
+  - [Testing Persistence](#testing-persistence)
 - [Developer Instructions](#developer-instructions)
-   - [Testing Holochain and hc](#testing-holochain-and-hc)
+  - [Testing Holochain and hc](#testing-holochain-and-hc)
+=======
+- [Trailblazer](#trailblazer)
+  - [Table of Contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Getting Started](#getting-started)
+    - [Obtaining the Image](#obtaining-the-image)
+    - [Running the Container](#running-the-container)
+  - [Usage](#usage)
+    - [Interactive Shell Access](#interactive-shell-access)
+    - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
+    - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
+      - [Scripted Install](#scripted-install)
+      - [Manual Install (Kando Example)](#manual-install-kando-example)
+    - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
+  - [Persistent Storage](#persistent-storage)
+    - [Overview](#overview)
+    - [Testing Persistence](#testing-persistence)
+  - [Developer Instructions](#developer-instructions)
+    - [Testing Holochain and hc](#testing-holochain-and-hc)
+>>>>>>> origin/main
 
 ## Prerequisites
 
