@@ -1,0 +1,70 @@
+name: Release happ_config_file
+
+on:
+  push:
+    tags:
+      - 'tools/happ_config_file-v*'
+
+jobs:
+  build-and-release-linux:
+    name: Build and Release (linux-x86_64)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      CRATE_DIR: tools/happ_config_file
+      BINARY_NAME: happ_config_file
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            tools/happ_config_file -> target
+
+      - name: Build release binary
+        working-directory: ${{ env.CRATE_DIR }}
+        run: |
+          cargo build --release
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp "${CRATE_DIR}/target/release/${BINARY_NAME}" "dist/${BINARY_NAME}"
+          strip --strip-all "dist/${BINARY_NAME}" || true
+          (cd dist && sha256sum "${BINARY_NAME}" > "${BINARY_NAME}.sha256")
+
+      - name: Upload artifact (workflow)
+        uses: actions/upload-artifact@v4
+        with:
+          name: happ_config_file-linux-x86_64
+          path: |
+            dist/happ_config_file
+            dist/happ_config_file.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/happ_config_file
+            dist/happ_config_file.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+
