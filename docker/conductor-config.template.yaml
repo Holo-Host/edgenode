@@ -6,7 +6,7 @@ admin_interface:
     port: 4444
 
 network:
-  bootstrap_url: "https://bootstrap-staging.holo.host"
+  bootstrap_url: "dev-test-bootstrap2.holochain.org"
   signal_url: "wss://signal-staging.holo.host"
   transport_pool:
     - type: "quic"
