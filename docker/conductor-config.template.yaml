@@ -8,12 +8,10 @@ admin_interface:
 network:
   bootstrap_url: "dev-test-bootstrap2.holochain.org"
   signal_url: "dev-test-bootstrap2.holochain.org"
-  transport_pool:
-    - type: "quic"
-      enable_mdns: false
-      enable_relaying: true
+  enable_mdns: false
+  enable_relaying: true
 
-webrtc_config:
+  webrtc_config:
   ice_servers:
     - urls: ["stun:stun.cloudflare.com:3478"]
     - urls: ["stun:stun.l.google.com:19302"]
