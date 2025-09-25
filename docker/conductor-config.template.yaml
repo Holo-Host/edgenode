@@ -7,7 +7,7 @@ admin_interface:
 
 network:
   bootstrap_url: "https://dev-test-bootstrap2.holochain.org"
-  signal_url: "https://dev-test-bootstrap2.holochain.org"
+  signal_url: "wss://dev-test-bootstrap2.holochain.org"
   enable_mdns: false
   enable_relaying: true
 
