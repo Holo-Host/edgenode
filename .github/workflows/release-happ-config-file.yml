@@ -43,16 +43,15 @@ jobs:
           mkdir -p dist
           cp "${CRATE_DIR}/target/release/${BINARY_NAME}" "dist/${BINARY_NAME}"
           strip --strip-all "dist/${BINARY_NAME}" || true
-          tar -C dist -czf "dist/${BINARY_NAME}-linux-x86_64.tar.gz" "${BINARY_NAME}"
-          (cd dist && sha256sum "${BINARY_NAME}-linux-x86_64.tar.gz" > "${BINARY_NAME}-linux-x86_64.tar.gz.sha256")
+          (cd dist && sha256sum "${BINARY_NAME}" > "${BINARY_NAME}.sha256")
 
       - name: Upload artifact (workflow)
         uses: actions/upload-artifact@v4
         with:
           name: happ_config_file-linux-x86_64
           path: |
-            dist/happ_config_file-linux-x86_64.tar.gz
-            dist/happ_config_file-linux-x86_64.tar.gz.sha256
+            dist/happ_config_file
+            dist/happ_config_file.sha256
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -62,8 +61,8 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            dist/happ_config_file-linux-x86_64.tar.gz
-            dist/happ_config_file-linux-x86_64.tar.gz.sha256
+            dist/happ_config_file
+            dist/happ_config_file.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
