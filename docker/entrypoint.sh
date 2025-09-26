@@ -42,7 +42,7 @@ done &
 echo "Container is running. Use 'docker exec -it <container_name> /bin/sh' to access interactive shell."
 
 if [ "$CONDUCTOR_MODE" = "true" ]; then
-  exec tini -- gosu nonroot echo "" | holochain --piped --config-path /etc/holochain/conductor-config.yaml > /data/logs/holochain.log 2>&1
+  exec tini -- gosu nonroot yes '' | holochain --piped --config-path /etc/holochain/conductor-config.yaml > /data/logs/holochain.log 2>&1
 else
   exec tini -- tail -f /dev/null
 fi
