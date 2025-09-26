@@ -1,26 +1,31 @@
 # Trailblazer
 
-This repo contains the the tooling needed to participate in the decentralized "DIY" Holo Hosting network for decentralized hApps, and (when released) accounting for hosting provided using HoloFuel.
+This repo contains the the tooling needed to participate in the decentralized "DIY" Holo Hosting network for decentralized hApps, and (when operational) accounting for hosting provided using Unyt payment currency.
 
 The tooling consists of:
 
 1. a docker container specification for running Holochain in an OCI containerized environment
 2. a streamlined Linux ISO for making it easy to deploy this container, physical or virtual hardware (including Holoports)
 
-## Core Components
+For detailed overview and usage instructions [see here](/USAGE.md)
+
+## Repo Components:
 
 ### Container Build System
-A Docker-based environment that delivers a Holochain runtime environment:
+A [Docker-based environment](docker/README.md) that delivers a Holochain runtime environment:
 - Holochain binary configured to automatically run via systemd
 - Tools for installing and managing hApp from configuration files provided by hApp publishers.
 - Log-harvesting and publishing for connecting to HoloFuel accounts.
 
 ### Holos Build System
-A specialized OS builder for creating custom ISO images using Buildroot, featuring:
+A [specialized OS builder](holos/README.md) for creating custom ISO images using Buildroot, featuring:
 - Optimized Linux kernel
 - Integrated Holochain services and dependencies
 - Custom init scripts for automatic network configuration
 - Ready-to-burn disk images for deployment
+
+### Tools
+- a cli for creating and validating [hApp config files](tools/happ_config_file/README.md)
 
 ## Quick Start
 
@@ -49,3 +54,4 @@ A specialized OS builder for creating custom ISO images using Buildroot, featuri
 ## Documentation
 - [`Trailblazer Toolkit Instructions`](docker/README.md)
 - [`Holos Build System Guide`](holos/README.md)
+- [`Detailed overview and usage instructions](/USAGE.md)
