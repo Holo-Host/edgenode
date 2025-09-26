@@ -11,6 +11,10 @@ RUN wget https://github.com/matthme/holochain-binaries/releases/download/lair-bi
 COPY install_happ /usr/local/bin/install_happ
 RUN chmod +x /usr/local/bin/install_happ
 
+# Copy and set up happ_config_file
+COPY happ_config_file /usr/local/bin/happ_config_file 
+RUN chmod +x /usr/local/bin/happ_config_file
+
 # Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
