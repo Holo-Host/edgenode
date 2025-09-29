@@ -151,6 +151,25 @@ export ADMIN_PORT=<admin_port>
 install_happ <config.json> $ADMIN_PORT
 ```
 
+#### Listing Installed hApps
+
+To list installed hApps, use the `list_happs` script.
+
+1. **Get another interactive shell to the container.**
+2. **Run the script:**
+
+```sh
+su - nonroot
+export ADMIN_PORT=<admin_port>
+list_happs $ADMIN_PORT
+```
+
+Or with default port:
+
+```sh
+list_happs
+```
+
 #### Manual Install (Kando Example)
 
 1. **Get another interactive shell to the container.**
