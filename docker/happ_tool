@@ -25,7 +25,8 @@ echo "[*] Downloading happ from $HAPP_URL ..."
 curl -sSL "$HAPP_URL" -o "$HAPP_FILE"
 
 # ---- Generate agent key ----
-AGENT_KEY=$(hc s -f "$ADMIN_PORT" call new-agent | awk '{print $NF}')
+AGENT_KEY=$(hc s call -r "$ADMIN_PORT" new-agent | awk '{print $NF}')
+## AGENT_KEY=$(hc s -f "$ADMIN_PORT" call new-agent | awk '{print $NF}')
 
 # ---- Build App ID ----
 APP_ID="${APP_NAME}::${APP_VERSION}::${AGENT_KEY}"
@@ -33,7 +34,8 @@ echo "[*] App ID = $APP_ID"
 
 # ---- Install app ----
 echo "[*] Installing app..."
-hc s -f "$ADMIN_PORT" call install-app \
+## hc s -f "$ADMIN_PORT" call install-app \
+hc s call -r "$ADMIN_PORT" install-app \
   --agent-key "$AGENT_KEY" \
   --app-id "$APP_ID" \
   "$HAPP_FILE" \
