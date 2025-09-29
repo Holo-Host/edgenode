@@ -45,14 +45,14 @@ docker pull ghcr.io/holo-host/trailblazer
 2. Launch with persistent storage:
 
 ```sh
-docker run -v $(pwd)/holo-data:/data ghcr.io/holo-host/trailblazer
+docker run --name trailblazer -dit -v $(pwd)/holo-data:/data ghcr.io/holo-host/trailblazer
 ```
 
-3. Access the container and create a sandbox:
+3. Access the container and check for a running `holochain` process:
 
 ```sh
 docker exec -it trailblazer su - nonroot
-hc sandbox create
+ps -ef
 ```
 
 ### For Holos Users
@@ -64,6 +64,6 @@ hc sandbox create
 
 ## Documentation
 
-- [`Trailblazer Toolkit Instructions`](docker/README.md)
-- [`Holos Build System Guide`](holos/README.md)
-- [`Detailed overview and usage instructions](/USAGE.md)
+- [Trailblazer Toolkit Instructions](docker/README.md)
+- [Holos Build System Guide](holos/README.md)
+- [Detailed overview and usage instructions](/USAGE.md)
