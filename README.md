@@ -1,48 +1,59 @@
 # Trailblazer
 
-This repo contains the the tooling needed to participate in the decentralized "DIY" Holo Hosting network for decentralized hApps, and (when operational) accounting for hosting provided using Unyt payment currency.
+This repo contains the tooling needed to participate in the decentralized "DIY" Holo Hosting network for decentralized hApps, and (when operational) accounting for hosting provided using Unyt payment currency.
 
 The tooling consists of:
 
-1. a docker container specification for running Holochain in an OCI containerized environment
-2. a streamlined Linux ISO for making it easy to deploy this container, physical or virtual hardware (including Holoports)
+1. A Docker container specification for running Holochain with hApps in an OCI-compliant containerized environment.
+2. A streamlined Linux ISO for making it easy to deploy this container on physical or virtual hardware (especially HoloPorts)
 
-For detailed overview and usage instructions [see here](/USAGE.md)
+For a detailed overview and usage instructions [see here](/USAGE.md).
 
 ## Repo Components:
 
 ### Container Build System
+
 A [Docker-based environment](docker/README.md) that delivers a Holochain runtime environment:
-- Holochain binary configured to automatically run via systemd
-- Tools for installing and managing hApp from configuration files provided by hApp publishers.
-- Log-harvesting and publishing for connecting to HoloFuel accounts.
+
+- Holochain binary configured to automatically run via `tini`.
+- WIP: Tools for installing and managing hApps from configuration files provided by hApp publishers.
+- TBD: Log-harvesting and publishing for connecting to HoloFuel/Unyt accounts.
 
 ### Holos Build System
+
 A [specialized OS builder](holos/README.md) for creating custom ISO images using Buildroot, featuring:
-- Optimized Linux kernel
-- Integrated Holochain services and dependencies
-- Custom init scripts for automatic network configuration
-- Ready-to-burn disk images for deployment
+
+- Optimized Linux kernel.
+- Integrated Holochain services and dependencies (via `runc`-deployed container).
+- Custom init scripts for automatic network configuration.
+- Ready-to-burn disk images for deployment.
 
 ### Tools
-- a cli for creating and validating [hApp config files](tools/happ_config_file/README.md)
+
+- A CLI utility for creating and validating [hApp config files](tools/happ_config_file/README.md).
 
 ## Quick Start
 
 ### To test the container:
+
 1. Pull the Docker image:
-   ```sh
-   docker pull ghcr.io/holo-host/trailblazer
-   ```
+
+```sh
+docker pull ghcr.io/holo-host/trailblazer
+```
+
 2. Launch with persistent storage:
-   ```sh
-   docker run -v $(pwd)/holo-data:/data ghcr.io/holo-host/trailblazer
-   ```
+
+```sh
+docker run -v $(pwd)/holo-data:/data ghcr.io/holo-host/trailblazer
+```
+
 3. Access the container and create a sandbox:
-   ```sh
-   docker exec -it trailblazer su - nonroot
-   hc sandbox create
-   ```
+
+```sh
+docker exec -it trailblazer su - nonroot
+hc sandbox create
+```
 
 ### For Holos Users
 
@@ -52,6 +63,7 @@ A [specialized OS builder](holos/README.md) for creating custom ISO images using
 4. Follow [these](TBD) instructions to install and manage hApp instances you will be hosting.
 
 ## Documentation
+
 - [`Trailblazer Toolkit Instructions`](docker/README.md)
 - [`Holos Build System Guide`](holos/README.md)
 - [`Detailed overview and usage instructions](/USAGE.md)

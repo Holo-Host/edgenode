@@ -5,6 +5,10 @@ set -eu
 mkdir -p /data/holochain/etc /data/holochain/var /data/logs
 chown -R nonroot:nonroot /data
 
+# Fix ownership for copied files in nonroot home
+chown -R nonroot:nonroot /home/nonroot
+echo "Chowned /home/nonroot contents for copied files" >> /data/logs/startup.log
+
 # Ensure parent directories exist for symlinks
 mkdir -p /var/local/lib
 
