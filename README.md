@@ -13,7 +13,7 @@ For a detailed overview and usage instructions [see here](/USAGE.md).
 
 ### Container Build System
 
-A [Docker-based environment](docker/README.md) that delivers a Holochain runtime environment:
+A [Docker-based container](docker/README.md) that delivers a Holochain runtime environment ready to run hApps:
 
 - Holochain binary configured to automatically run via `tini`.
 - WIP: Tools for installing and managing hApps from configuration files provided by hApp publishers.
@@ -48,7 +48,7 @@ docker pull ghcr.io/holo-host/trailblazer
 docker run --name trailblazer -dit -v $(pwd)/holo-data:/data ghcr.io/holo-host/trailblazer
 ```
 
-3. Access the container and check for a running `holochain` process:
+3. Access the container and check for a running hApp-ready `holochain` process:
 
 ```sh
 docker exec -it trailblazer su - nonroot
