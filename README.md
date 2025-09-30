@@ -1,6 +1,6 @@
-# Trailblazer
+# Edge Node
 
-This repo contains the tooling needed to participate in the decentralized "DIY" Holo Hosting network for decentralized hApps, and (when operational) accounting for hosting provided using Unyt payment currency.
+This repo contains the tooling needed to participate in the decentralized support network for Holochain hApps, and (when operational) accounting for services provided using Unyt payment currency.
 
 The tooling consists of:
 
@@ -60,7 +60,7 @@ ps -ef
 1. Download a release of the iso from our releases page: TBD
 2. Burn a USB stick, to install on your own hardware or install it in a virtualized environment of your choosing.
 3. Follow the instructions provided to choose persistence, container instance, and other configuration options for the machine.
-4. Follow [these](TBD) instructions to install and manage hApp instances you will be hosting.
+4. Follow [these](TBD) instructions to install and manage hApp instances you will be running on your node.
 
 ## Documentation
 
