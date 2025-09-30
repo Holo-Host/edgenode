@@ -1,0 +1,17 @@
+# A sample/default configuration file suitable for a Dell XPS13 9310
+storage:
+    install_partition: /dev/sda1
+    persist_partition: /dev/sda2
+network:
+    nameservers:
+    interfaces:
+        # Use the onboard controller, with DHCP
+        - identifier: !pci_address
+            address: "0000:00:14.3"
+          static_addresses:
+security:
+    github_usernames:
+        - mattgeddes
+    ssh_keys:
+    rootpw_hash:
+

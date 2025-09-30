@@ -1,0 +1,17 @@
+# A sample/default configuration file suitable for a holoport
+storage:
+    install_partition: /dev/sda1
+    persist_partition: /dev/sdb1
+network:
+    nameservers:
+    interfaces:
+        # Use the onboard controller, with DHCP
+        - identifier: !pci_address
+            address: "0000:01:00.0"
+          static_addresses:
+security:
+    github_usernames:
+        - changeme
+    ssh_keys:
+    rootpw_hash:
+
