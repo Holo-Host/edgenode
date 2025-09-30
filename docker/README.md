@@ -215,18 +215,16 @@ Holochain logs are redirected to `/data/logs/holochain.log` inside the container
 
 Logs are rotated daily (see [Process Management and Logging](#process-management-and-logging)) with 7 days retention.
 
-### Production Deployment with Conductor
+## Production Deployment with Conductor
 
 To deploy in production using the Holochain conductor:
 
 0. Remove any prior containers if you need to: `docker stop trailblazer && docker rm trailblazer`
-
-1. __Enable Conductor Mode__
-   Set the `CONDUCTOR_MODE` environment variable when running the container:
+1. __Run the Container__
+The Holochain conductor will start up automatically with the container:
 
 ```sh
 docker run --name trailblazer -dit \
-  -e CONDUCTOR_MODE=true \
   -v $(pwd)/holo-data:/data \
   -p 4444:4444 \
   ghcr.io/holo-host/trailblazer
@@ -234,20 +232,13 @@ docker run --name trailblazer -dit \
 
 2. **Conductor Configuration**
 
-   The Conductor configuration operates on certain conventions:
+   The Conductor configuration in this container operates on certain conventions:
 
    - Admin port must be `4444`
    - `lair_root` must be empty
    - Configuration must use LSB-compliant paths
 
-3. **Starting the Conductor**
-   Start an interactive shell in the container and then enter:
-
-```sh
-holochain -c /etc/holochain/conductor-config.yaml
-```
-
-4. **Persistent Configuration**
+3. **Persistent Configuration**
    The conductor configuration is persisted through the same volume mount structure as sandbox mode:
 
    - `/etc/holochain` → `/data/holochain/etc`

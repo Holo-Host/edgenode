@@ -17,7 +17,6 @@ A [Docker-based container](docker/README.md) that delivers a Holochain Edge Node
 
 - Holochain binary configured to automatically run via `tini`.
 - WIP: Tools for installing and managing hApps from configuration files provided by hApp publishers.
-- TBD: Log-harvesting and publishing for connecting to HoloFuel/Unyt accounts.
 
 ### HolOS Build System
 
