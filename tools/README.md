@@ -1,8 +1,8 @@
-# tools for working with DIY Holo Hosting Nodes
+# tools for working with Edge Nodes
 
 ## Happ Config File
 
-This tool aids in creating and verifying configuration files that are used by hosters to install hApps on their nodes.
+This tool aids in creating and verifying configuration files that are used by Edge Node providers to install hApps on their nodes.
 
 ```
 $ happ_config_file 
