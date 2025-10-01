@@ -1,10 +1,10 @@
-# tools for working with Edge Nodes
+# Tools for working with Edge Nodes
 
 ## Happ Config File
 
 This tool aids in creating and verifying configuration files that are used by Edge Node providers to install hApps on their nodes.
 
-```
+```html
 $ happ_config_file 
 Create and validate JSON config files
 

@@ -19,9 +19,13 @@ HAPP_URL=$(jq -r '.app.happUrl' "$CONFIG_FILE")
 NETWORK_SEED=$(jq -r '.app.modifiers.networkSeed // empty' "$CONFIG_FILE")
 
 # ---- Download happ file ----
-HAPP_FILE="${APP_NAME}-${APP_VERSION}.happ"
+HAPP_FILE="/var/local/lib/holochain/tmp/${APP_NAME}-${APP_VERSION}.happ"
 echo "[*] Downloading happ from $HAPP_URL ..."
 curl -sSL "$HAPP_URL" -o "$HAPP_FILE"
+if [ ! -f "$HAPP_FILE" ]; then
+  echo "[!] Download failed at $HAPP_FILE"
+  exit 1
+fi
 
 # ---- Generate agent key ----
 AGENT_KEY=$(hc s call -r "$ADMIN_PORT" new-agent | awk '{print $NF}')
