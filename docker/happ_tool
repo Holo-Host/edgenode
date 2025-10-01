@@ -21,6 +21,32 @@ if [ "$SCRIPT_NAME" = "uninstall_happ" ]; then
   exit 0
 fi
 
+if [ "$SCRIPT_NAME" = "enable_happ" ]; then
+  APP_ID="$1"
+  ADMIN_PORT="${2:-4444}"
+  if [ -z "$APP_ID" ]; then
+    echo "Usage: enable_happ <APP_ID> [<ADMIN_PORT>]"
+    exit 1
+  fi
+  echo "[*] Enabling app $APP_ID..."
+  hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
+  echo "[✔] App $APP_ID enabled!"
+  exit 0
+fi
+
+if [ "$SCRIPT_NAME" = "disable_happ" ]; then
+  APP_ID="$1"
+  ADMIN_PORT="${2:-4444}"
+  if [ -z "$APP_ID" ]; then
+    echo "Usage: disable_happ <APP_ID> [<ADMIN_PORT>]"
+    exit 1
+  fi
+  echo "[*] Disabling app $APP_ID..."
+  hc s call -r "$ADMIN_PORT" disable-app "$APP_ID"
+  echo "[✔] App $APP_ID disabled!"
+  exit 0
+fi
+
 # Usage: install_happ config.json <ADMIN_PORT>
 CONFIG_FILE="$1"
 
