@@ -1,0 +1,35 @@
+name: Build HolOS ISO
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git wget unzip libncurses5-dev libssl-dev bc bison flex libelf-dev libssl-dev make
+
+    - name: Build HolOS ISO
+      run: |
+        cd holos
+        make clean
+        make iso
+
+    - name: Upload ISO artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: holos-iso
+        path: holos/tmp/holos-*.iso
+        retention-days: 5
