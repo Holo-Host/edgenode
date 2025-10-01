@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential git wget unzip libncurses5-dev libssl-dev bc bison flex libelf-dev libssl-dev make
+        sudo apt-get install -y build-essential git wget unzip libncurses5-dev libssl-dev bc bison flex libelf-dev libssl-dev make musl-tools
 
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
