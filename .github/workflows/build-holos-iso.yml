@@ -13,6 +13,25 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Cache Rust dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          holos/rust/holos-config/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Cache Buildroot downloads
+      uses: actions/cache@v4
+      with:
+        path: holos/dl
+        key: ${{ runner.os }}-buildroot-dl-${{ hashFiles('holos/Makefile', 'holos/holos-buildroot-2025.08.config') }}
+        restore-keys: |
+          ${{ runner.os }}-buildroot-dl-
+
     - name: Install dependencies
       run: |
         sudo apt-get update
