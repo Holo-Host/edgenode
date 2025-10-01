@@ -1,5 +1,5 @@
 # Version string
-HOLOS_VERSION := 0.0.3
+HOLOS_VERSION := 0.0.5
 
 # We need some temporary scratch space for build artifacts. Everything generated
 # by this build process will be under this tree and we shouldn't be modifying
@@ -36,6 +36,31 @@ help:
 ${TMPDIR}:
 	mkdir -p ${TMPDIR}
 
+# Overlay directory for generated artifacts.
+${TMPDIR}/overlay: ${TMPDIR}
+	mkdir -p $@
+
+${TMPDIR}/overlay/usr/bin: ${TMPDIR}
+	mkdir -p $@
+
+${TMPDIR}/overlay/usr/bin/holos-config: rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config ${TMPDIR}/overlay/usr/bin
+	cp $< $@
+	strip $@
+
+rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config:
+	cd rust/holos-config && cargo build --release --target x86_64-unknown-linux-musl
+
+${TMPDIR}/overlay/etc/holos/configs:
+	mkdir -p $@
+
+default-configs: ${TMPDIR}/overlay/etc/holos/configs
+	cp rust/holos-config/contrib/*.yaml $<
+
+version-file: ${TMPDIR}/overlay/etc/holos/configs
+	echo ${HOLOS_VERSION} > ${TMPDIR}/overlay/etc/holos-version
+
+external-artifacts: ${TMPDIR}/overlay/usr/bin/holos-config default-configs version-file
+
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz: ${TMPDIR}
 	curl -q -o $@ ${BUILDROOT_URL}
 
@@ -45,8 +70,7 @@ ${TMPDIR}/buildroot-${BUILDROOT_VERSION}: ${TMPDIR}/buildroot-${BUILDROOT_VERSIO
 ${BR_BUILD_DIR}: ${TMPDIR}
 	mkdir -p ${BR_BUILD_DIR}
 
-# TODO: This shouldn't just copy the file. There are things we want to modify within.
-${BR_BUILD_DIR}/.config: ${BR_BUILD_DIR} ${BUILDROOT_CONFIG}
+${BR_BUILD_DIR}/.config: ${BR_BUILD_DIR} ${BUILDROOT_CONFIG} external-artifacts
 	cp ${BUILDROOT_CONFIG} $@
 
 # The kernel is one of the artifacts built
@@ -65,18 +89,34 @@ ${TMPDIR}/isoroot/isolinux: ${TMPDIR}
 # work too, but this is a version-independent source path).
 ${TMPDIR}/isoroot/boot/bzImage: ${BR_BUILD_DIR}/images/bzImage ${TMPDIR}/isoroot/boot
 	cp $< $@
+
 ${TMPDIR}/isoroot/boot/rootfs.cpio.gz: ${BR_BUILD_DIR}/images/rootfs.cpio
 	# Compress it on the fly
 	gzip -c9 $< > $@
+
 ${TMPDIR}/isoroot/isolinux/isolinux.bin: ${BR_BUILD_DIR}/host/share/syslinux/isolinux.bin ${TMPDIR}/isoroot/isolinux
 	cp $< $@
+
+${TMPDIR}/isoroot/isolinux/libmenu.c32: ${BR_BUILD_DIR}/host/share/syslinux/libmenu.c32
+	cp $< $@
+
+${TMPDIR}/isoroot/isolinux/libutil.c32: ${BR_BUILD_DIR}/host/share/syslinux/libutil.c32
+	cp $< $@
+
+${TMPDIR}/isoroot/isolinux/menu.c32: ${BR_BUILD_DIR}/host/share/syslinux/menu.c32 ${TMPDIR}/isoroot/isolinux/libutil.c32 ${TMPDIR}/isoroot/isolinux/libmenu.c32
+	cp $< $@
+
 ${TMPDIR}/isoroot/isolinux/ldlinux.c32: ${BR_BUILD_DIR}/host/share/syslinux/ldlinux.c32
 	cp $< $@
+
+${MODULE_DEST}/%: %
+	cp ${BR_BUILD_DIR}/host/share/syslinux/$< $@
+
 ${TMPDIR}/isoroot/isolinux/isolinux.cfg: isolinux.cfg
 	cp $< $@
 
 # Now that we have the artifacts we need, build a bootable hybrid ISO artifact
-${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg
+${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg ${TMPDIR}/isoroot/isolinux/menu.c32
 	echo ${HOLOS_VERSION} > ${TMPDIR}/isoroot/holos-version
 	cd ${TMPDIR}/isoroot && xorriso -as mkisofs \
 		-r \

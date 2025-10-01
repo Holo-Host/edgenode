@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Bring up network interfaces discovered after default network service has started. Ideally
+# we'd do all of the hardware discovery and configuration before the default network service
+# and have it do its thing. 
+#
+
+start() {
+	printf "Bringing up network interfaces: "
+	for i in /etc/init.d/net.*
+	do
+		iface=`basename $i`
+		if [ "$iface" != "net.lo" ]
+		then
+			rc-service `basename $i` start
+			printf "$iface "
+		fi
+	done
+	echo "OK"
+}
+
+stop() {
+	# We don't currently have anything we need to do here, but may later.
+	printf "Stopping interfaces: "
+	echo "OK"
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart|reload)
+		restart
+		;;
+	*)
+		echo "Usage: $0 (start|stop|restart)"
+		exit 1
+esac
