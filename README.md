@@ -1,6 +1,6 @@
-# Trailblazer: DIY Holochain Edge Nodes
+# Edge Node
 
-This repo contains the tooling needed to deploy and operate Holochain Edge Nodes and run hApps on them!
+This repo contains the tooling needed to deploy and operate Holochain Edge Nodes and run decentralized hApps on them!
 
 The tooling consists of:
 

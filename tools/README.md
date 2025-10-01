@@ -1,4 +1,4 @@
-# Tools for working with DIY Holochain Edge Nodes
+# Tools for working with Edge Nodes
 
 ## Happ Config File
 
