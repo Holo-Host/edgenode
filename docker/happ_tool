@@ -9,6 +9,18 @@ if [ "$SCRIPT_NAME" = "list_happs" ]; then
   exit 0
 fi
 
+if [ "$SCRIPT_NAME" = "uninstall_happ" ]; then
+  APP_ID="$1"
+  if [ -z "$APP_ID" ]; then
+    echo "Usage: uninstall_happ <APP_ID> [<ADMIN_PORT>]"
+    exit 1
+  fi
+  echo "[*] Uninstalling app $APP_ID..."
+  hc s call -r "$ADMIN_PORT" uninstall-app "$APP_ID"
+  echo "[✔] App $APP_ID uninstalled!"
+  exit 0
+fi
+
 # Usage: install_happ config.json <ADMIN_PORT>
 CONFIG_FILE="$1"
 

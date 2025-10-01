@@ -11,8 +11,9 @@ RUN wget https://github.com/matthme/holochain-binaries/releases/download/lair-bi
 COPY happ_tool /usr/local/bin/happ_tool
 RUN chmod +x /usr/local/bin/happ_tool
 RUN ln -sf /usr/local/bin/happ_tool /usr/local/bin/install_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/uninstall_happ && \
     ln -sf /usr/local/bin/happ_tool /usr/local/bin/list_happs && \
-    chmod +x /usr/local/bin/install_happ /usr/local/bin/list_happs
+    chmod +x /usr/local/bin/install_happ /usr/local/bin/list_happs /usr/local/bin/uninstall_happ
 
 # Copy and set up happ_config_file
 COPY happ_config_file /usr/local/bin/happ_config_file 
