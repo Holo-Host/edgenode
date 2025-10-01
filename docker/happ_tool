@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: install_happ config.json <ADMIN_PORT>
-CONFIG_FILE="$1"
 ADMIN_PORT="${2:-4444}"   # default to 4444 if not provided
 SCRIPT_NAME=$(basename "$0")
 
@@ -11,6 +9,8 @@ if [ "$SCRIPT_NAME" = "list_happs" ]; then
   exit 0
 fi
 
+# Usage: install_happ config.json <ADMIN_PORT>
+CONFIG_FILE="$1"
 
 # ---- Parse JSON ----
 APP_NAME=$(jq -r '.app.name' "$CONFIG_FILE")

@@ -14,6 +14,10 @@ RUN ln -sf /usr/local/bin/happ_tool /usr/local/bin/install_happ && \
     ln -sf /usr/local/bin/happ_tool /usr/local/bin/list_happs && \
     chmod +x /usr/local/bin/install_happ /usr/local/bin/list_happs
 
+# Copy and set up happ_config_file
+COPY happ_config_file /usr/local/bin/happ_config_file 
+RUN chmod +x /usr/local/bin/happ_config_file
+
 # Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
