@@ -45,7 +45,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential git wget unzip libncurses5-dev libssl-dev bc bison flex libelf-dev libssl-dev make musl-tools
         sudo apt-get clean  # Clear apt cache to free space
-        rm -rf /var/lib/apt/lists/*  # Remove apt lists
 
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -71,7 +70,6 @@ jobs:
       run: |
         sudo rm -rf /tmp/*
         sudo apt-get clean
-        rm -rf /var/lib/apt/lists/*
 
     - name: Upload ISO artifact
       uses: actions/upload-artifact@v4
