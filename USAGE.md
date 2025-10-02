@@ -16,8 +16,9 @@ We solve these challenges in a very simple way with two technical components and
 
 With these tools it becomes very simple for a community-based distributed Holochain support network to emerge.  Groups that want to run an application and need to solve the challenges described above can simply create a configuration file specifying the application they want to run and send it to an Edge Node provider.  Of course the terms of that negotiation are completely up to the parties involved, but we also include in the configuration file and in the container image, the information slots and service reporting tools to  account for the services using a Unyt based mutual credit currency.  For more about Unyt please see: https://unyt.co
 
-The rest of this documentation provides instructions from two vantage points:  Application providers and Edge Node providers.  
-- For Application providers, the instructions are simply about how to create the configuration file of the hApp they want to run which they will send to an Edge Node provider.  
+The rest of this documentation provides instructions from two vantage points:  Application providers and Edge Node providers.
+
+- For Application providers, the instructions are simply about how to create the configuration file of the hApp they want to run which they will send to an Edge Node provider.
 - For Edge Node providers, the instructions include how to set up a node, and how to install and manage applications using configuration files created by Application providers.
 
 ## Application Provider Instructions
@@ -88,10 +89,11 @@ To be an Edge Node provider, you simply need to run the OCI container on the pla
 
 Step 1: Install the ISO on the machine:
 
-1. Download the ISO image here: https://github.com/Holo-Host/edgenode/releases/tag/HolOS-v0.0.5
+1. Download the ISO image here: https://github.com/Holo-Host/edgenode/releases/tag/HolOS-v0.0.6
 2. Install it on a usb stick as a bootable device following these instructions: {Link TODO}
 3. Boot your computer from the ISO
 4. Choose the configuration you want:
+
    1. Networking
    2. Hard-drive
    3. Container
