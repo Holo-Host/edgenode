@@ -68,6 +68,9 @@ Step 1: Create JSON file using `happ_config_file create`, modifying the fields o
 Some notes on the contents of the fields:
 
 - `networkSeed`: this seed must match the seed used by other participants in the network, otherwise the node will not participate in the application.
+
+NOTE: these fields are placeholder for future use, they are not yet implemented.
+
 - `payorUnytAgentPubKey`: Unyt Agent who will be paying
 - `agreementHash`: the action hash agreement that invoices will get attached to for the work performed.
 - `payeeUnytAgentPubKey`: Optional Unyt Agent who will get paid (will be validated against sys registered agent)
