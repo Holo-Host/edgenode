@@ -1,6 +1,14 @@
 # Edge Node Container
 
-A docker container for running Holochain and installing hApps to host them as always-on-nodes.
+A docker container for running Holochain and installing hApps to host them as always-on-nodes.  
+
+Besides `holochain` and `hc`, the following commands are available in the container to manage the hApp lifecycle:
+- `list_happs`
+- `happ_config_file`
+- `install_happ`
+- `enable_happ`
+- `disable_happ`
+- `uninstall_happ`
 
 ## Table of Contents
 
@@ -56,7 +64,6 @@ docker pull ghcr.io/holo-host/edgenode
 To run the container with persistent storage, you need to map a local directory on your host machine to the `/data` volume in the container.
 
 1. Create the directory for persistent storage:
-
 2. Run the container in the background:
 
 ```sh
