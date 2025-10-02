@@ -1,6 +1,6 @@
 # happ_config_file
 
-A CLI for creating and validating JSON configuration files used by Trailblazer tools.
+A CLI for creating and validating JSON configuration files used by Edge Node tools.
 
 ## Build
 
@@ -19,6 +19,7 @@ happ_config_file <COMMAND>
 ```
 
 Commands:
+
 - create — write a config file template
 - validate — check a config file for structure and basic rules
 
@@ -29,12 +30,14 @@ happ_config_file create [--name <app_name>] [--gateway] [--economics] [--init-zo
 ```
 
 Options:
+
 - --name <app_name>: Optional name to use for app.name; output file will be `<app_name>_config.json`. Name must match `[a-z0-9_]+`.
 - --gateway: Include optional env.gw section
 - --economics: Include optional economics section
 - --init-zome-calls: Include example app.init_zome_calls block
 
 Behavior:
+
 - If `--name` is provided, the generated file is `<name>_config.json` and `app.name` is set to `<name>`.
 - If `--name` is omitted, the generated file is `example_happ_config.json` and `app.name` is `example_happ`.
 - Optional sections are omitted if the flags are not provided.
