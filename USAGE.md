@@ -75,13 +75,13 @@ Some notes on the contents of the fields:
 
 Step 2: Send the file to the Edge Node provider or put it someplace on the internet so that it can be downloaded, i.e. a github.gist, etc.
 
-Thats’ it!
+That's it!
 
 ## Edge Node Provider Instructions
 
 To be an Edge Node provider, you simply need to run the OCI container on the platform of your choice.  This can be a virtual machine,  a machine that you already have that runs docker or some other OCI container executable device, or a machine on which you have installed our minimal Linux ISO image.  Here we provide instructions for various of these use-cases:
 
-### I have a HoloPort or spare computer at home I want to use for provide an Edge Node
+### I have a HoloPort or spare computer at home I want to use for providing an Edge Node
 
 Step 1: Install the ISO on the machine:
 
