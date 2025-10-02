@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-m
 
     steps:
     - name: Checkout repository
@@ -32,10 +32,20 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildroot-dl-
 
+    - name: Cache Buildroot output
+      uses: actions/cache@v4
+      with:
+        path: holos/output
+        key: ${{ runner.os }}-buildroot-out-${{ hashFiles('holos/Makefile', 'holos/holos-buildroot-2025.08.config', 'holos/kernel-config-x86_64.config') }}
+        restore-keys: |
+          ${{ runner.os }}-buildroot-out-
+
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential git wget unzip libncurses5-dev libssl-dev bc bison flex libelf-dev libssl-dev make musl-tools
+        sudo apt-get clean  # Clear apt cache to free space
+        rm -rf /var/lib/apt/lists/*  # Remove apt lists
 
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -44,11 +54,24 @@ jobs:
         target: x86_64-unknown-linux-musl
         override: true
 
+    - name: Cleanup temp files before build
+      run: |
+        sudo rm -rf /tmp/*
+        df -h  # Log disk usage
+
     - name: Build HolOS ISO
       run: |
         cd holos
-        make clean
+        make clean  # Clean any local artifacts
         make iso
+        df -h  # Log final disk usage
+
+    - name: Cleanup after build
+      if: always()
+      run: |
+        sudo rm -rf /tmp/*
+        sudo apt-get clean
+        rm -rf /var/lib/apt/lists/*
 
     - name: Upload ISO artifact
       uses: actions/upload-artifact@v4
