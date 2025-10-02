@@ -1,4 +1,4 @@
-# Trailblazer
+# Edge Node Container
 
 A docker container for running Holochain and installing hApps to host them as always-on-nodes.
 
@@ -7,7 +7,7 @@ A docker container for running Holochain and installing hApps to host them as al
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 
-   - [Obtaining the Image](#obtaining-the-image)
+   - [Obtaining the Container Image](#obtaining-the-container-image)
    - [Running the Container](#running-the-container)
 
 - [Usage](#usage)
@@ -36,57 +36,41 @@ A docker container for running Holochain and installing hApps to host them as al
 ## Prerequisites
 
 - Docker installed and running.
-- A GitHub personal access token (classic) with `read:packages` access on the Trailblazer repo if you need to pull private images.
 
 ## Getting Started
 
-### Obtaining the Image
+### Obtaining the Container Image
 
-Private images are available from [GitHub Packages](https://github.com/Holo-Host/trailblazer/pkgs/container/trailblazer).
+The container images are available from [GitHub Packages](https://github.com/Holo-Host/edgenode/pkgs/container/edgenode).
 
 ```sh
 # Log in to GitHub Container Registry
 docker login ghcr.io
 
 # Pull the latest image
-docker pull ghcr.io/holo-host/trailblazer
+docker pull ghcr.io/holo-host/edgenode
 ```
 
 ### Running the Container
 
 To run the container with persistent storage, you need to map a local directory on your host machine to the `/data` volume in the container.
 
-1. **Create a host directory for persistence:**
-2. **Run the container:**
+1. Create the directory for persistent storage:
 
-For basic usage (interactive mode), run without `CONDUCTOR_MODE`:
-
-```sh
-docker run --name trailblazer -dit \
-  -v $(pwd)/holo-data:/data \
-  ghcr.io/holo-host/trailblazer
-```
-
-To auto-start the Holochain conductor with supervised process management and logging (see [Process Management and Logging](#process-management-and-logging)), set `CONDUCTOR_MODE=true`:
+2. Run the container in the background:
 
 ```sh
-docker run --name trailblazer -dit \
-  -e CONDUCTOR_MODE=true \
+docker run --name edgenode -dit \
   -v $(pwd)/holo-data:/data \
-  -p 4444:4444 \
-  ghcr.io/holo-host/trailblazer
+  ghcr.io/holo-host/edgenode 
 ```
-
-This will start the container in detached mode and name it `trailblazer`. Manual `hc run` commands are still possible inside the container but will now be supervised by tini.
-
-## Usage
 
 ### Interactive Shell Access
 
 To access an interactive shell in the running container:
 
 ```sh
-docker exec -it trailblazer /bin/sh
+docker exec -it edgenode su - nonroot
 ```
 
 ### Creating a Holochain Sandbox
@@ -210,8 +194,8 @@ RUST_LOG=debug hc sandbox run 0
 Holochain logs are redirected to `/data/logs/holochain.log` inside the container for persistence.
 
 - If using a volume mount (e.g., `-v $(pwd)/holo-data:/data`), access logs directly from the host at `./holo-data/logs/holochain.log`.
-- To copy logs from a running container: `docker cp trailblazer:/data/logs/holochain.log .`
-- View live logs: `docker exec -it trailblazer tail -f /data/logs/holochain.log`
+- To copy logs from a running container: `docker cp edgenode:/data/logs/holochain.log .`
+- View live logs: `docker exec -it edgenode tail -f /data/logs/holochain.log`
 
 Logs are rotated daily (see [Process Management and Logging](#process-management-and-logging)) with 7 days retention.
 
@@ -219,15 +203,15 @@ Logs are rotated daily (see [Process Management and Logging](#process-management
 
 To deploy in production using the Holochain conductor:
 
-0. Remove any prior containers if you need to: `docker stop trailblazer && docker rm trailblazer`
+0. Remove any prior containers if you need to: `docker stop edgenode && docker rm edgenode`
 1. __Run the Container__
-The Holochain conductor will start up automatically with the container:
+   The Holochain conductor will start up automatically with the container:
 
 ```sh
-docker run --name trailblazer -dit \
+docker run --name edgenode -dit \
   -v $(pwd)/holo-data:/data \
   -p 4444:4444 \
-  ghcr.io/holo-host/trailblazer
+  ghcr.io/holo-host/edgenode
 ```
 
 2. **Conductor Configuration**
@@ -243,6 +227,10 @@ docker run --name trailblazer -dit \
 
    - `/etc/holochain` → `/data/holochain/etc`
    - `/var/local/lib/holochain` → `/data/holochain/var`
+
+```sh
+holochain -c /etc/holochain/conductor-config.yaml
+```
 
 ### Process Management and Logging
 
@@ -339,11 +327,11 @@ The script will:
 To quickly test that the `holochain` and `hc` binaries are functional:
 
 ```sh
-docker run --name trailblazer -dit ghcr.io/holo-host/trailblazer
-docker exec -it trailblazer /bin/sh
+docker run --name edgenode -dit ghcr.io/holo-host/edgenode
+docker exec -it edgenode /bin/sh
 which holochain
 which hc
 holochain --version
- hc --version
+hc --version
 lair-keystore --version
 ```
