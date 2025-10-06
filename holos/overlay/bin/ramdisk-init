@@ -1,0 +1,42 @@
+#!/bin/sh
+
+# Mount virtual filesystems
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+
+# Load any/all drivers that might give us access to the root filesystem.
+# TODO: We really only want the essential drivers to be included in the
+# initrd, and only load those required. In the short term, we're
+# including *all* of the kernel modules and load anything that has a 
+# modalias....
+modprobe -a virtio_blk virtio_pci virtio ext4 sd_mod
+for bus in pci usb
+do
+	for i in sys/bus/$bus/devices/*
+	do
+		MODALIAS=""
+		. $i/uevent
+		[ -z "$MODALIAS" ] || modprobe "$MODALIAS" 2>/dev/null
+	done
+done
+
+# wait for the dust to settle and then have mdev create device nodes
+sleep 1
+mdev -s
+
+# Look for the real root filesystem and mount it
+rootfs=`sed -e 's/.*root=//' /proc/cmdline | sed -e 's/ .*//'`
+if [ -z "$rootfs" ]
+then
+	echo "Defaulting to LABEL=HolOS-system as root filesystem"
+	rootfs="LABEL=HolOS-system"
+else
+	echo "Using $rootfs as root filesystem"
+fi
+# busybox mount doesn't support mounting by label...
+rootdev=`blkid | tr -d '"' |fgrep $rootfs | cut -f 1 -d :`
+echo "Mounting root filesystem on device $rootdev"
+mount -t ext4 $rootdev /mnt
+
+# Hand off to the real root
+exec switch_root /mnt /sbin/init

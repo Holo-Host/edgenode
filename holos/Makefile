@@ -1,5 +1,5 @@
 # Version string
-HOLOS_VERSION := 0.0.5
+HOLOS_VERSION := 0.0.6
 
 # We need some temporary scratch space for build artifacts. Everything generated
 # by this build process will be under this tree and we shouldn't be modifying
@@ -118,9 +118,12 @@ ${TMPDIR}/isoroot/isolinux/isolinux.cfg: isolinux.cfg
 # Now that we have the artifacts we need, build a bootable hybrid ISO artifact
 ${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg ${TMPDIR}/isoroot/isolinux/menu.c32
 	echo ${HOLOS_VERSION} > ${TMPDIR}/isoroot/holos-version
+	# The volume name string is relevant. The code for installation and
+	# upgrades uses this to discover source media, so that the user doesn't
+	# have to work it out and tell us.
 	cd ${TMPDIR}/isoroot && xorriso -as mkisofs \
 		-r \
-		-V HolOS \
+		-V HolOS-install \
 		-o ../holos-${HOLOS_VERSION}.iso \
 		-isohybrid-mbr ../br-build/host/share/syslinux/isohdpfx.bin \
 		-b isolinux/isolinux.bin \

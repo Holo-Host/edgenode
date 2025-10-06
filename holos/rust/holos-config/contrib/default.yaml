@@ -8,10 +8,11 @@ network:
         # Use the onboard controller, with DHCP
         - identifier: !pci_address
             address: "0000:01:00.0"
+            #address: "0000:00:03.0"
           static_addresses:
 security:
     github_usernames:
-        - changeme
+        - holosupport
     ssh_keys:
     rootpw_hash:
 
