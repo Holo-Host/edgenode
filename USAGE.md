@@ -90,15 +90,18 @@ To be an Edge Node provider, you simply need to run the OCI container on the pla
 Step 1: Install the ISO on the machine:
 
 1. Download the ISO image here: https://github.com/Holo-Host/edgenode/releases/tag/HolOS-v0.0.6
-2. Install it on a usb stick as a bootable device following these instructions: {Link TODO}
-3. Boot your computer from the ISO
+2. Write it to a usb stick as a raw disk image. On Linux, a command such as the following may suffice:
+```
+dd if=./holos-0.0.6.iso of=/dev/sdX bs=1024k conv=sync
+```
+   Where `/dev/sdX` is the block device node for the USB stick.
+3. Boot your computer from the USB stick and log in as root with no password.
 4. Choose the configuration you want:
-
-   1. Networking
-   2. Hard-drive
-   3. Container
-
-5. Install
+5. Run the interim installer script, telling it which hard drive to install to (generally `sda` on holoports). The following command will likely suffice on holoports:
+```
+install-draft sda
+```
+   Once the installation has completed, the holoport will automatically reboot. At which time, you should remove the USB stick and allow it to boot from the hard drive.
 
 Step 2: Run the container and verify that Holochain is installed an operational:
 
