@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use holos_config::{HolosConfig, cmdline::CmdLine, models::ModelConfig};
+use holos_config::{HolosConfig, cmdline::CmdLine, install::do_install, models::ModelConfig};
 use local_ip_address::list_afinet_netifas;
 use log::info;
 use serde::Deserialize;
@@ -24,6 +24,7 @@ enum Commands {
     Configure {},
     TrustedKeys {},
     EtcIssue {},
+    Install {},
 }
 
 /// The structure we get keys from github in
@@ -148,6 +149,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             issue += "TODO: add model info here\n";
 
             fs::write("/etc/issue", issue)?;
+        }
+        Commands::Install {} => {
+            do_install(&config)?;
         }
         Commands::Configure {} => {
             let interfaces_path = match env::var("INTERFACES_PATH") {
