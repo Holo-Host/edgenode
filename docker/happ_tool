@@ -86,4 +86,31 @@ hc s call -r "$ADMIN_PORT" install-app \
 echo "[*] Enabling app..."
 hc s -f "$ADMIN_PORT" call enable-app "$APP_ID"
 
+# ---- Initial zome calls (if configured) ----
+# Looks for .app.initZomeCalls array in the provided config JSON and echoes planned calls
+INIT_CALLS_JSON=$(jq -c '.app.initZomeCalls // []' "$CONFIG_FILE")
+if [ "$INIT_CALLS_JSON" != "[]" ]; then
+  echo "[*] Found initZomeCalls in config; authorizing zome calls..."
+  echo "" | hc s zome-call-auth --piped -r "$ADMIN_PORT" "$APP_ID"
+  
+  # List apps and extract DnaHash for our specific app
+  echo "[*] Getting app info to extract DnaHash for $APP_ID..."
+  APPS_LIST=$(hc s call -r "$ADMIN_PORT" list-apps)
+  DNA_HASH=$(echo "$APPS_LIST" | sed -n "s/.*installed_app_id: \"$APP_ID\"[^}]*DnaHash(\([^)]*\)).*/\1/p")
+  
+  if [ -n "$DNA_HASH" ]; then
+    echo "[*] Extracted DnaHash: $DNA_HASH"
+    echo "[*] Iterating init zome calls..."
+    jq -c '.app.initZomeCalls[]' "$CONFIG_FILE" | while read -r call; do
+      ZOME=$(printf '%s' "$call" | jq -r '.zome')
+      FN_NAME=$(printf '%s' "$call" | jq -r '.fn_name')
+      PAYLOAD=$(printf '%s' "$call" | jq -c '.payload')
+      echo "calling $FN_NAME with $PAYLOAD"
+      echo "" | hc s -f "$ADMIN_PORT" zome-call --piped "$APP_ID" "$DNA_HASH" "$ZOME" "$FN_NAME" "$PAYLOAD"
+    done
+  else
+    echo "[!] Could not extract DnaHash from apps list"
+  fi
+fi
+
 echo "[✔] App $APP_NAME ($APP_ID) installed and enabled!"
