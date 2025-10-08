@@ -13,6 +13,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Free up disk space
+      run: |
+        echo "Initial disk space:"
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf "/usr/local/share/boost"
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        echo "Disk space after cleanup:"
+        df -h
+
     - name: Cache Rust dependencies
       uses: actions/cache@v4
       with:
