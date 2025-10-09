@@ -32,14 +32,13 @@ We welcome many different types of contributions including:
 * Bug fixes
 * Documentation
 * Issue Triage
-* Answering questions on the [Holo Forum](https://forum.holo.host/)
+* Answering questions on the [Holo Forum](https://forum.holo.host/) or [Edge Node Support Telegram](https://t.me/+8JV9ibBHBDpmOTg0)
 * Web design
 * Communications / Social Media / Blog Posts
 * Release management
 
 Not everything happens through a GitHub pull request. Please come to our
-[Holo Huddles](https://calendly.com/rob-lyon-holo/holo-huddle-edge-node-support) or [contact us on the Holo Forum](https://forum.holo.host/) and let's discuss how we can work
-together.
+[Holo Huddles](https://calendly.com/rob-lyon-holo/holo-huddle-edge-node-support) or contact us either on the [Holo Forum](https://forum.holo.host/) or [Edge Node Support Telegram](https://t.me/+8JV9ibBHBDpmOTg0) and let's discuss how we can work together.
 
 ### Come to Meetings
 
@@ -70,12 +69,9 @@ that you want to work on it. Something like "I want to work on this" is fine.
 ## Ask for Help
 
 The best way to reach us with a question when contributing is to ask on:
-
 * The original github issue
 
 ## Pull Request Lifecycle
-
-[Instructions](https://contribute.cncf.io/maintainers/github/templates/required/contributing/#pull-request-lifecycle)
 
 - Please comment on an existing issue or create a new one to let us know what it is you want to work on and outline your proposed solution, so we can ensure your pull request will match the requirements for our project.
 - Fork the repo, and submit a pull request when you are ready.
