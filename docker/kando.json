@@ -1,0 +1,20 @@
+{
+  "app": {
+    "name": "kando",
+    "version": "0.14.0",
+    "happUrl": "https://github.com/holochain-apps/kando/releases/download/v0.14.0/kando.happ",
+    "modifiers": {
+      "networkSeed": "",
+      "properties": ""
+    }
+  },
+  "env": {
+    "holochain": {
+      "version": "",
+      "flags": [""],
+      "bootstrapUrl": "",
+      "signalServerUrl": "",
+      "stunServerUrls": [""]
+    }
+  }
+}

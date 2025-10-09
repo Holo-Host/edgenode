@@ -16,10 +16,11 @@ mkdir -p /var/local/lib
 # Create symlinks for persistent storage
 ln -sf /data/holochain/etc /etc/holochain
 ln -sf /data/holochain/var /var/local/lib/holochain
-mkdir -p /data/holochain/var/ks
+mkdir -p /data/holochain/var/ks /data/holochain/tmp /data/holochain/var/tmp
 chown -R nonroot:nonroot /data/holochain
-chown nonroot:nonroot /data/holochain/var/ks
+chown nonroot:nonroot /data/holochain/var/ks /data/holochain/tmp /data/holochain/var/tmp
 chmod 700 /data/holochain/var/ks
+chmod 755 /data/holochain/tmp /data/holochain/var/tmp
 
 # Conductor mode activation
 # Copy conductor config template
