@@ -24,7 +24,6 @@ struct App {
     version: String,
     happ_url: String,
     modifiers: Modifiers,
-    #[serde(rename = "init_zome_calls")]
     #[serde(skip_serializing_if = "Option::is_none")]
     init_zome_calls: Option<Vec<InitZomeCall>>,
 }
@@ -32,6 +31,7 @@ struct App {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct InitZomeCall {
+    zome: String,
     #[serde(rename = "fn_name")]
     fn_name: String,
     payload: JsonValue,
@@ -222,6 +222,7 @@ fn do_create(
             },
             init_zome_calls: if include_init_calls {
                 Some(vec![InitZomeCall {
+                    zome: "some_zome".to_string(),
                     fn_name: "some_zome_fn".to_string(),
                     payload: JsonValue::Null,
                 }])
