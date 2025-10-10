@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ADMIN_PORT="${2:-4444}"   # default to 4444 if not provided
 SCRIPT_NAME=$(basename "$0")
 
 if [ "$SCRIPT_NAME" = "list_happs" ]; then
+  ADMIN_PORT="${2:-4444}"
   hc s call -r "$ADMIN_PORT" list-apps
   exit 0
 fi
 
 if [ "$SCRIPT_NAME" = "uninstall_happ" ]; then
   APP_ID="$1"
+  ADMIN_PORT="${2:-4444}"
   if [ -z "$APP_ID" ]; then
     echo "Usage: uninstall_happ <APP_ID> [<ADMIN_PORT>]"
     exit 1
@@ -27,7 +28,7 @@ if [ "$SCRIPT_NAME" = "enable_happ" ]; then
   if [ -z "$APP_ID" ]; then
     echo "Usage: enable_happ <APP_ID> [<ADMIN_PORT>]"
     exit 1
-  fi
+  fi                        
   echo "[*] Enabling app $APP_ID..."
   hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
   echo "[✔] App $APP_ID enabled!"
@@ -47,9 +48,17 @@ if [ "$SCRIPT_NAME" = "disable_happ" ]; then
   exit 0
 fi
 
-# Usage: install_happ config.json <ADMIN_PORT>
-CONFIG_FILE="$1"
 
+CONFIG_FILE="$1"
+# Usage: install_happ config.json <NODE_NAME> <ADMIN_PORT>
+if [ -z "$CONFIG_FILE" ]; then
+  echo "Usage: install_happ <CONFIG_FILE> [<NODE_NAME>] [<ADMIN_PORT>]"
+  exit 1
+fi
+
+NODE_NAME="${2:-$(hostname)}"
+ADMIN_PORT="${3:-4444}"   # default to 4444 if not provided
+                            
 # ---- Parse JSON ----
 APP_NAME=$(jq -r '.app.name' "$CONFIG_FILE")
 APP_VERSION=$(jq -r '.app.version // "0.0.1"' "$CONFIG_FILE")
@@ -79,7 +88,7 @@ echo "[*] Installing app..."
 hc s call -r "$ADMIN_PORT" install-app \
   --agent-key "$AGENT_KEY" \
   --app-id "$APP_ID" \
-  "$HAPP_FILE" \
+  "$HAPP_FILE" \            
   "$NETWORK_SEED"
 
 # ---- Enable app ----
@@ -88,7 +97,7 @@ hc s -f "$ADMIN_PORT" call enable-app "$APP_ID"
 
 # ---- Initial zome calls (if configured) ----
 # Looks for .app.initZomeCalls array in the provided config JSON and echoes planned calls
-INIT_CALLS_JSON=$(jq -c '.app.initZomeCalls // []' "$CONFIG_FILE")
+INIT_CALLS_JSON=$(jq -c '.app.initZomeCalls // .app.init_zome_calls // []' "$CONFIG_FILE")
 if [ "$INIT_CALLS_JSON" != "[]" ]; then
   echo "[*] Found initZomeCalls in config; authorizing zome calls..."
   echo "" | hc s zome-call-auth --piped -r "$ADMIN_PORT" "$APP_ID"
@@ -101,10 +110,23 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
   if [ -n "$DNA_HASH" ]; then
     echo "[*] Extracted DnaHash: $DNA_HASH"
     echo "[*] Iterating init zome calls..."
-    jq -c '.app.initZomeCalls[]' "$CONFIG_FILE" | while read -r call; do
+    jq -c '.app.initZomeCalls[] // .app.init_zome_calls[]' "$CONFIG_FILE" | while read -r call; do
       ZOME=$(printf '%s' "$call" | jq -r '.zome')
       FN_NAME=$(printf '%s' "$call" | jq -r '.fn_name')
       PAYLOAD=$(printf '%s' "$call" | jq -c '.payload')
+      
+      # Check if payload contains <NODE_NAME> placeholder
+      if echo "$PAYLOAD" | grep -q "<NODE_NAME>"; then
+        # If NODE_NAME was not provided as parameter, throw error
+        if [ "$NODE_NAME" = "$(hostname)" ] && [ -z "${2:-}" ]; then
+          echo "[!] Error: PAYLOAD contains <NODE_NAME> placeholder but NODE_NAME parameter was not provided"
+          echo "[!] Usage: install_happ <CONFIG_FILE> <NODE_NAME> [<ADMIN_PORT>]"
+          exit 1
+        fi
+        # Replace <NODE_NAME> with actual NODE_NAME
+        PAYLOAD=$(echo "$PAYLOAD" | sed "s/<NODE_NAME>/$NODE_NAME/g")
+      fi
+      
       echo "calling $FN_NAME with $PAYLOAD"
       echo "" | hc s -f "$ADMIN_PORT" zome-call --piped "$APP_ID" "$DNA_HASH" "$ZOME" "$FN_NAME" "$PAYLOAD"
     done
