@@ -23,8 +23,6 @@ bug report and let us know!
 
 ## Ways to Contribute
 
-[Instructions](https://contribute.cncf.io/maintainers/github/templates/required/contributing/#ways-to-contribute)
-
 We welcome many different types of contributions including:
 
 * New features
@@ -69,6 +67,7 @@ that you want to work on it. Something like "I want to work on this" is fine.
 ## Ask for Help
 
 The best way to reach us with a question when contributing is to ask on:
+
 * The original github issue
 
 ## Pull Request Lifecycle
@@ -92,51 +91,51 @@ This guide provides step-by-step instructions for setting up a development envir
 
 **Development Environment Setup**
 
-1.  **Clone the Repository**
+1. **Clone the Repository**
 
-    ```bash
-    git clone https://github.com/Holo-Host/edgenode.git
-    cd edgenode
-    ```
+```bash
+git clone https://github.com/Holo-Host/edgenode.git
+cd edgenode
+```
 
-2.  **Build the Docker Image**
+2. **Build the Docker Image**
 
-    The container is defined in [`docker/Dockerfile`](docker/Dockerfile:1). To build the image locally:
+The container is defined in [`docker/Dockerfile`](docker/Dockerfile:1). To build the image locally:
 
-    ```bash
-    cd docker
-    docker build -t local-edgenode .
-    cd ..
-    ```
+```bash
+cd docker
+docker build -t local-edgenode .
+cd ..
+```
 
-3.  **Run the Container in Development Mode**
+3. **Run the Container in Development Mode**
 
-    For development, you'll want to run the container with interactive shell access and persistent storage:
+For development, you'll want to run the container with interactive shell access and persistent storage:
 
-    ```bash
-    # Create a directory for persistent data
-    mkdir -p ./holo-data-dev
+```bash
+# Create a directory for persistent data
+mkdir -p ./holo-data-dev
 
-    # Run the container in interactive mode
-    docker run --name edgenode-dev -it \
-      -v $(pwd)/holo-data-dev:/data \
-      -p 4444:4444 \
-      local-edgenode
-    ```
+# Run the container in interactive mode
+docker run --name edgenode-dev -it \
+  -v $(pwd)/holo-data-dev:/data \
+  -p 4444:4444 \
+  local-edgenode
+```
 
-4.  **Access the Container Shell**
+4. **Access the Container Shell**
 
-    Once the container is running, access it interactively:
+Once the container is running, access it interactively:
 
-    ```bash
-    docker exec -it edgenode-dev /bin/sh
-    ```
+```bash
+docker exec -it edgenode-dev /bin/sh
+```
 
-    Inside the container, switch to the nonroot user:
+Inside the container, switch to the nonroot user:
 
-    ```bash
-    su - nonroot
-    ```
+```bash
+su - nonroot
+```
 
 **ISO Setup**
 
@@ -149,77 +148,42 @@ HolOS is a minimal Linux distribution specifically designed to run Holochain con
 **Development Environment Setup**
 
 The Makefile automates the following steps:
-1.  Downloads Buildroot source
-2.  Builds the Rust-based `holos-config` tool
-3.  Copies configuration files and overlays
-4.  Builds the Linux kernel with custom configuration
-5.  Creates initramfs (rootfs.cpio.gz)
-6.  Assembles everything into a hybrid ISO image
+
+1. Downloads Buildroot source
+2. Builds the Rust-based `holos-config` tool
+3. Copies configuration files and overlays
+4. Builds the Linux kernel with custom configuration
+5. Creates initramfs (rootfs.cpio.gz)
+6. Assembles everything into a hybrid ISO image
 
 The system can be used in several ways:
-1.  **Boot from USB/CD**: Write the ISO to a bootable device
-2.  **PXE Boot**: Use the kernel and initrd from the boot/ directory
-3.  **Virtual Machine**: Use `make run` to boot in KVM with QEMU
 
-**happ_config_file Utility Setup**
+1. **Boot from USB/CD**: Write the ISO to a bootable device
+2. **PXE Boot**: Use the kernel and initrd from the boot/ directory
+3. **Virtual Machine**: Use `make run` to boot in KVM with QEMU
+
+__happ_config_file Utility Setup__
 
 **Prerequisites**
 
-1.  **Rust Programming Language**: The project requires Rust to be installed on your system. You can install Rust by following the instructions at [rustup.rs](https://rustup.rs/).
-2.  **Cargo**: Cargo is Rust's package manager and build tool. It comes bundled with the Rust installation.
+1. **Rust Programming Language**: The project requires Rust to be installed on your system. You can install Rust by following the instructions at [rustup.rs](https://rustup.rs/).
+2. **Cargo**: Cargo is Rust's package manager and build tool. It comes bundled with the Rust installation.
 
 **Setup Steps**
 
-1.  **Navigate to the project directory**:
+1. **Navigate to the project directory**:
 
-    ```bash
-    cd tools/happ_config_file
-    ```
+```bash
+cd tools/happ_config_file
+```
 
-2.  **Build the project**:
+2. **Build the project**:
 
-    ```bash
-    cargo build --release
-    ```
+```bash
+cargo build --release
+```
 
-    This will compile the project and create the binary at `target/release/happ_config_file`.
-
-## Sign Your Commits
-
-[Instructions](https://contribute.cncf.io/maintainers/github/templates/required/contributing/#sign-your-commits)
-
-⚠️ **Keep either the DCO or CLA section depending on which you use**
-
-### DCO
-
-Licensing is important to open source projects. It provides some assurances that
-the software will continue to be available based under the terms that the
-author(s) desired. We require that contributors sign off on commits submitted to
-our project's repositories. The [Developer Certificate of Origin
-(DCO)](https://probot.github.io/apps/dco/) is a way to certify that you wrote and
-have the right to contribute the code you are submitting to the project.
-
-You sign-off by adding the following to your commit messages. Your sign-off must
-match the git user and email associated with the commit.
-
-    This is my commit message
-    
-    Signed-off-by: Your Name <your.name@example.com>
-
-Git has a `-s` command line option to do this automatically:
-
-    git commit -s -m 'This is my commit message'
-
-If you forgot to do this and have not yet pushed your changes to the remote
-repository, you can amend your commit with the sign-off by running
-
-    git commit --amend -s 
-
-### CLA
-
-We require that contributors have signed our Contributor License Agreement (CLA).
-
-⚠️ **Explain how to sign the CLA**
+This will compile the project and create the binary at `target/release/happ_config_file`.
 
 ## Pull Request Checklist
 
@@ -229,4 +193,4 @@ passes these checks, but we also have more criteria than just that before we can
 accept and merge it. We recommend that you check the following things locally
 before you submit your code:
 
-⚠️ **Create a checklist that authors should use before submitting a pull request**
+TBD:⚠️ **Create a checklist that authors should use before submitting a pull request**
