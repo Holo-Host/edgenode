@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "example_happ",
-    "version": "0.1.0",
+    "name": "kando",
+    "version": "0.14.0",
     "happUrl": "https://github.com/holochain-apps/kando/releases/download/v0.14.0/kando.happ",
     "modifiers": {
       "networkSeed": "",
