@@ -1,21 +1,64 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Function to validate APP_ID format
+validate_app_id() {
+  local app_id="$1"
+  if ! [[ "$app_id" =~ ^[a-zA-Z0-9_:\.-]+$ ]]; then
+    echo "[!] Invalid APP_ID format: $app_id" >&2
+    exit 1
+  fi
+}
+
+# Function to validate port number
+validate_port() {
+  local port="$1"
+  if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+    echo "[!] Invalid port number: $port" >&2
+    exit 1
+  fi
+}
+
 SCRIPT_NAME=$(basename "$0")
 
+# --- Argument Parsing ---
+# This script uses `getopts` to parse flags.
+# The -p flag is used to specify the admin port.
+# If -p is not provided, it defaults to 4444.
+ADMIN_PORT="4444"
+while getopts ":p:" opt; do
+  case ${opt} in
+    p )
+      ADMIN_PORT=$OPTARG
+      ;;
+    \? )
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    : )
+      echo "Invalid option: -$OPTARG requires an argument" >&2
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND -1))
+validate_port "$ADMIN_PORT"
+
+# --- Sub-commands ---
+# The script behaves differently based on the name it's called with.
+# This allows for a single script to perform multiple related functions.
 if [ "$SCRIPT_NAME" = "list_happs" ]; then
-  ADMIN_PORT="${2:-4444}"
   hc s call -r "$ADMIN_PORT" list-apps
   exit 0
 fi
 
 if [ "$SCRIPT_NAME" = "uninstall_happ" ]; then
   APP_ID="$1"
-  ADMIN_PORT="${2:-4444}"
   if [ -z "$APP_ID" ]; then
-    echo "Usage: uninstall_happ <APP_ID> [<ADMIN_PORT>]"
+    echo "Usage: uninstall_happ <APP_ID> [-p <ADMIN_PORT>]"
     exit 1
   fi
+  validate_app_id "$APP_ID"
   echo "[*] Uninstalling app $APP_ID..."
   hc s call -r "$ADMIN_PORT" uninstall-app "$APP_ID"
   echo "[✔] App $APP_ID uninstalled!"
@@ -24,11 +67,11 @@ fi
 
 if [ "$SCRIPT_NAME" = "enable_happ" ]; then
   APP_ID="$1"
-  ADMIN_PORT="${2:-4444}"
   if [ -z "$APP_ID" ]; then
-    echo "Usage: enable_happ <APP_ID> [<ADMIN_PORT>]"
+    echo "Usage: enable_happ <APP_ID> [-p <ADMIN_PORT>]"
     exit 1
-  fi                        
+  fi
+  validate_app_id "$APP_ID"
   echo "[*] Enabling app $APP_ID..."
   hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
   echo "[✔] App $APP_ID enabled!"
@@ -37,76 +80,86 @@ fi
 
 if [ "$SCRIPT_NAME" = "disable_happ" ]; then
   APP_ID="$1"
-  ADMIN_PORT="${2:-4444}"
   if [ -z "$APP_ID" ]; then
-    echo "Usage: disable_happ <APP_ID> [<ADMIN_PORT>]"
+    echo "Usage: disable_happ <APP_ID> [-p <ADMIN_PORT>]"
     exit 1
   fi
+  validate_app_id "$APP_ID"
   echo "[*] Disabling app $APP_ID..."
   hc s call -r "$ADMIN_PORT" disable-app "$APP_ID"
   echo "[✔] App $APP_ID disabled!"
   exit 0
 fi
 
-
+# --- Main script: install_happ ---
+# This is the default command when the script is not called as one of the sub-commands.
 CONFIG_FILE="$1"
-# Usage: install_happ config.json <NODE_NAME> <ADMIN_PORT>
-if [ -z "$CONFIG_FILE" ]; then
-  echo "Usage: install_happ <CONFIG_FILE> [<NODE_NAME>] [<ADMIN_PORT>]"
+if [ -z "$CONFIG_FILE" ] || [ ! -f "$CONFIG_FILE" ]; then
+  echo "Usage: install_happ <CONFIG_FILE> [<NODE_NAME>] [-p <ADMIN_PORT>]"
   exit 1
 fi
 
 NODE_NAME="${2:-$(hostname)}"
-ADMIN_PORT="${3:-4444}"   # default to 4444 if not provided
-                            
+
 # ---- Parse JSON ----
 APP_NAME=$(jq -r '.app.name' "$CONFIG_FILE")
 APP_VERSION=$(jq -r '.app.version // "0.0.1"' "$CONFIG_FILE")
 HAPP_URL=$(jq -r '.app.happUrl' "$CONFIG_FILE")
+HAPP_SHA256=$(jq -r '.app.happSha256 // empty' "$CONFIG_FILE")
 NETWORK_SEED=$(jq -r '.app.modifiers.networkSeed // empty' "$CONFIG_FILE")
 
-# ---- Download happ file ----
+# ---- Download and verify happ file ----
 HAPP_FILE="/var/local/lib/holochain/tmp/${APP_NAME}-${APP_VERSION}.happ"
 echo "[*] Downloading happ from $HAPP_URL ..."
 curl -sSL "$HAPP_URL" -o "$HAPP_FILE"
+
 if [ ! -f "$HAPP_FILE" ]; then
   echo "[!] Download failed at $HAPP_FILE"
   exit 1
 fi
 
+if [ -n "$HAPP_SHA256" ]; then
+  echo "[*] Verifying SHA256 checksum..."
+  DOWNLOAD_SHA256=$(sha256sum "$HAPP_FILE" | awk '{print $1}')
+  if [ "$DOWNLOAD_SHA256" != "$HAPP_SHA256" ]; then
+    echo "[!] Checksum mismatch!"
+    echo "    Expected: $HAPP_SHA256"
+    echo "    Actual:   $DOWNLOAD_SHA256"
+    rm "$HAPP_FILE"
+    exit 1
+  fi
+  echo "[✔] Checksum verified."
+fi
+
 # ---- Generate agent key ----
 AGENT_KEY=$(hc s call -r "$ADMIN_PORT" new-agent | awk '{print $NF}')
-## AGENT_KEY=$(hc s -f "$ADMIN_PORT" call new-agent | awk '{print $NF}')
 
 # ---- Build App ID ----
 APP_ID="${APP_NAME}::${APP_VERSION}::${AGENT_KEY}"
 echo "[*] App ID = $APP_ID"
+validate_app_id "$APP_ID"
 
 # ---- Install app ----
 echo "[*] Installing app..."
-## hc s -f "$ADMIN_PORT" call install-app \
 hc s call -r "$ADMIN_PORT" install-app \
   --agent-key "$AGENT_KEY" \
   --app-id "$APP_ID" \
-  "$HAPP_FILE" \            
+  "$HAPP_FILE" \
   "$NETWORK_SEED"
 
 # ---- Enable app ----
 echo "[*] Enabling app..."
-hc s -f "$ADMIN_PORT" call enable-app "$APP_ID"
+hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
 
 # ---- Initial zome calls (if configured) ----
-# Looks for .app.initZomeCalls array in the provided config JSON and echoes planned calls
 INIT_CALLS_JSON=$(jq -c '.app.initZomeCalls // .app.init_zome_calls // []' "$CONFIG_FILE")
 if [ "$INIT_CALLS_JSON" != "[]" ]; then
   echo "[*] Found initZomeCalls in config; authorizing zome calls..."
   echo "" | hc s zome-call-auth --piped -r "$ADMIN_PORT" "$APP_ID"
   
-  # List apps and extract DnaHash for our specific app
   echo "[*] Getting app info to extract DnaHash for $APP_ID..."
-  APPS_LIST=$(hc s call -r "$ADMIN_PORT" list-apps)
-  DNA_HASH=$(echo "$APPS_LIST" | sed -n "s/.*installed_app_id: \"$APP_ID\"[^}]*DnaHash(\([^)]*\)).*/\1/p")
-  
+  DNA_HASH=$(hc s call -r "$ADMIN_PORT" list-apps | jq -r --arg app_id "$APP_ID" '.[] | select(.installed_app_id == $app_id) | .cell_data.dna_hash')
+
   if [ -n "$DNA_HASH" ]; then
     echo "[*] Extracted DnaHash: $DNA_HASH"
     echo "[*] Iterating init zome calls..."
@@ -115,20 +168,17 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
       FN_NAME=$(printf '%s' "$call" | jq -r '.fn_name')
       PAYLOAD=$(printf '%s' "$call" | jq -c '.payload')
       
-      # Check if payload contains <NODE_NAME> placeholder
       if echo "$PAYLOAD" | grep -q "<NODE_NAME>"; then
-        # If NODE_NAME was not provided as parameter, throw error
         if [ "$NODE_NAME" = "$(hostname)" ] && [ -z "${2:-}" ]; then
           echo "[!] Error: PAYLOAD contains <NODE_NAME> placeholder but NODE_NAME parameter was not provided"
           echo "[!] Usage: install_happ <CONFIG_FILE> <NODE_NAME> [<ADMIN_PORT>]"
           exit 1
         fi
-        # Replace <NODE_NAME> with actual NODE_NAME
         PAYLOAD=$(echo "$PAYLOAD" | sed "s/<NODE_NAME>/$NODE_NAME/g")
       fi
       
       echo "calling $FN_NAME with $PAYLOAD"
-      echo "" | hc s -f "$ADMIN_PORT" zome-call --piped "$APP_ID" "$DNA_HASH" "$ZOME" "$FN_NAME" "$PAYLOAD"
+      echo "" | hc s zome-call --piped -r "$ADMIN_PORT" "$APP_ID" "$DNA_HASH" "$ZOME" "$FN_NAME" "$PAYLOAD"
     done
   else
     echo "[!] Could not extract DnaHash from apps list"

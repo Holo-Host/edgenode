@@ -1,3 +1,5 @@
 holo-data/
 test-data/
 holo-data-test/
+.roo/
+AGENTS.md
