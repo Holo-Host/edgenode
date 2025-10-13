@@ -69,6 +69,8 @@ Step 1: Create JSON file using `happ_config_file create`, modifying the fields o
 Some notes on the contents of the fields:
 
 - `networkSeed`: this seed must match the seed used by other participants in the network, otherwise the node will not participate in the application.
+- `init_zome_calls`: This array allows you to specify zome calls that should be executed right after the hApp is installed. This is useful for initialization tasks.
+  - The `payload` field in a zome call can contain the placeholder `<NODE_NAME>`. This placeholder will be dynamically replaced with the `NODE_NAME` provided during the `install_happ` execution. If no `NODE_NAME` is provided, it defaults to the machine's hostname. This is particularly useful for creating flexible configurations that can be reused across different nodes without modification. For example, you could have a payload like `{"node_name": "<NODE_NAME>"}` and the script will substitute `<NODE_NAME>` with the actual node name.
 
 NOTE: these fields are placeholder for future use, they are not yet implemented.
 
