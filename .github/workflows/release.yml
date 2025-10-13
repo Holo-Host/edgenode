@@ -88,6 +88,13 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        include:
+          - image_suffix: ""
+            build_target: ""
+          - image_suffix: "-go-pion"
+            build_target: "holochain-go-pion"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -99,12 +106,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and test Docker image
         run: |
-          IMAGE_TAG=${{ github.ref_name }}
-          docker build docker/ --file docker/Dockerfile --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG} --tag ghcr.io/holo-host/edgenode:latest
+          IMAGE_TAG=${{ github.ref_name }}${{ matrix.image_suffix }}
+          docker build docker/ --file docker/Dockerfile --target ${{ matrix.build_target }} --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG}
+          bats docker/tests
           docker push ghcr.io/holo-host/edgenode:${IMAGE_TAG}
-          docker push ghcr.io/holo-host/edgenode:latest
-          docker build docker/ --file docker/Dockerfile --target holochain-go-pion --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG}-go-pion --tag ghcr.io/holo-host/edgenode:latest-go-pion
-          docker push ghcr.io/holo-host/edgenode:${IMAGE_TAG}-go-pion
-          docker push ghcr.io/holo-host/edgenode:latest-go-pion
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
+            docker tag ghcr.io/holo-host/edgenode:${IMAGE_TAG} ghcr.io/holo-host/edgenode:latest${{ matrix.image_suffix }}
+            docker push ghcr.io/holo-host/edgenode:latest${{ matrix.image_suffix }}
+          fi
