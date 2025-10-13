@@ -69,6 +69,8 @@ Step 1: Create JSON file using `happ_config_file create`, modifying the fields o
 Some notes on the contents of the fields:
 
 - `networkSeed`: this seed must match the seed used by other participants in the network, otherwise the node will not participate in the application.
+- `init_zome_calls`: This array allows you to specify zome calls that should be executed right after the hApp is installed. This is useful for initialization tasks.
+  - The `payload` field in a zome call can contain the placeholder `<NODE_NAME>`. This placeholder will be dynamically replaced with the `NODE_NAME` provided during the `install_happ` execution. If no `NODE_NAME` is provided, it defaults to the machine's hostname. This is particularly useful for creating flexible configurations that can be reused across different nodes without modification. For example, you could have a payload like `{"node_name": "<NODE_NAME>"}` and the script will substitute `<NODE_NAME>` with the actual node name.
 
 NOTE: these fields are placeholder for future use, they are not yet implemented.
 
@@ -90,15 +92,18 @@ To be an Edge Node provider, you simply need to run the OCI container on the pla
 Step 1: Install the ISO on the machine:
 
 1. Download the ISO image here: https://github.com/Holo-Host/edgenode/releases/tag/HolOS-v0.0.6
-2. Install it on a usb stick as a bootable device following these instructions: {Link TODO}
-3. Boot your computer from the ISO
+2. Write it to a usb stick as a raw disk image. On Linux, a command such as the following may suffice:
+```
+dd if=./holos-0.0.6.iso of=/dev/sdX bs=1024k conv=sync
+```
+   Where `/dev/sdX` is the block device node for the USB stick.
+3. Boot your computer from the USB stick and log in as root with no password.
 4. Choose the configuration you want:
-
-   1. Networking
-   2. Hard-drive
-   3. Container
-
-5. Install
+5. Run the interim installer script, telling it which hard drive to install to (generally `sda` on holoports). The following command will likely suffice on holoports:
+```
+install-draft sda
+```
+   Once the installation has completed, the holoport will automatically reboot. At which time, you should remove the USB stick and allow it to boot from the hard drive.
 
 Step 2: Run the container and verify that Holochain is installed an operational:
 

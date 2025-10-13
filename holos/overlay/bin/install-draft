@@ -1,0 +1,102 @@
+#!/bin/zsh -e
+# This is a total hack to show various steps all working. It should be 
+# reimplemented as part of the holos-config Rust code to be made more
+# robust and flexible.
+
+die() {
+    echo "$*" 1>&2
+    exit 1
+}
+
+dest="$1"
+[ -z "$dest" ] && die "usage: $0 <dest_device>"
+
+# We should be able to detect the source device. Eventually, we should
+# provide a way to override this, and likely use things like a URL
+# instead.
+source=`blkid -L HolOS-install 2>/dev/null`
+[ -z "$source" ] && die "Unable to find source media. Ensure USB stick is inserted."
+echo "Discovered HolOS source media on device ${source}"
+
+partition() {
+	parted -s -j /dev/$dest \
+		mklabel msdos \
+		mkpart primary ext4 0% 100% \
+		print > /var/lib/holos/parted-$dest.json
+
+	mkfs.ext4 -F -L HolOS-system /dev/${dest}1
+
+	mkdir -p $src_mnt 
+	mkdir -p $dest_mnt
+
+}
+
+install() {
+	echo "Unpacking root filesystem"
+	zcat $src_mnt/boot/rootfs.cpio.gz | cpio -di
+	cp $src_mnt/boot/bzImage $dest_mnt/boot
+}
+
+mkinitrd() {
+	# This is executed from the root directory of the destination
+	mkdir tmp/initrd-root
+	for i in bin dev etc lib mnt proc sbin sys usr usr/bin usr/sbin
+	do
+		mkdir tmp/initrd-root/$i
+	done
+	cp bin/busybox tmp/initrd-root/bin
+	cp -a lib/{ld-musl-x86_64,libc}* tmp/initrd-root/lib
+	chroot tmp/initrd-root /bin/busybox --install
+
+	cp bin/ramdisk-init tmp/initrd-root/init && chmod a+rx tmp/initrd-root/init
+
+	# We actually only need the storage drivers. That can be an optimisation for later.
+	echo "Copying kernel modules"
+	cp -a /lib/modules tmp/initrd-root/lib
+
+	echo "Packing initial ramdisk"
+	( cd tmp/initrd-root ; find . -print0 | cpio --null --create --format=newc | gzip > ../../boot/holos-initrd.img )
+}
+
+bootloader() {
+	mount --bind /dev $dest_mnt/dev
+	mount --bind /proc $dest_mnt/proc
+	mount --bind /sys $dest_mnt/sys
+
+	chroot $dest_mnt depmod -a
+	chroot $dest_mnt grub-install /dev/${dest}
+
+	cat > $dest_mnt/boot/grub/grub.cfg <<EOF
+set default="0"
+set timeout="5"
+
+menuentry "HolOS `cat $dest_mnt/etc/holos-version`" {
+	linux /boot/bzImage root=LABEL=HolOS-system ro vga=791
+	initrd /boot/holos-initrd.img
+}
+EOF
+}
+
+dest_mnt="/tmp/mnt/dest"
+src_mnt="/tmp/mnt/src"
+
+partition
+mount /dev/${dest}1 $dest_mnt
+mount ${source} $src_mnt
+
+cd $dest_mnt
+install
+mkinitrd
+bootloader
+
+cp -a /root/.ssh $dest_mnt/root/
+
+umount $src_mnt
+umount $dest_mnt/dev
+umount $dest_mnt/proc
+umount $dest_mnt/sys
+umount --lazy $dest_mnt
+
+echo "Installation done. Rebooting. It's safe to remove your installation media."
+
+reboot
