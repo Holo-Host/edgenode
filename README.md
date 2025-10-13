@@ -9,11 +9,11 @@ The tooling consists of:
 
 For a detailed overview and usage instructions [see here](/USAGE.md).
 
-For Support: 
+## For Support:
 
-Edge Node Support Telegram: https://t.me/+8JV9ibBHBDpmOTg0
-Schedule Live-Support: https://calendly.com/rob-lyon-holo/holo-huddle-edge-node-support
-Host Forum: https://forum.holo.host/
+- [Edge Node Support Telegram](https://t.me/+8JV9ibBHBDpmOTg0)
+- [Schedule Live-Support](https://calendly.com/rob-lyon-holo/holo-huddle-edge-node-support)
+- [Holo Host Forum](https://forum.holo.host/)
 
 ## Repo Components:
 
