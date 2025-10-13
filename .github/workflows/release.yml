@@ -105,3 +105,6 @@ jobs:
           docker build docker/ --file docker/Dockerfile --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG} --tag ghcr.io/holo-host/edgenode:latest
           docker push ghcr.io/holo-host/edgenode:${IMAGE_TAG}
           docker push ghcr.io/holo-host/edgenode:latest
+          docker build docker/ --file docker/Dockerfile --target holochain-go-pion --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG}-go-pion --tag ghcr.io/holo-host/edgenode:latest-go-pion
+          docker push ghcr.io/holo-host/edgenode:${IMAGE_TAG}-go-pion
+          docker push ghcr.io/holo-host/edgenode:latest-go-pion
