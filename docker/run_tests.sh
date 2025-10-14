@@ -24,6 +24,8 @@ trap cleanup EXIT
 # Build image if it's a local build
 if [[ "$IMAGE_NAME" == "local-edgenode" ]]; then
   docker build -t local-edgenode . -f Dockerfile
+elif [[ "$IMAGE_NAME" == "local-edgenode-go-pion" ]]; then
+  docker build -t local-edgenode-go-pion . -f Dockerfile.go-pion
 fi
 
 # Run container
@@ -34,7 +36,4 @@ docker run -d --name "$CONTAINER_NAME" -v "$(pwd)/$TEST_DATA_DIR:/data" "$IMAGE_
 sleep 5
 
 # Run tests using relative path from docker directory
-docker logs edgenode-test
-docker exec edgenode-test holochain --version
-docker exec edgenode-test hc --version
 ./tests/libs/bats/bin/bats tests

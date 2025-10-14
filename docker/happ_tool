@@ -168,7 +168,6 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
   echo "" | hc s zome-call-auth --piped -r "$ADMIN_PORT" "$APP_ID"
   
   echo "[*] Getting app info to extract DnaHash for $APP_ID..."
-  hc s call -r "$ADMIN_PORT" list-apps
   DNA_HASH=$(hc s call -r "$ADMIN_PORT" list-apps | awk -F 'DnaHash\\(|\\), AgentPubKey' '{print $2}')
 
   if [ -n "$DNA_HASH" ]; then
