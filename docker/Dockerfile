@@ -1,16 +1,16 @@
-FROM cgr.dev/chainguard/wolfi-base
+FROM cgr.dev/chainguard/wolfi-base AS base
 
 VOLUME ["/data"]
 
-RUN apk update && apk add --no-cache --update-cache bash curl wget htop jq strace tcpdump coreutils tini logrotate shadow gosu
+RUN apk update && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils tini logrotate shadow gosu uuidgen xz libstdc++
 
 ARG HOLOCHAIN_VERSION=0.5.6
 ARG HC_VERSION=0.5.6
 
-RUN wget https://github.com/matthme/holochain-binaries/releases/download/holochain-binaries-${HOLOCHAIN_VERSION}/holochain-v${HOLOCHAIN_VERSION}-x86_64-unknown-linux-gnu && \
-    wget https://github.com/matthme/holochain-binaries/releases/download/hc-binaries-${HC_VERSION}/hc-v${HC_VERSION}-x86_64-unknown-linux-gnu && \
-    mv holochain-v${HOLOCHAIN_VERSION}-x86_64-unknown-linux-gnu /bin/holochain && \
-    mv hc-v${HC_VERSION}-x86_64-unknown-linux-gnu /bin/hc && \
+RUN wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-x86_64-unknown-linux-gnu && \
+    wget https://github.com/holochain/holochain/releases/download/holochain-${HC_VERSION}/hc-x86_64-unknown-linux-gnu && \
+    mv holochain-x86_64-unknown-linux-gnu /bin/holochain && \
+    mv hc-x86_64-unknown-linux-gnu /bin/hc && \
     chmod +x /bin/holochain && \
     chmod +x /bin/hc
 
@@ -44,15 +44,3 @@ EXPOSE 4444
 # Set entrypoint to keep container running and allow interactive shell access
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Target for holochain-go-pion
-FROM base as holochain-go-pion
-
-ARG HOLOCHAIN_VERSION=0.6.0-dev.28
-ARG HC_VERSION=0.6.0-dev.28
-
-RUN wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-v${HOLOCHAIN_VERSION}-x86_64-unknown-linux-gnu-go-pion && \
-    wget https://github.com/matthme/holochain-binaries/releases/download/hc-binaries-${HC_VERSION}/hc-v${HC_VERSION}-x86_64-unknown-linux-gnu && \
-    mv holochain-v${HOLOCHAIN_VERSION}-x86_64-unknown-linux-gnu-go-pion /bin/holochain && \
-    mv hc-v${HC_VERSION}-x86_64-unknown-linux-gnu /bin/hc && \
-    chmod +x /bin/holochain && \
-    chmod +x /bin/hc

@@ -1,21 +1,25 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 IMAGE_NAME=${1:-"local-edgenode"}
 CONTAINER_NAME="edgenode-test"
 TEST_DATA_DIR="holo-data-test"
 
+# Determine the script's directory and the repository root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Change to the docker directory
+cd "$SCRIPT_DIR"
+
 cleanup() {
   echo "Cleaning up..."
   docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
-  rm -rf "$TEST_DATA_DIR" || true
+  sudo rm -rf "$TEST_DATA_DIR" || true
 }
 
 trap cleanup EXIT
-
-# Initialize git submodules for bats
-git submodule update --init --recursive
 
 # Build image if it's a local build
 if [[ "$IMAGE_NAME" == "local-edgenode" ]]; then
@@ -29,5 +33,8 @@ docker run -d --name "$CONTAINER_NAME" -v "$(pwd)/$TEST_DATA_DIR:/data" "$IMAGE_
 # Wait for startup
 sleep 5
 
-# Run tests
+# Run tests using relative path from docker directory
+docker logs edgenode-test
+docker exec edgenode-test holochain --version
+docker exec edgenode-test hc --version
 ./tests/libs/bats/bin/bats tests

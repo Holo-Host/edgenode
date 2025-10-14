@@ -107,6 +107,16 @@ APP_VERSION=$(jq -r '.app.version // "0.0.1"' "$CONFIG_FILE")
 HAPP_URL=$(jq -r '.app.happUrl' "$CONFIG_FILE")
 HAPP_SHA256=$(jq -r '.app.happSha256 // empty' "$CONFIG_FILE")
 NETWORK_SEED=$(jq -r '.app.modifiers.networkSeed // empty' "$CONFIG_FILE")
+if [ -z "$NETWORK_SEED" ]; then
+  echo "[*] No network seed provided, generating a random one for testing..."
+  if command -v uuidgen &> /dev/null; then
+    NETWORK_SEED=$(uuidgen)
+    echo "[*] Generated network seed: $NETWORK_SEED"
+  else
+    echo "[!] uuidgen command not found. Please install it to generate a network seed."
+    exit 1
+  fi
+fi
 
 # ---- Download and verify happ file ----
 HAPP_FILE="/var/local/lib/holochain/tmp/${APP_NAME}-${APP_VERSION}.happ"
@@ -132,7 +142,7 @@ if [ -n "$HAPP_SHA256" ]; then
 fi
 
 # ---- Generate agent key ----
-AGENT_KEY=$(hc s call -r "$ADMIN_PORT" new-agent | awk '{print $NF}')
+AGENT_KEY=$(hc s call -r "$ADMIN_PORT" new-agent | awk '{print $NF}' | tr -d '"')
 
 # ---- Build App ID ----
 APP_ID="${APP_NAME}::${APP_VERSION}::${AGENT_KEY}"
@@ -158,7 +168,8 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
   echo "" | hc s zome-call-auth --piped -r "$ADMIN_PORT" "$APP_ID"
   
   echo "[*] Getting app info to extract DnaHash for $APP_ID..."
-  DNA_HASH=$(hc s call -r "$ADMIN_PORT" list-apps | jq -r --arg app_id "$APP_ID" '.[] | select(.installed_app_id == $app_id) | .cell_data.dna_hash')
+  hc s call -r "$ADMIN_PORT" list-apps
+  DNA_HASH=$(hc s call -r "$ADMIN_PORT" list-apps | awk -F 'DnaHash\\(|\\), AgentPubKey' '{print $2}')
 
   if [ -n "$DNA_HASH" ]; then
     echo "[*] Extracted DnaHash: $DNA_HASH"

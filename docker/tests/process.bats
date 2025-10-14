@@ -4,6 +4,6 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 @test "Holochain process runs as nonroot" {
-  run docker exec edgenode-test ps aux
-  assert_output --partial "nonroot.*holochain"
+  run docker exec edgenode-test sh -c "ps aux | grep -E 'nonroot.*holochain'"
+  assert_success
 }
