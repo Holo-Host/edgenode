@@ -90,11 +90,9 @@ jobs:
       packages: write
     strategy:
       matrix:
-        include:
-          - image_suffix: ""
-            dockerfile: "docker/Dockerfile"
-          - image_suffix: "-go-pion"
-            dockerfile: "docker/Dockerfile.go-pion"
+        dockerfile:
+          - "docker/Dockerfile.hc-0.5.6"
+          - "docker/Dockerfile.hc-0.6.0-dev-go-pion"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -108,11 +106,18 @@ jobs:
 
       - name: Build and test Docker image
         run: |
-          IMAGE_TAG=${{ github.ref_name }}${{ matrix.image_suffix }}
-          docker build docker/ --file ${{ matrix.dockerfile }} --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG}
-          IMAGE_NAME=ghcr.io/holo-host/edgenode:${IMAGE_TAG} bats docker/tests
-          docker push ghcr.io/holo-host/edgenode:${IMAGE_TAG}
+          DOCKERFILE_BASENAME=$(basename ${{ matrix.dockerfile }})
+          IMAGE_SUFFIX=$(echo "$DOCKERFILE_BASENAME" | sed 's/^Dockerfile\.//')
+          IMAGE_TAG="${{ github.ref_name }}-${IMAGE_SUFFIX}"
+          docker build docker/ --file ${{ matrix.dockerfile }} --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
+          IMAGE_NAME="ghcr.io/holo-host/edgenode:${IMAGE_TAG}" bats docker/tests
+          docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
-            docker tag ghcr.io/holo-host/edgenode:${IMAGE_TAG} ghcr.io/holo-host/edgenode:latest${{ matrix.image_suffix }}
-            docker push ghcr.io/holo-host/edgenode:latest${{ matrix.image_suffix }}
+            if [[ "$IMAGE_SUFFIX" == *go-pion* ]]; then
+              LATEST_SUFFIX="-go-pion"
+            else
+              LATEST_SUFFIX=""
+            fi
+            docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:latest${LATEST_SUFFIX}"
+            docker push "ghcr.io/holo-host/edgenode:latest${LATEST_SUFFIX}"
           fi

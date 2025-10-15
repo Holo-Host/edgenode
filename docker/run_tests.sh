@@ -2,9 +2,17 @@
 
 set -ex
 
-IMAGE_NAME=${1:-"local-edgenode"}
+IMAGE_NAME=${1}
 CONTAINER_NAME="edgenode-test"
 TEST_DATA_DIR="holo-data-test"
+
+if [ -z "$IMAGE_NAME" ]; then
+  echo "Usage: $0 <image-name>"
+  echo "e.g. for a local build: $0 local-edgenode-hc-0.5.6"
+  echo "e.g. for a remote image: $0 ghcr.io/holo-host/edgenode:v0.1.0-hc-0.5.6"
+  exit 1
+fi
+
 
 # Determine the script's directory and the repository root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,10 +30,15 @@ cleanup() {
 trap cleanup EXIT
 
 # Build image if it's a local build
-if [[ "$IMAGE_NAME" == "local-edgenode" ]]; then
-  docker build -t local-edgenode . -f Dockerfile
-elif [[ "$IMAGE_NAME" == "local-edgenode-go-pion" ]]; then
-  docker build -t local-edgenode-go-pion . -f Dockerfile.go-pion
+if [[ "$IMAGE_NAME" == local-edgenode-* ]]; then
+  DOCKERFILE_SUFFIX=$(echo "$IMAGE_NAME" | sed 's/^local-edgenode-//')
+  DOCKERFILE="Dockerfile.${DOCKERFILE_SUFFIX}"
+  if [ ! -f "$DOCKERFILE" ]; then
+      echo "Dockerfile not found: $DOCKERFILE"
+      exit 1
+  fi
+  echo "Building local image $IMAGE_NAME from $DOCKERFILE"
+  docker build -t "$IMAGE_NAME" . -f "$DOCKERFILE"
 fi
 
 # Run container
