@@ -1,8 +1,9 @@
-# Edge Node Container
+# Edge Node Container Developers Guide
 
-A docker container for running Holochain and installing hApps to host them as always-on-nodes.  
+A docker container for running Holochain and installing hApps to host them as always-on-nodes.
 
 Besides `holochain` and `hc`, the following commands are available in the container to manage the hApp lifecycle:
+
 - `list_happs`
 - `happ_config_file`
 - `install_happ`
