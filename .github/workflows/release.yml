@@ -92,9 +92,9 @@ jobs:
       matrix:
         include:
           - image_suffix: ""
-            build_target: ""
+            dockerfile: "docker/Dockerfile"
           - image_suffix: "-go-pion"
-            build_target: "holochain-go-pion"
+            dockerfile: "docker/Dockerfile.go-pion"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -109,8 +109,8 @@ jobs:
       - name: Build and test Docker image
         run: |
           IMAGE_TAG=${{ github.ref_name }}${{ matrix.image_suffix }}
-          docker build docker/ --file docker/Dockerfile --target ${{ matrix.build_target }} --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG}
-          bats docker/tests
+          docker build docker/ --file ${{ matrix.dockerfile }} --tag ghcr.io/holo-host/edgenode:${IMAGE_TAG}
+          IMAGE_NAME=ghcr.io/holo-host/edgenode:${IMAGE_TAG} bats docker/tests
           docker push ghcr.io/holo-host/edgenode:${IMAGE_TAG}
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
             docker tag ghcr.io/holo-host/edgenode:${IMAGE_TAG} ghcr.io/holo-host/edgenode:latest${{ matrix.image_suffix }}
