@@ -1,8 +1,9 @@
-# Edge Node Container
+# Edge Node Container Developers Guide
 
-A docker container for running Holochain and installing hApps to host them as always-on-nodes.  
+A docker container for running Holochain and installing hApps to host them as always-on-nodes.
 
 Besides `holochain` and `hc`, the following commands are available in the container to manage the hApp lifecycle:
+
 - `list_happs`
 - `happ_config_file`
 - `install_happ`
@@ -21,9 +22,13 @@ Besides `holochain` and `hc`, the following commands are available in the contai
 - [Usage](#usage)
 
    - [Interactive Shell Access](#interactive-shell-access)
+   - [Creating a Holochain Sandbox](#creating-a-holochain-sandbox)
+   - [Installing a hApp in the Sandbox](#installing-a-happ-in-the-sandbox)
 
-   - [Scripted Install](#scripted-install)
+      - [Scripted Install](#scripted-install)
+      - [Manual Install (Kando Example)](#manual-install-kando-example)
 
+   - [Running the Sandbox in Debug Mode](#running-the-sandbox-in-debug-mode)
    - [Troubleshooting Logs](#troubleshooting-logs)
 
 - [Production Deployment with Conductor](#production-deployment-with-conductor)
@@ -31,6 +36,11 @@ Besides `holochain` and `hc`, the following commands are available in the contai
 - [Persistent Storage](#persistent-storage)
 
    - [Overview](#overview)
+   - [Testing Persistence](#testing-persistence)
+
+- [Developer Instructions](#developer-instructions)
+
+   - [Testing Holochain and hc](#testing-holochain-and-hc)
 
 ## Prerequisites
 
@@ -71,6 +81,55 @@ To access an interactive shell in the running container:
 docker exec -it edgenode su - nonroot
 ```
 
+### Creating a Holochain Sandbox
+
+Once you have an interactive shell, you can create a Holochain sandbox.
+
+1. **Switch to the `nonroot` user:**
+
+```sh
+su - nonroot
+```
+
+2. **Create the sandbox:**
+   The `entrypoint.sh` script sets up symlinks for persistent storage, so you can use the standard paths. The following command will create a sandbox in `/home/nonroot` and configure it to use persistent storage for the conductor config and data.
+
+```sh
+hc sandbox create --root /home/nonroot/ \
+  --conductor-config /etc/holochain/conductor-config.yaml \
+  --data-root-path /var/local/lib/holochain
+```
+
+_Note: The `data_root_path` and `lair_root` in the generated `conductor-config.yaml` will point to `/var/local/lib/holochain`._
+
+3. **Configure WebRTC:**
+   You need to add WebRTC details to your conductor configuration file to allow for peer-to-peer communication.
+
+```sh
+vi /home/nonroot/conductor-config.yaml
+```
+
+Find the `webrtc_config` stanza and replace it with the following:
+
+```yaml
+  webrtc_config:
+    iceServers:
+      - urls:
+          - stun:stun.cloudflare.com:3478
+      - urls:
+          - stun:stun.l.google.com:19302
+```
+
+4. **Run the sandbox:**
+
+```sh
+hc sandbox run 0
+```
+
+Note the `admin_port` displayed after the sandbox is run. You will need it to install hApps.
+
+### Installing a hApp in the Sandbox
+
 #### Scripted Install
 
 You can use the `install_happ` script to install a hApp from a JSON configuration file.
@@ -80,8 +139,8 @@ You can use the `install_happ` script to install a hApp from a JSON configuratio
 
 ```sh
 su - nonroot
-install_happ <config.json>
-enable_happ <APP_ID>
+export ADMIN_PORT=<admin_port>
+install_happ <config.json> $ADMIN_PORT
 ```
 
 #### Listing Installed hApps
@@ -101,6 +160,41 @@ Or with default port:
 
 ```sh
 list_happs
+```
+
+#### Manual Install (Kando Example)
+
+1. **Get another interactive shell to the container.**
+2. **Switch to the `nonroot` user and set the admin port:**
+
+```sh
+su - nonroot
+export ADMIN_PORT=<admin_port>
+```
+
+3. **Install the hApp:**
+
+```sh
+export AGENT_KEY=$(hc s -f $ADMIN_PORT call new-agent | awk '{print $NF}')
+export APP_ID="kando::v0.13.0::$AGENT_KEY"
+wget https://github.com/holochain-apps/kando/releases/download/v0.13.0/kando.happ
+export NETWORK_SEED="<network_seed>"
+hc s -f $ADMIN_PORT call install-app ./kando.happ $NETWORK_SEED --agent-key "$AGENT_KEY" --app-id "$APP_ID"
+```
+
+4. **Verify the installation:**
+
+```sh
+hc s -f $ADMIN_PORT call list-apps
+hc s -f $ADMIN_PORT call dump-network-stats
+```
+
+### Running the Sandbox in Debug Mode
+
+To get more verbose output from your sandbox, you can run it with the `RUST_LOG` environment variable set to `debug`.
+
+```sh
+RUST_LOG=debug hc sandbox run 0
 ```
 
 ### Troubleshooting Logs
@@ -142,12 +236,9 @@ docker run --name edgenode -dit \
    - `/etc/holochain` → `/data/holochain/etc`
    - `/var/local/lib/holochain` → `/data/holochain/var`
 
-4. **Install hApp(s)**
-
-`install_happ <config.json>`
-5. **Enable hApp(s)**
-
-`enable_happ <APP_ID>`
+```sh
+holochain -c /etc/holochain/conductor-config.yaml
+```
 
 ### Process Management and Logging
 
@@ -157,7 +248,7 @@ The container uses advanced process management and logging for reliability in pr
 
 - **tini as PID 1**: The init system `tini` is used as the container's PID 1. It handles process supervision, reaps zombie processes, and can restart the Holochain conductor if it crashes (configured via entrypoint.sh).
 - **Non-root User**: All processes run as user ID 65532 (nonroot) for security.
-- __Supervisor Behavior__:  entrypoint.sh execs `tini -- holochain run ...`, ensuring proper signal handling and restarts. Manual `hc run` commands inside the container are also supervised.
+- __Supervisor Behavior__: When `CONDUCTOR_MODE=true`, entrypoint.sh execs `tini -- holochain run ...`, ensuring proper signal handling and restarts. Manual `hc run` commands inside the container are also supervised.
 
 #### Logging
 
@@ -218,3 +309,37 @@ graph TD
 
 This means that any data written to `/etc/holochain` or `/var/local/lib/holochain` inside the container will be persisted in the `holo-data` directory on your host machine.
 
+### Testing Persistence
+
+A test harness script is provided to verify that persistence is working correctly.
+
+To run the test:
+
+```sh
+docker/test_persistence.sh
+```
+
+The script will:
+
+1. Create a temporary directory for test data.
+2. Start a container and create a test file in a persistent location.
+3. Stop and remove the container.
+4. Start a new container using the same data directory.
+5. Verify that the test file still exists.
+6. Clean up all test resources.
+
+## Developer Instructions
+
+### Testing Holochain and hc
+
+To quickly test that the `holochain` and `hc` binaries are functional:
+
+```sh
+docker run --name edgenode -dit ghcr.io/holo-host/edgenode
+docker exec -it edgenode /bin/sh
+which holochain
+which hc
+holochain --version
+hc --version
+lair-keystore --version
+```

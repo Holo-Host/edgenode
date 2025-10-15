@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# Discover things like file system IDs etc, and put them somewhere convenient
+# for holos-config to use for hints around source and destination media. This
+# would likely be better off as native Rust code in holos-config that could
+# be reliably called whenever we need it, but this is quicker.
+#
+
+start() {
+	printf "Inspecting block devices: "
+
+	# Take a look for any file system labels on any block devices. We'll use
+	# this to discover and identify source and destination media. TODO: this
+	# should probably be moved into holos-config as Rust code to make it
+	# easier to re-run at will, rather than just at boot time.
+	mkdir -p /var/lib/holos/blockdev \
+		 /var/lib/holos/partition
+	for devpath in /sys/class/block/*
+	do
+		blockdev="`basename $devpath`"
+		devtype="blockdev"
+		if [ -r "$devpath/partition" ]
+		then
+			devtype=partition
+		fi
+
+		blkid -o json -p /dev/$blockdev > /var/lib/holos/$devtype/$blockdev.json 2>/dev/null
+	done
+
+	echo "OK"
+
+}
+
+stop() {
+	# We don't currently have anything we need to do here, but may later.
+	printf "Shutting down block devices: "
+	echo "OK"
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart|reload)
+		restart
+		;;
+	*)
+		echo "Usage: $0 (start|stop|restart)"
+		exit 1
+esac
