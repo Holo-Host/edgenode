@@ -1,4 +1,4 @@
-FROM local-edgenode AS holochain-go-pion
+FROM ghcr.io/holo-host/edgenode:latest AS holochain-go-pion
 
 ARG HOLOCHAIN_VERSION=0.6.0-dev.28
 ARG HC_VERSION=0.6.0-dev.28
