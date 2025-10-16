@@ -121,13 +121,17 @@ fi
 # ---- Download and verify happ file ----
 HAPP_FILE="/var/local/lib/holochain/tmp/${APP_NAME}-${APP_VERSION}.happ"
 echo "[*] Downloading happ from $HAPP_URL ..."
-curl -sSL "$HAPP_URL" -o "$HAPP_FILE"
-
-if [ ! -f "$HAPP_FILE" ]; then
-  echo "[!] Download failed at $HAPP_FILE"
+if ! curl -sSfL "$HAPP_URL" -o "$HAPP_FILE"; then
+  echo "[!] Failed to download happ from $HAPP_URL" >&2
   exit 1
 fi
 
+if [ ! -s "$HAPP_FILE" ]; then
+  echo "[!] Downloaded file is empty" >&2
+  rm -f "$HAPP_FILE"
+  exit 1
+fi
+ 
 if [ -n "$HAPP_SHA256" ]; then
   echo "[*] Verifying SHA256 checksum..."
   DOWNLOAD_SHA256=$(sha256sum "$HAPP_FILE" | awk '{print $1}')
