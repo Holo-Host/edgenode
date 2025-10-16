@@ -49,4 +49,4 @@ docker run -d --name "$CONTAINER_NAME" -v "$(pwd)/$TEST_DATA_DIR:/data" "$IMAGE_
 sleep 5
 
 # Run tests using relative path from docker directory
-IMAGE_NAME=$IMAGE_NAME ./tests/libs/bats/bin/bats tests
+IMAGE_NAME=$IMAGE_NAME SCRIPT_DIR="$SCRIPT_DIR" ./tests/libs/bats/bin/bats tests

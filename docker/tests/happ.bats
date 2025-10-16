@@ -5,7 +5,7 @@ load 'libs/bats-assert/load'
 
 @test "Happ installation" {
   if [[ "$IMAGE_NAME" == *hc-0.6.0* ]]; then
-    docker cp relay.json edgenode-test:/home/nonroot/
+    docker cp "$SCRIPT_DIR/relay.json" edgenode-test:/home/nonroot/
     run docker exec -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
     
