@@ -1,0 +1,11 @@
+FROM local-edgenode AS holochain-go-pion
+
+ARG HOLOCHAIN_VERSION=0.6.0-dev.28
+ARG HC_VERSION=0.6.0-dev.28
+
+RUN wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-go-pion-unstable-x86_64-unknown-linux-gnu && \
+    wget https://github.com/holochain/holochain/releases/download/holochain-${HC_VERSION}/hc-x86_64-unknown-linux-gnu && \
+    mv holochain-go-pion-unstable-x86_64-unknown-linux-gnu /bin/holochain && \
+    mv hc-x86_64-unknown-linux-gnu /bin/hc && \
+    chmod +x /bin/holochain && \
+    chmod +x /bin/hc

@@ -1,0 +1,25 @@
+{
+  "app": {
+    "name": "relay",
+    "version": "0.10.0-dev.0",
+    "happUrl": "https://github.com/holochain-apps/volla-messages/releases/download/happ-v0.10.0-dev.0/relay.happ",
+    "modifiers": {
+      "networkSeed": "",
+      "properties": ""
+    },
+    "initZomeCalls": []
+  },
+  "env": {
+    "holochain": {
+      "version": "",
+      "flags": [
+        ""                 
+      ],
+      "bootstrapUrl": "",
+      "signalServerUrl": "",
+      "stunServerUrls": [
+        ""
+      ]
+    }
+  }
+}
