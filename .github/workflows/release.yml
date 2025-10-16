@@ -8,7 +8,6 @@ on:
 jobs:
   create-release:
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag'
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
@@ -85,10 +84,10 @@ jobs:
 
   build-and-push-docker-image:
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, '[docker]')"
+    if: github.ref_type == 'tag'
     permissions:
-      contents: read
-      packages: write
+      contents: write
+      releases: write
     strategy:
       matrix:
         dockerfile:
