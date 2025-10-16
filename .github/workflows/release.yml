@@ -108,6 +108,7 @@ jobs:
           DOCKERFILE_BASENAME=$(basename ${{ matrix.dockerfile }})
           IMAGE_SUFFIX=$(echo "$DOCKERFILE_BASENAME" | sed 's/^Dockerfile\.//')
           IMAGE_TAG="${{ github.ref_name }}-${IMAGE_SUFFIX}"
+          docker build docker/ --file ${{ matrix.dockerfile }} --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           ./docker/run_tests.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
