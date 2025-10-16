@@ -109,7 +109,7 @@ jobs:
           IMAGE_SUFFIX=$(echo "$DOCKERFILE_BASENAME" | sed 's/^Dockerfile\.//')
           IMAGE_TAG="${{ github.ref_name }}-${IMAGE_SUFFIX}"
           docker build docker/ --file ${{ matrix.dockerfile }} --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
-          IMAGE_NAME="ghcr.io/holo-host/edgenode:${IMAGE_TAG}" bats docker/tests
+          IMAGE_NAME="ghcr.io/holo-host/edgenode:${IMAGE_TAG}" ./docker/tests/libs/bats/bin/bats docker/tests
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
             if [[ "$IMAGE_SUFFIX" == *go-pion* ]]; then
