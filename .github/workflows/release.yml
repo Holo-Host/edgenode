@@ -87,6 +87,7 @@ jobs:
     if: github.ref_type == 'tag'
     permissions:
       contents: write
+      packages: write
     strategy:
       matrix:
         dockerfile:
