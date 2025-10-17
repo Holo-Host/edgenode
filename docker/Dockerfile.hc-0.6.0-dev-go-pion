@@ -1,4 +1,8 @@
-FROM ghcr.io/holo-host/edgenode:latest AS holochain-go-pion
+FROM cgr.dev/chainguard/wolfi-base AS base
+
+VOLUME ["/data"]
+
+RUN apk update && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils tini logrotate shadow gosu uuidgen xz libstdc++
 
 ARG HOLOCHAIN_VERSION=0.6.0-dev.28
 ARG HC_VERSION=0.6.0-dev.28
@@ -9,3 +13,33 @@ RUN wget https://github.com/holochain/holochain/releases/download/holochain-${HO
     mv hc-x86_64-unknown-linux-gnu /bin/hc && \
     chmod +x /bin/holochain && \
     chmod +x /bin/hc
+    
+# Copy and set up happ tool script
+COPY happ_tool /usr/local/bin/happ_tool
+RUN chmod +x /usr/local/bin/happ_tool
+RUN ln -sf /usr/local/bin/happ_tool /usr/local/bin/install_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/uninstall_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/enable_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/disable_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/list_happs && \
+    chmod +x /usr/local/bin/install_happ /usr/local/bin/list_happs /usr/local/bin/uninstall_happ /usr/local/bin/enable_happ /usr/local/bin/disable_happ
+
+# Copy and set up happ_config_file
+COPY happ_config_file /usr/local/bin/happ_config_file 
+RUN chmod +x /usr/local/bin/happ_config_file
+
+# Copy and set up entrypoint script
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Copy and set up holochain paths and files.  
+RUN mkdir -p /usr/local/share/holochain
+COPY conductor-config.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
+COPY logrotate.d/holochain.conf /etc/logrotate.d/holochain.conf
+RUN chown -R nonroot:nonroot /usr/local/share/holochain
+
+SHELL ["/bin/sh", "-c"]
+EXPOSE 4444
+
+# Set entrypoint to keep container running and allow interactive shell access
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

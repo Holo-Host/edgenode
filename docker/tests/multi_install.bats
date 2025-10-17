@@ -7,12 +7,12 @@ load 'libs/bats-assert/load'
   # This test only runs on versions that support the kando happ.
   if [[ "$IMAGE_NAME" != *hc-0.6.0* ]]; then
     # Install a first happ
-    docker cp kando.json edgenode-test:/home/nonroot/
-    run docker exec -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando.json test-node-1'
+    docker cp "$SCRIPT_DIR/kando-nosha.json" edgenode-test:/home/nonroot/
+    run docker exec -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando-nosha.json test-node-1'
     assert_success
 
     # Install a second happ to test DNA_HASH extraction with multiple apps present
-    run docker exec -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando.json test-node-2'
+    run docker exec -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando-nosha.json test-node-2'
     assert_success
   else
     skip "Test not applicable for hc-0.6.0 images as a suitable happ with initZomeCalls is not available."

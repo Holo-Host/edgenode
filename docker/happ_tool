@@ -55,7 +55,7 @@ fi
 if [ "$SCRIPT_NAME" = "uninstall_happ" ]; then
   APP_ID="$1"
   if [ -z "$APP_ID" ]; then
-    echo "Usage: uninstall_happ <APP_ID> [-p <ADMIN_PORT>]"
+    echo "Usage: uninstall_happ [-p <ADMIN_PORT>] <APP_ID>"
     exit 1
   fi
   validate_app_id "$APP_ID"
@@ -68,7 +68,7 @@ fi
 if [ "$SCRIPT_NAME" = "enable_happ" ]; then
   APP_ID="$1"
   if [ -z "$APP_ID" ]; then
-    echo "Usage: enable_happ <APP_ID> [-p <ADMIN_PORT>]"
+    echo "Usage: enable_happ [-p <ADMIN_PORT>] <APP_ID>"
     exit 1
   fi
   validate_app_id "$APP_ID"
@@ -81,7 +81,7 @@ fi
 if [ "$SCRIPT_NAME" = "disable_happ" ]; then
   APP_ID="$1"
   if [ -z "$APP_ID" ]; then
-    echo "Usage: disable_happ <APP_ID> [-p <ADMIN_PORT>]"
+    echo "Usage: disable_happ [-p <ADMIN_PORT>] <APP_ID>"
     exit 1
   fi
   validate_app_id "$APP_ID"
@@ -95,11 +95,13 @@ fi
 # This is the default command when the script is not called as one of the sub-commands.
 CONFIG_FILE="$1"
 if [ -z "$CONFIG_FILE" ] || [ ! -f "$CONFIG_FILE" ]; then
-  echo "Usage: install_happ <CONFIG_FILE> [<NODE_NAME>] [-p <ADMIN_PORT>]"
+  echo "Usage: install_happ [-p <ADMIN_PORT>] <CONFIG_FILE> [<NODE_NAME>]"
   exit 1
 fi
 
 NODE_NAME="${2:-$(hostname)}"
+
+echo "DEBUG: Starting JSON parsing"
 
 # ---- Parse JSON ----
 APP_NAME=$(jq -r '.app.name' "$CONFIG_FILE")
@@ -120,6 +122,8 @@ fi
 
 # ---- Download and verify happ file ----
 HAPP_FILE="/var/local/lib/holochain/tmp/${APP_NAME}-${APP_VERSION}.happ"
+
+echo "DEBUG: Starting happ download"
 echo "[*] Downloading happ from $HAPP_URL ..."
 if ! curl -sSfL "$HAPP_URL" -o "$HAPP_FILE"; then
   echo "[!] Failed to download happ from $HAPP_URL" >&2
@@ -146,14 +150,17 @@ if [ -n "$HAPP_SHA256" ]; then
 fi
 
 # ---- Generate agent key ----
+echo "DEBUG: Starting agent key generation"
 AGENT_KEY=$(hc s call -r "$ADMIN_PORT" new-agent | awk '{print $NF}' | tr -d '"')
 
 # ---- Build App ID ----
+echo "DEBUG: Starting App ID build"
 APP_ID="${APP_NAME}::${APP_VERSION}::${AGENT_KEY}"
 echo "[*] App ID = $APP_ID"
 validate_app_id "$APP_ID"
 
 # ---- Install app ----
+echo "DEBUG: Preparing to install app"
 echo "[*] Installing app..."
 hc s call -r "$ADMIN_PORT" install-app \
   --agent-key "$AGENT_KEY" \
@@ -162,6 +169,7 @@ hc s call -r "$ADMIN_PORT" install-app \
   "$NETWORK_SEED"
 
 # ---- Enable app ----
+echo "DEBUG: App install command finished, preparing to enable"
 echo "[*] Enabling app..."
 hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
 
@@ -172,7 +180,7 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
   echo "" | hc s zome-call-auth --piped -r "$ADMIN_PORT" "$APP_ID"
   
   echo "[*] Getting app info to extract DnaHash for $APP_ID..."
-  DNA_HASH=$(hc s call -r "$ADMIN_PORT" list-apps | sed 's/AppInfo {/\n&/g' | grep "installed_app_id: \"$APP_ID\"" | awk -F 'DnaHash\\(|\\), AgentPubKey' '{print $2}')
+  DNA_HASH=$(hc s call -r "$ADMIN_PORT" list-apps | sed 's/AppInfo {/\n&/g' | grep "installed_app_id: \"$APP_ID\"" | awk -F 'DnaHash\\(|\\), AgentPubKey' '{print $2}' || true)
 
   if [ -n "$DNA_HASH" ]; then
     echo "[*] Extracted DnaHash: $DNA_HASH"
@@ -185,7 +193,7 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
       if echo "$PAYLOAD" | grep -q "<NODE_NAME>"; then
         if [ "$NODE_NAME" = "$(hostname)" ] && [ -z "${2:-}" ]; then
           echo "[!] Error: PAYLOAD contains <NODE_NAME> placeholder but NODE_NAME parameter was not provided"
-          echo "[!] Usage: install_happ <CONFIG_FILE> <NODE_NAME> [<ADMIN_PORT>]"
+          echo "[!] Usage: install_happ [-p <ADMIN_PORT>] <CONFIG_FILE> <NODE_NAME>"
           exit 1
         fi
         PAYLOAD=$(echo "$PAYLOAD" | sed "s/<NODE_NAME>/$NODE_NAME/g")
