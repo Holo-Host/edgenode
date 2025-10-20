@@ -90,9 +90,17 @@ jobs:
       packages: write
     strategy:
       matrix:
-        dockerfile:
-          - "docker/Dockerfile.hc-0.5.6"
-          - "docker/Dockerfile.hc-0.6.0-dev-go-pion"
+        include:
+          - dockerfile: "docker/Dockerfile.hc-0.5.6"
+            hc_version: "0.5.6"
+            backend: "default"
+            dev: false
+            is_default: true
+          - dockerfile: "docker/Dockerfile.hc-0.6.0-dev-go-pion"
+            hc_version: "0.6.0"
+            backend: "go-pion"
+            dev: true
+            is_default: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -106,13 +114,28 @@ jobs:
 
       - name: Build and test Docker image
         run: |
-          DOCKERFILE_BASENAME=$(basename ${{ matrix.dockerfile }})
-          IMAGE_SUFFIX=$(echo "$DOCKERFILE_BASENAME" | sed 's/^Dockerfile\.//')
-          IMAGE_TAG="${{ github.ref_name }}-${IMAGE_SUFFIX}"
+          TAG_SUFFIX="hc${{ matrix.hc_version }}"
+          if [[ "${{ matrix.backend }}" != "default" ]]; then
+            TAG_SUFFIX="${TAG_SUFFIX}-${{ matrix.backend }}"
+          fi
+          if [[ "${{ matrix.dev }}" == "true" ]]; then
+            TAG_SUFFIX="${TAG_SUFFIX}-dev"
+          fi
+          IMAGE_TAG="${{ github.ref_name }}-${TAG_SUFFIX}"
+          LATEST_VERSIONED_TAG="latest-${TAG_SUFFIX}"
+
           docker build docker/ --file ${{ matrix.dockerfile }} --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           ./docker/run_tests.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
+
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
-            docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:latest-${IMAGE_SUFFIX}"
-            docker push "ghcr.io/holo-host/edgenode:latest-${IMAGE_SUFFIX}"
+            # Push the versioned latest tag, e.g., latest-hc0.5.6
+            docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
+            docker push "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
+
+            # If this is the default build, also tag it as 'latest'
+            if [[ "${{ matrix.is_default }}" == "true" ]]; then
+              docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:latest"
+              docker push "ghcr.io/holo-host/edgenode:latest"
+            fi
           fi
