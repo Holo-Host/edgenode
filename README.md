@@ -12,7 +12,7 @@ For a detailed overview and usage instructions [see here](/USAGE.md).
 ## For Support
 
 - [Edge Node Support Telegram](https://t.me/+8JV9ibBHBDpmOTg0)
-- [Schedule Live-Support](https://calendly.com/rob-lyon-holo/holo-huddle-edge-node-support)
+- [Schedule Live-Support](https://calendly.com/rob-lyon-holo/30min)
 - [Holo Host Forum](https://forum.holo.host/)
 
 ## Repo Components
