@@ -113,11 +113,6 @@ jobs:
           ./docker/run_tests.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
-            if [[ "$IMAGE_SUFFIX" == *go-pion* ]]; then
-              LATEST_SUFFIX="-go-pion"
-            else
-              LATEST_SUFFIX=""
-            fi
-            docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:latest${LATEST_SUFFIX}"
-            docker push "ghcr.io/holo-host/edgenode:latest${LATEST_SUFFIX}"
+            docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:latest-${IMAGE_SUFFIX}"
+            docker push "ghcr.io/holo-host/edgenode:latest-${LATEST_SUFFIX}"
           fi
