@@ -3,8 +3,12 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
+is_hc_0_6_0() {
+  [[ "$IMAGE_NAME" =~ hc0\.6\.0 ]]
+}
+
 @test "Happ installation" {
-  if [[ "$IMAGE_NAME" == *hc-0.6.0* ]]; then
+  if is_hc_0_6_0; then
     docker cp "$SCRIPT_DIR/relay.json" edgenode-test:/home/nonroot/
     run docker exec -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
@@ -21,7 +25,7 @@ load 'libs/bats-assert/load'
   fi
 }
 @test "Happ installation with invalid URL" {
-  if [[ "$IMAGE_NAME" == *hc-0.6.0* ]]; then
+  if is_hc_0_6_0; then
     skip "Not running kando-badurl test on hc-0.6.0 images"
   else
     docker cp kando-badurl.json edgenode-test:/home/nonroot/
@@ -32,7 +36,7 @@ load 'libs/bats-assert/load'
 }
 
 @test "Happ installation with valid SHA256" {
-  if [[ "$IMAGE_NAME" == *hc-0.6.0* ]]; then
+  if is_hc_0_6_0; then
     skip "Not running kando-realsha test on hc-0.6.0 images"
   else
     docker cp kando-realsha.json edgenode-test:/home/nonroot/
@@ -44,7 +48,7 @@ load 'libs/bats-assert/load'
 }
 
 @test "Happ installation with invalid SHA256" {
-  if [[ "$IMAGE_NAME" == *hc-0.6.0* ]]; then
+  if is_hc_0_6_0; then
     skip "Not running kando-badsha test on hc-0.6.0 images"
   else
     docker cp kando-badsha.json edgenode-test:/home/nonroot/
