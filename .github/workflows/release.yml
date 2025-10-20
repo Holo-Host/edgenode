@@ -114,5 +114,5 @@ jobs:
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
             docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:latest-${IMAGE_SUFFIX}"
-            docker push "ghcr.io/holo-host/edgenode:latest-${LATEST_SUFFIX}"
+            docker push "ghcr.io/holo-host/edgenode:latest-${IMAGE_SUFFIX}"
           fi
