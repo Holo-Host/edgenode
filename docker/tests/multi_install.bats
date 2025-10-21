@@ -4,7 +4,7 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 is_hc_0_6_0() {
-  [[ "$IMAGE_NAME" =~ hc0\.6\.0 ]]
+  [[ "$IMAGE_NAME" =~ hc0\.6\.0 ]] || [[ "$IMAGE_NAME" =~ unyt ]]
 }
 
 @test "Multiple happ installation" {
