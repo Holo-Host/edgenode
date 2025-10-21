@@ -219,7 +219,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         format!("/etc/init.d/net.{}", interface),
                     )
                     .ok();
-                    let netifrc_stanza = format!("config_{}=\"dhcp\"\n", interface);
+                    // TODO: This is not necessary for each boot when the OS is installed. We
+                    // should first check for a `config_XXX` line for our interface first, and
+                    // replace it if present, or append it if not. The code below is fine. It just
+                    // appends a duplicate line each boot.
+                    let netifrc_stanza = format!(
+                        "config_{}=\"dhcp\"\nudhcpc_{}=\"-b -t 7\"\n",
+                        interface, interface
+                    );
                     let mut file = OpenOptions::new()
                         .append(true)
                         .create(false)
