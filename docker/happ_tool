@@ -147,8 +147,7 @@ fi
 # Check if we need to extract .happ from .webhapp
 if [[ "$HAPP_URL" == *.webhapp ]]; then
   echo "[*] Detected .webhapp file, extracting .happ file..."
-  EXTRACT_DIR="/tmp/happ_extract_$$"
-  mkdir -p "$EXTRACT_DIR"
+  EXTRACT_DIR=$(mktemp -d -u)
   
   if ! hc web-app unpack "$DOWNLOADED_FILE" -o "$EXTRACT_DIR"; then
     echo "[!] Failed to extract .happ file from .webhapp" >&2
