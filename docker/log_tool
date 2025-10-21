@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+set -e
+set -u
+
+# Script version
+VERSION="0.1.0"
+
+# Configuration
+LOG_SENDER_BIN="/bin/log-sender"
+CONFIG_FILE="/etc/log-sender/config.json"
+ENDPOINT="https://log-collector.example.com"
+UNYT_PUB_KEY="${LOG_SENDER_UNYT_PUB_KEY:-}"
+REPORT_INTERVAL="${LOG_SENDER_REPORT_INTERVAL_SECONDS:-3600}"
+LOG_PATH="/var/log"
+
+# Logging setup
+LOG_TAG="log_tool"
+log() {
+    logger -t "$LOG_TAG" "$1"
+}
+
+# Usage help
+usage() {
+    cat << EOF
+Usage: $0 [command] [options]
+
+Commands:
+  init      Initialize configuration
+  service   Run log collection service
+  help      Show this help
+
+For command-specific help: $0 <command> --help
+EOF
+    exit 1
+}
+
+# Initialize command
+init_command() {
+    if [ -z "$UNYT_PUB_KEY" ] && [ -z "${LOG_SENDER_UNYT_PUB_KEY:-}" ]; then
+        log "Error: UNYT public key required for init (set via UNYT_PUB_KEY or LOG_SENDER_UNYT_PUB_KEY)"
+        exit 1
+    fi
+    
+    "$LOG_SENDER_BIN" init \
+        --config-file "$CONFIG_FILE" \
+        --endpoint "$ENDPOINT" \
+        --unyt-pub-key "${UNYT_PUB_KEY:-$LOG_SENDER_UNYT_PUB_KEY}" \
+        --report-interval-seconds "$REPORT_INTERVAL"
+}
+
+# Service command
+service_command() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        log "Error: Config file not found: $CONFIG_FILE"
+        exit 1
+    fi
+    
+    "$LOG_SENDER_BIN" service \
+        --config-file "$CONFIG_FILE" \
+        --report-path "$LOG_PATH"
+}
+
+# Main execution
+case "$1" in
+    init)
+        shift
+        init_command "$@"
+        ;;
+    service)
+        shift
+        service_command "$@"
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    *)
+        log "Unknown command: $1"
+        usage
+        ;;
+esac
