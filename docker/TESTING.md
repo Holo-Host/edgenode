@@ -30,6 +30,7 @@ The test cases are located in the `tests` directory. Each file in this directory
 - `process.bats`: Verifies that the `holochain` process runs as the `nonroot` user.
 - `persistence.bats`: Verifies that data written to the `/data` volume persists across container restarts.
 - `happ.bats`: Verifies that a sample hApp can be installed successfully.
+- `webhapp.bats`: Verifies that a sample webhApp can be downloaded, extracted, and installed successfully.
 
 ## Adding New Tests
 
@@ -38,3 +39,9 @@ To add a new test, create a new `.bats` file in the `tests` directory. The `run_
 ## CI Integration
 
 The `run_tests.sh` script is designed to be easily integrated into a CI/CD pipeline. It will exit with a non-zero status code if any of the tests fail. The structured output from Bats will make it easy to diagnose failures in the CI logs.
+
+## Incompatible Happs and Skipping Tests
+
+Some hApps and webhApps may not be compatible with all versions of Holochain, especially with development or pre-release versions. To prevent test failures due to these incompatibilities, certain tests are conditionally skipped.
+
+The `is_hc_0_6_0()` function (or similar version-checking logic) is used within test suites to detect specific Holochain versions (e.g., `hc-0.6.0` and newer development builds). If an incompatible version is detected, tests that rely on specific hApps (like `kando` or `rhymez`) will be skipped, and a message indicating the reason for skipping will be displayed. This ensures that the test suite remains robust and provides accurate results without false negatives caused by version mismatches.

@@ -1,8 +1,9 @@
 # Edge Node Container
 
-A docker container for running Holochain and installing hApps to host them as always-on-nodes.  
+A docker container for running Holochain and installing hApps to host them as always-on-nodes.
 
 Besides `holochain` and `hc`, the following commands are available in the container to manage the hApp lifecycle:
+
 - `list_happs`
 - `happ_config_file`
 - `install_happ`
@@ -21,9 +22,7 @@ Besides `holochain` and `hc`, the following commands are available in the contai
 - [Usage](#usage)
 
    - [Interactive Shell Access](#interactive-shell-access)
-
    - [Scripted Install](#scripted-install)
-
    - [Troubleshooting Logs](#troubleshooting-logs)
 
 - [Production Deployment with Conductor](#production-deployment-with-conductor)
@@ -73,7 +72,7 @@ docker exec -it edgenode su - nonroot
 
 #### Scripted Install
 
-You can use the `install_happ` script to install a hApp from a JSON configuration file.
+You can use the `install_happ` script to install a hApp from a JSON configuration file.  URLs for both `.happ` and `.webhapp` files are supported.
 
 1. **Get another interactive shell to the container.**
 2. **Run the script:**
@@ -145,7 +144,7 @@ docker run --name edgenode -dit \
 4. **Install hApp(s)**
 
 `install_happ <config.json>`
-5. **Enable hApp(s)**
+5. __Enable hApp(s)__
 
 `enable_happ <APP_ID>`
 

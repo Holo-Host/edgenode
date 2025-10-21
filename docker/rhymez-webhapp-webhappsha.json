@@ -1,0 +1,8 @@
+{
+  "app": {
+    "name": "rhymez",
+    "version": "0.1.5",
+    "happUrl": "https://codeberg.org/matthme/rhymez/releases/download/0.1.5/rhymez.webhapp",
+    "happSha256": "3c6b80e6377606ea59400586a99078d875af653fb50c428a03789c8ac17cfe1d"
+  }
+}
