@@ -32,7 +32,7 @@ Step 1: Create JSON file using `happ_config_file create`, modifying the fields o
   "app": {  
     "name": "example_happ",  
     "version": "0.1.0",  
-    "happUrl": "https://github.com/example/v0.1.0/example_happ.happ",  
+    "happUrl": "https://github.com/example/v0.1.0/example_happ.happ", // Can also be a .webhapp URL  
     "modifiers": {  
       "networkSeed": "", // any string value  
       "properties": {} // any json value  
