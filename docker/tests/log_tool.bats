@@ -15,7 +15,7 @@ is_unyt() {
 
 @test "Init command creates config file at /etc/log-sender/config.json" {
   export UNYT_PUB_KEY="testkey123"
-  run docker exec edgenode-test log-sender init
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://example.com --unyt-pub-key "$UNYT_PUB_KEY" --report-interval-seconds 60
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial "testkey123"
@@ -24,7 +24,7 @@ is_unyt() {
 
 @test "Init command accepts LOG_SENDER_REPORT_INTERVAL_SECONDS override" {
   export LOG_SENDER_REPORT_INTERVAL_SECONDS="300"
-  run docker exec edgenode-test log-sender init
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://example.com --unyt-pub-key testkey123 --report-interval-seconds "$LOG_SENDER_REPORT_INTERVAL_SECONDS"
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial '"report_interval_seconds":300'
@@ -33,7 +33,7 @@ is_unyt() {
 
 @test "Service command fails when config file is missing" {
   run docker exec edgenode-test rm /etc/log-sender/config.json
-  run docker exec edgenode-test log-sender service
+  run docker exec edgenode-test log-sender service --config-file /etc/log-sender/config.json
   assert_failure
   assert_output --partial "Config file not found"
 }
@@ -41,7 +41,7 @@ is_unyt() {
 @test "Service command processes logs from /var/log" {
   if is_unyt; then
     run docker exec edgenode-test sh -c 'echo "testlog" > /var/log/test.log'
-    run docker exec edgenode-test log-sender service
+    run docker exec edgenode-test log-sender service --config-file /etc/log-sender/config.json
     assert_output --partial "Processing logs from /var/log/test.log"
   else
     skip "Not running on unyt image"
@@ -50,7 +50,7 @@ is_unyt() {
 
 @test "Service command handles environment variable overrides" {
   export LOG_SENDER_LOG_PATH="/custom/log/path"
-  run docker exec edgenode-test log-sender service
+  run docker exec edgenode-test log-sender service --config-file /etc/log-sender/config.json
   assert_output --partial "Processing logs from $LOG_SENDER_LOG_PATH"
   unset LOG_SENDER_LOG_PATH
 }
@@ -58,7 +58,7 @@ is_unyt() {
 @test "LOG_SENDER_UNYT_PUB_KEY takes precedence over UNYT_PUB_KEY" {
   export UNYT_PUB_KEY="fallback"
   export LOG_SENDER_UNYT_PUB_KEY="override"
-  run docker exec edgenode-test log-sender init
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://example.com --unyt-pub-key "$UNYT_PUB_KEY" --report-interval-seconds 60
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial "override"
@@ -66,7 +66,7 @@ is_unyt() {
 }
 
 @test "Default paths are used when not overridden" {
-  run docker exec edgenode-test log-sender init
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://example.com --unyt-pub-key testkey123 --report-interval-seconds 60
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial '"log_path":"/var/log"'
