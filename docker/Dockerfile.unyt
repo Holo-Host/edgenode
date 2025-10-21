@@ -3,3 +3,9 @@ FROM ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev
 RUN wget https://github.com/Holo-Host/log-sender/releases/download/v0.1.0p3/log-sender && \
     mv log-sender /bin/log-sender && \
     chmod +x /bin/log-sender
+    
+SHELL ["/bin/sh", "-c"]
+EXPOSE 4444
+
+# Set entrypoint to keep container running and allow interactive shell access
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
