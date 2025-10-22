@@ -9,14 +9,14 @@ is_unyt() {
 
 @test "Init command fails when no public key provided" {
   run docker exec edgenode-test rm -f /etc/log-sender/config.json
-  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint https://httpbin.org/get --report-interval-seconds 60
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://host.docker.internal:8787 --report-interval-seconds 60
   assert_failure
   assert_output --partial "the following required arguments were not provided: --unyt-pub-key"
 }
 
 @test "Init command creates config file at /etc/log-sender/config.json" {
   export UNYT_PUB_KEY="testkey123"
-  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint https://httpbin.org/post --unyt-pub-key "$UNYT_PUB_KEY" --report-interval-seconds 60
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://host.docker.internal:8787 --unyt-pub-key "$UNYT_PUB_KEY" --report-interval-seconds 60
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial '"unyt_pub_key":"testkey123"'
@@ -26,7 +26,7 @@ is_unyt() {
 @test "Init command accepts LOG_SENDER_REPORT_INTERVAL_SECONDS override" {
   run docker exec edgenode-test rm -f /etc/log-sender/config.json
   export LOG_SENDER_REPORT_INTERVAL_SECONDS="300"
-  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint https://httpbin.org/get --unyt-pub-key testkey123 --report-interval-seconds "$LOG_SENDER_REPORT_INTERVAL_SECONDS"
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://host.docker.internal:8787 --unyt-pub-key testkey123 --report-interval-seconds "$LOG_SENDER_REPORT_INTERVAL_SECONDS"
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial '"report_interval_seconds":300'
@@ -61,7 +61,7 @@ is_unyt() {
   run docker exec edgenode-test rm -f /etc/log-sender/config.json
   export UNYT_PUB_KEY="fallback"
   export LOG_SENDER_UNYT_PUB_KEY="override"
-  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint https://httpbin.org/get --unyt-pub-key "$UNYT_PUB_KEY" --report-interval-seconds 60
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://host.docker.internal:8787 --unyt-pub-key "$UNYT_PUB_KEY" --report-interval-seconds 60
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial '"unyt_pub_key":"override"'
@@ -70,7 +70,7 @@ is_unyt() {
 
 @test "Default paths are used when not overridden" {
   run docker exec edgenode-test rm -f /etc/log-sender/config.json
-  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint https://httpbin.org/get --unyt-pub-key testkey123 --report-interval-seconds 60
+  run docker exec edgenode-test log-sender init --config-file /etc/log-sender/config.json --endpoint http://host.docker.internal:8787 --unyt-pub-key testkey123 --report-interval-seconds 60
   assert_success
   run docker exec edgenode-test cat /etc/log-sender/config.json
   assert_output --partial '"log_path":"/var/log"'
