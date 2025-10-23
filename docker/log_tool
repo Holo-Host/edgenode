@@ -37,16 +37,48 @@ EOF
 
 # Initialize command
 init_command() {
-    if [ -z "$UNYT_PUB_KEY" ] && [ -z "${LOG_SENDER_UNYT_PUB_KEY:-}" ]; then
-        log "Error: UNYT public key required for init (set via UNYT_PUB_KEY or LOG_SENDER_UNYT_PUB_KEY)"
-        exit 1
+    # Build the command
+    local CMD=("$LOG_SENDER_BIN" init)
+    
+    # Add config file
+    CMD+=(--config-file "$CONFIG_FILE")
+    
+    # Add endpoint (allow override via environment variable or command line)
+    local ENDPOINT_ARG="${LOG_SENDER_ENDPOINT:-$ENDPOINT}"
+    if [ $# -gt 0 ] && [[ "$1" == "--endpoint" ]]; then
+        CMD+=(--endpoint "$2")
+        shift 2
+    else
+        CMD+=(--endpoint "$ENDPOINT_ARG")
     fi
     
-    "$LOG_SENDER_BIN" init \
-        --config-file "$CONFIG_FILE" \
-        --endpoint "$ENDPOINT" \
-        --unyt-pub-key "${UNYT_PUB_KEY:-$LOG_SENDER_UNYT_PUB_KEY}" \
-        --report-interval-seconds "$REPORT_INTERVAL"
+    # Add unyt pub key (use LOG_SENDER_UNYT_PUB_KEY if set, otherwise UNYT_PUB_KEY)
+    local PUB_KEY_ARG="${LOG_SENDER_UNYT_PUB_KEY:-$UNYT_PUB_KEY}"
+    if [ -n "$PUB_KEY_ARG" ]; then
+        CMD+=(--unyt-pub-key "$PUB_KEY_ARG")
+    else
+        # If no pub key is set, check if it's provided as a command line argument
+        if [ $# -gt 0 ] && [[ "$1" == "--unyt-pub-key" ]]; then
+            CMD+=(--unyt-pub-key "$2")
+            shift 2
+        else
+            # If still no pub key, show error message
+            log "Error: UNYT public key required for init (set via UNYT_PUB_KEY or LOG_SENDER_UNYT_PUB_KEY or --unyt-pub-key argument)"
+            exit 1
+        fi
+    fi
+    
+    # Add report interval (allow override via environment variable or command line)
+    local INTERVAL_ARG="${LOG_SENDER_REPORT_INTERVAL_SECONDS:-$REPORT_INTERVAL}"
+    if [ $# -gt 0 ] && [[ "$1" == "--report-interval-seconds" ]]; then
+        CMD+=(--report-interval-seconds "$2")
+        shift 2
+    else
+        CMD+=(--report-interval-seconds "$INTERVAL_ARG")
+    fi
+    
+    # Execute the command
+    "${CMD[@]}"
 }
 
 # Service command
@@ -56,9 +88,12 @@ service_command() {
         exit 1
     fi
     
+    # Use LOG_SENDER_LOG_PATH if set, otherwise default to LOG_PATH
+    local REPORT_PATH="${LOG_SENDER_LOG_PATH:-$LOG_PATH}"
+    
     "$LOG_SENDER_BIN" service \
         --config-file "$CONFIG_FILE" \
-        --report-path "$LOG_PATH"
+        --report-path "$REPORT_PATH"
 }
 
 # Main execution

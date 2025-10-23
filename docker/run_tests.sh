@@ -43,7 +43,11 @@ fi
 
 # Run container
 mkdir -p "$TEST_DATA_DIR"
-docker run -d --name "$CONTAINER_NAME" -v "$(pwd)/$TEST_DATA_DIR:/data" --add-host host.docker.internal:host-gateway "$IMAGE_NAME"
+docker run -d \
+  --name "$CONTAINER_NAME" \
+  -v "$(pwd)/$TEST_DATA_DIR:/data" \
+  --add-host host.docker.internal:host-gateway \
+  "$IMAGE_NAME"
 
 # Wait for startup
 sleep 5
