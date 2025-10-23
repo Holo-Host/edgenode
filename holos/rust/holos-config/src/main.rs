@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
-use holos_config::{HolosConfig, cmdline::CmdLine, install::do_install, models::ModelConfig};
+use holos_config::{
+    HolosConfig, cmdline::CmdLine, install::do_install, models::Model, models::ModelConfig,
+};
 use local_ip_address::list_afinet_netifas;
 use log::info;
 use serde::Deserialize;
@@ -25,6 +27,7 @@ enum Commands {
     TrustedKeys {},
     EtcIssue {},
     Install {},
+    DetectModel {},
 }
 
 /// The structure we get keys from github in
@@ -83,6 +86,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match &cli.command {
+        Commands::DetectModel {} => {
+            println!("Model: {}", Model::detect_model().unwrap());
+        }
         Commands::TrustedKeys {} => {
             // Retrieve keys from github, if desired.
             let mut keys = String::new();
@@ -91,13 +97,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let uri = format!("https://api.github.com/users/{}/keys", user);
                 info!("URI: {}", uri);
                 let client = reqwest::Client::new();
-                /*
-                let res = client
-                    .get(uri)
-                    .header("User-Agent", "HolOS Configurator")
-                    .send()
-                    .await?;*/
-                //info!("{}", res.text().await?);
                 let res = client
                     .get(uri)
                     .header("User-Agent", "HolOS Configurator")
@@ -146,7 +145,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             issue += "\n\n";
-            issue += "TODO: add model info here\n";
+            issue += format!("Hardware Model: {}", Model::detect_model().unwrap()).as_str();
+            issue += "\n";
 
             fs::write("/etc/issue", issue)?;
         }
