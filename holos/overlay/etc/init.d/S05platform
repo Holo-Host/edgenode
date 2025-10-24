@@ -5,9 +5,6 @@
 
 start() {
 	printf "Loading platform drivers: "
-	# This should really be done during the build, *after* compression
-	/sbin/depmod -a
-
 	# Load drivers for specific generic layers (ie, block drivers) that sit
 	# atop hardware-specific drivers.
 	modprobe -a virtio_blk usb_storage sd_mod 2>/dev/null
