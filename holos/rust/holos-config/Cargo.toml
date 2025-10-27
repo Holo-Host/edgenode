@@ -9,8 +9,7 @@ bitmask-enum = "2.2.5"
 clap = { version = "4.5.48", features = ["derive"] }
 cpio = "0.4.1"
 env_logger = "0.11.8"
-flate2 = "1.1.2"
-glob = "0.3.3"
+bzip2 = "0.6"
 ipnet = { version = "2.11.0", features = ["serde"] }
 local-ip-address = "0.6.5"
 log = "0.4.28"

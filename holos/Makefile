@@ -15,6 +15,7 @@ BUILDROOT_VERSION := 2025.08
 BUILDROOT_URL := https://buildroot.org/downloads/buildroot-${BUILDROOT_VERSION}.tar.xz
 BUILDROOT_CONFIG := holos-buildroot-${BUILDROOT_VERSION}.config
 BR_BUILD_DIR := ${TMPDIR}/br-build
+INITRD_NAME := rootfs.cpio.bz2
 
 # There's a make target to create a qcow2 file and boot the holos ISO inside KVM
 # with the qcow2 image attached as its primary drive. This governs the size of 
@@ -77,6 +78,10 @@ ${BR_BUILD_DIR}/.config: ${BR_BUILD_DIR} ${BUILDROOT_CONFIG} external-artifacts
 ${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
 	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
 
+# The initial ramdisk filesystem image is the other
+${BR_BUILD_DIR}/images/${INITRD_NAME}: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
+
 ${TMPDIR}/isoroot/boot: ${TMPDIR}
 	mkdir -p $@
 
@@ -90,9 +95,8 @@ ${TMPDIR}/isoroot/isolinux: ${TMPDIR}
 ${TMPDIR}/isoroot/boot/bzImage: ${BR_BUILD_DIR}/images/bzImage ${TMPDIR}/isoroot/boot
 	cp $< $@
 
-${TMPDIR}/isoroot/boot/rootfs.cpio.gz: ${BR_BUILD_DIR}/images/rootfs.cpio
-	# Compress it on the fly
-	gzip -c9 $< > $@
+${TMPDIR}/isoroot/boot/${INITRD_NAME}: ${BR_BUILD_DIR}/images/${INITRD_NAME} ${TMPDIR}/isoroot/boot
+	cp $< $@
 
 ${TMPDIR}/isoroot/isolinux/isolinux.bin: ${BR_BUILD_DIR}/host/share/syslinux/isolinux.bin ${TMPDIR}/isoroot/isolinux
 	cp $< $@
@@ -116,7 +120,7 @@ ${TMPDIR}/isoroot/isolinux/isolinux.cfg: isolinux.cfg
 	cp $< $@
 
 # Now that we have the artifacts we need, build a bootable hybrid ISO artifact
-${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg ${TMPDIR}/isoroot/isolinux/menu.c32
+${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/${INITRD_NAME} ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg ${TMPDIR}/isoroot/isolinux/menu.c32
 	echo ${HOLOS_VERSION} > ${TMPDIR}/isoroot/holos-version
 	# The volume name string is relevant. The code for installation and
 	# upgrades uses this to discover source media, so that the user doesn't

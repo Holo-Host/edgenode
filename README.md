@@ -11,6 +11,8 @@ For a detailed overview and usage instructions [see here](/USAGE.md).
 
 ## For Support
 
+- [hackmd - How To Set Up Always-On Nodes for Your Holochain Apps](https://hackmd.io/BIgfIdV3Q3uuCsSpazsRig)
+- [gdoc - How To Set Up Always-On Nodes for Your Holochain Apps](https://docs.google.com/document/d/1f3_5Ddff50pFIuzRJAmqGwT9nE873TKQC182LKyJJ4k/edit?tab=t.0#heading=h.ik0z3qmvpegt)
 - [Edge Node Support Telegram](https://t.me/+8JV9ibBHBDpmOTg0)
 - [Schedule Live-Support](https://calendly.com/rob-lyon-holo/30min)
 - [Holo Host Forum](https://forum.holo.host/)
