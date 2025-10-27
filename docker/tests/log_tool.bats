@@ -148,13 +148,109 @@ is_unyt() {
 }
 
 @test "log_tool help command shows usage" {
+
   if is_unyt; then
+
     run docker exec edgenode-test log_tool help
+
     assert_failure
+
     assert_output --partial "Usage:"
+
     assert_output --partial "init"
+
     assert_output --partial "service"
+
   else
+
     skip "Not running on unyt image"
+
   fi
+
+}
+
+
+
+@test "log_tool sends data and increases the metric count in the database" {
+
+  if is_unyt; then
+
+    # Ensure jq is installed
+
+    if ! command -v jq &> /dev/null; then
+
+      echo "jq could not be found, skipping test"
+
+      skip "jq is not installed"
+
+    fi
+
+
+
+    # Init log_tool with a short report interval
+
+    run docker exec edgenode-test rm -f /etc/log-sender/config.json
+
+    docker cp setup_test_env.sh edgenode-test:/tmp/setup_test_env.sh
+
+    docker exec edgenode-test chmod +x /tmp/setup_test_env.sh
+
+    run docker exec edgenode-test /tmp/setup_test_env.sh log_tool init --endpoint http://host.docker.internal:8787 --report-interval-seconds 5
+
+    assert_success
+
+
+
+    # Get initial metric count
+
+    run wrangler --wrangler-config docker/log-collector/wrangler.toml d1 execute log-collector-db --local --command "SELECT COUNT(*) FROM metrics" --json
+
+    assert_success
+
+    initial_count=$(echo "$output" | jq '.[0].results[0]["COUNT(*)"]')
+
+
+
+    # Create a dummy log file with unique content
+
+    DUMMY_LOG_CONTENT="bats test log entry $(date +%s)"
+
+    run docker exec edgenode-test sh -c "echo '$DUMMY_LOG_CONTENT' > /var/log/bats_e2e_test.log"
+
+    assert_success
+
+
+
+    # Run log_tool service to send the log. Run for 10 seconds.
+
+    run docker exec edgenode-test timeout 10 /tmp/setup_test_env.sh log_tool service
+
+
+
+    # Wait for processing
+
+    sleep 5
+
+
+
+    # Get final metric count
+
+    run wrangler --wrangler-config docker/log-collector/wrangler.toml d1 execute log-collector-db --local --command "SELECT COUNT(*) FROM metrics" --json
+
+    assert_success
+
+    final_count=$(echo "$output" | jq '.[0].results[0]["COUNT(*)"]')
+
+
+
+    # Assert that the count has increased
+
+    assert [ "$final_count" -gt "$initial_count" ]
+
+  else
+
+    skip "Not running on unyt image"
+
+  fi
+
 }
