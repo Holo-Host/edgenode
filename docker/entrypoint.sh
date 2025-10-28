@@ -2,7 +2,7 @@
 set -eu
 
 # Create persistent storage directories
-mkdir -p /data/holochain/etc /data/holochain/var /data/logs
+mkdir -p /data/holochain/etc /data/holochain/var /data/logs /data/log-sender/etc
 touch /data/logs/startup.log
 chown -R nonroot:nonroot /data
 
@@ -15,6 +15,7 @@ mkdir -p /var/local/lib
 
 # Create symlinks for persistent storage
 ln -sf /data/holochain/etc /etc/holochain
+ln -sf /data/log-sender/etc /etc/log-sender
 ln -sf /data/holochain/var /var/local/lib/holochain
 mkdir -p /data/holochain/var/ks /data/holochain/tmp /data/holochain/var/tmp
 chown -R nonroot:nonroot /data/holochain

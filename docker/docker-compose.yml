@@ -1,0 +1,25 @@
+services:
+  log-collector:
+    build:
+      context: ./log-collector
+      dockerfile: Dockerfile
+    ports:
+      - "8787:8787"
+    networks:
+      - test-net
+
+  edgenode-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.unyt
+    depends_on:
+      - log-collector
+    environment:
+      - IMAGE_NAME=local-edgenode-unyt
+    volumes:
+      - ./holo-data-test:/data
+    networks:
+      - test-net
+
+networks:
+  test-net:
