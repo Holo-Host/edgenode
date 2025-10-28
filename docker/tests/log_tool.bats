@@ -85,7 +85,7 @@ is_unyt() {
   if is_unyt; then
     run docker-compose exec -T -u nonroot edgenode-test rm /etc/log-sender/config.json
     docker-compose cp setup_test_env.sh edgenode-test:/tmp/setup_test_env.sh
-    run docker-compose exec -T -u nonroot edgenode-test chmod +x /tmp/setup_test_env.sh
+    run docker-compose exec -T edgenode-test chmod +x /tmp/setup_test_env.sh
     run docker-compose exec -T -u nonroot -e RUST_LOG=debug edgenode-test timeout 5 /tmp/setup_test_env.sh log_tool service
     assert_failure
     assert_output --partial "Config file not found"
@@ -94,11 +94,11 @@ is_unyt() {
   fi
 }
 
-@test "log_tool service command uses default /var/log path" {
+@test "log_tool service command uses default /data/logs path" {
   if is_unyt; then
     run docker-compose exec -T -u nonroot edgenode-test sh -c 'mkdir -p /data/logs && echo "testlog" > /data/logs/test.log && chmod 644 /data/logs/test.log'
     docker-compose cp setup_test_env.sh edgenode-test:/tmp/setup_test_env.sh
-    run docker-compose exec -T -u nonroot edgenode-test chmod +x /tmp/setup_test_env.sh
+    run docker-compose exec -T edgenode-test chmod +x /tmp/setup_test_env.sh
     run docker-compose exec -T -u nonroot -e RUST_LOG=debug edgenode-test timeout 5 /tmp/setup_test_env.sh log_tool service
     # The service command might not produce the expected output, so let's check if it runs without error
     assert_success
