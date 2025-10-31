@@ -1,16 +1,22 @@
-FROM ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev
+ARG BASE_IMAGE=${BASE_IMAGE:-local-edgenode-hc-0.6.0-dev-go-pion}
+FROM $BASE_IMAGE
 
-RUN wget https://github.com/Holo-Host/log-sender/releases/download/v0.1.0p3/log-sender && \
-    mv log-sender /bin/log-sender && \
-    chmod +x /bin/log-sender && \
+RUN wget https://github.com/Holo-Host/log-sender/releases/download/v0.1.0p4/log-sender && \
+    mv log-sender /usr/local/bin/log-sender && \
+    chmod +x /usr/local/bin/log-sender && \
     mkdir -p /etc/log-sender && \
-    chmod 755 /etc/log-sender
+    chown nonroot:nonroot /etc/log-sender
+
+COPY conductor-config-0.6.0.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
 
 COPY log_tool /usr/local/bin/log_tool
 RUN chmod +x /usr/local/bin/log_tool
+
+COPY unyt_entrypoint.sh /usr/local/bin/unyt_entrypoint.sh
+RUN chmod +x /usr/local/bin/unyt_entrypoint.sh
 
 SHELL ["/bin/sh", "-c"]
 EXPOSE 4444
 
 # Set entrypoint to keep container running and allow interactive shell access
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/unyt_entrypoint.sh"]

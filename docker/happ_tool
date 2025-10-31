@@ -4,7 +4,7 @@ set -euo pipefail
 # Function to validate APP_ID format
 validate_app_id() {
   local app_id="$1"
-  if ! [[ "$app_id" =~ ^[a-zA-Z0-9_:\.-]+$ ]]; then
+  if ! [[ "$app_id" =~ ^[a-zA-Z0-9_:\.-]+$ ]] && ! [[ "$app_id" =~ ^[a-zA-Z0-9_:\.-]+(\:\:[a-zA-Z0-9_:\.-]+)*$ ]]; then
     echo "[!] Invalid APP_ID format: $app_id" >&2
     exit 1
   fi
@@ -151,7 +151,51 @@ fi
 
 # ---- Generate agent key ----
 echo "DEBUG: Starting agent key generation"
-AGENT_KEY=$(hc s call -r "$ADMIN_PORT" new-agent | awk '{print $NF}' | tr -d '"')
+RAW_OUTPUT=$(hc s call -r "$ADMIN_PORT" new-agent 2>&1)
+echo "[*] Debug: Raw new-agent output:"
+echo "$RAW_OUTPUT"
+
+# Robust agent key extraction with fallback strategies
+# Try multiple extraction methods to handle different Holochain versions
+
+# Method 1: Original simple extraction (for hc-0.5.6 and standard images)
+AGENT_KEY=$(echo "$RAW_OUTPUT" | awk '{print $NF}' | tr -d '"' | grep -v '^$')
+
+# Method 2: JSON format extraction (for UNYT images with reporting)
+if [ -z "$AGENT_KEY" ] || ! [[ "$AGENT_KEY" =~ ^[A-Za-z0-9_-]{30,}$ ]]; then
+    echo "[*] Method 1 failed, trying JSON extraction..."
+    AGENT_KEY=$(echo "$RAW_OUTPUT" | \
+      grep -E '"[A-Za-z0-9_-]{40,}"' | \
+      sed 's/.*"\([A-Za-z0-9_-]\{40,\}\)".*/\1/' | \
+      head -1)
+fi
+
+# Method 3: Fallback - extract anything that looks like a key
+if [ -z "$AGENT_KEY" ] || ! [[ "$AGENT_KEY" =~ ^[A-Za-z0-9_-]+$ ]]; then
+    echo "[*] Method 2 failed, trying fallback extraction..."
+    AGENT_KEY=$(echo "$RAW_OUTPUT" | \
+      grep -o -E '[A-Za-z0-9_-]{30,}' | \
+      grep -v 'Log\|Initialising' | \
+      head -1)
+fi
+
+# Final validation
+if [ -z "$AGENT_KEY" ]; then
+    echo "[!] Failed to extract agent key from output" >&2
+    echo "[!] All extraction methods failed" >&2
+    echo "[!] Raw output was:" >&2
+    echo "$RAW_OUTPUT" >&2
+    exit 1
+fi
+
+if ! [[ "$AGENT_KEY" =~ ^[A-Za-z0-9_-]{30,}$ ]]; then
+    echo "[!] Extracted key '$AGENT_KEY' doesn't look valid" >&2
+    echo "[!] Raw output was:" >&2
+    echo "$RAW_OUTPUT" >&2
+    exit 1
+fi
+
+echo "[*] Generated agent key: $AGENT_KEY"
 
 # ---- Build App ID ----
 echo "DEBUG: Starting App ID build"

@@ -34,7 +34,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Copy and set up holochain paths and files.  
 RUN mkdir -p /usr/local/share/holochain
-COPY conductor-config.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
+COPY conductor-config-0.5.6.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
 COPY logrotate.d/holochain.conf /etc/logrotate.d/holochain.conf
 RUN chown -R nonroot:nonroot /usr/local/share/holochain
 

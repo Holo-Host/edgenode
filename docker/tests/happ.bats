@@ -4,23 +4,23 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 is_hc_0_6_0() {
-  [[ "$IMAGE_NAME" =~ hc0\.6\.0 ]] || [[ "$IMAGE_NAME" =~ unyt ]]
+  [[ "$IMAGE_NAME" =~ hc.*0\.6\.0 ]] || [[ "$IMAGE_NAME" =~ unyt ]]
 }
 
 @test "Happ installation" {
   if is_hc_0_6_0; then
-    docker-compose cp "$SCRIPT_DIR/relay.json" edgenode-test:/home/nonroot/
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    docker compose cp "$SCRIPT_DIR/relay.json" ${SERVICE_NAME:-edgenode-test}:/home/nonroot/
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
     
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'hc s call -r 4444 list-apps'
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'hc s call -r 4444 list-apps'
     assert_output --partial "relay"
   else
-    docker-compose cp kando-nosha.json edgenode-test:/home/nonroot/
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando-nosha.json test-node'
+    docker compose cp kando-nosha.json ${SERVICE_NAME:-edgenode-test}:/home/nonroot/
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'cd /home/nonroot && install_happ kando-nosha.json test-node'
     assert_success
     
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'hc s call -r 4444 list-apps'
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'hc s call -r 4444 list-apps'
     assert_output --partial "kando"
   fi
 }
@@ -28,8 +28,8 @@ is_hc_0_6_0() {
   if is_hc_0_6_0; then
     skip "Not running kando-badurl test on hc-0.6.0 images"
   else
-    docker-compose cp kando-badurl.json edgenode-test:/home/nonroot/
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando-badurl.json test-node'
+    docker compose cp kando-badurl.json ${SERVICE_NAME:-edgenode-test}:/home/nonroot/
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'cd /home/nonroot && install_happ kando-badurl.json test-node'
     assert_failure
     assert_output --partial "[!] Failed to download happ"
   fi
@@ -39,10 +39,10 @@ is_hc_0_6_0() {
   if is_hc_0_6_0; then
     skip "Not running kando-realsha test on hc-0.6.0 images"
   else
-    docker-compose cp kando-realsha.json edgenode-test:/home/nonroot/
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando-realsha.json test-node'
+    docker compose cp kando-realsha.json ${SERVICE_NAME:-edgenode-test}:/home/nonroot/
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'cd /home/nonroot && install_happ kando-realsha.json test-node'
     assert_success
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'hc s call -r 4444 list-apps'
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'hc s call -r 4444 list-apps'
     assert_output --partial "kando"
   fi
 }
@@ -51,8 +51,8 @@ is_hc_0_6_0() {
   if is_hc_0_6_0; then
     skip "Not running kando-badsha test on hc-0.6.0 images"
   else
-    docker-compose cp kando-badsha.json edgenode-test:/home/nonroot/
-    run docker-compose exec -T -u nonroot edgenode-test sh -c 'cd /home/nonroot && install_happ kando-badsha.json test-node'
+    docker compose cp kando-badsha.json ${SERVICE_NAME:-edgenode-test}:/home/nonroot/
+    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'cd /home/nonroot && install_happ kando-badsha.json test-node'
     assert_failure
     assert_output --partial "Checksum mismatch!"
   fi

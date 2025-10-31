@@ -3,3 +3,7 @@ test-data/
 holo-data-test/
 .roo/
 AGENTS.md
+log_fix.md
+UNYT_TEST_ANALYSIS.md
+UNYT_TEST_RESULTS*.*
+unyt_test_r*.*

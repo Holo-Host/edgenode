@@ -1,25 +1,50 @@
+# Simple Docker Compose for local development
+# For multi-image testing, use docker-compose.base.yml with image-specific compose files
+
 services:
+  edgenode-test:
+    image: local-edgenode-unyt
+    build:
+      context: .
+      dockerfile: Dockerfile.unyt
+      args:
+        BASE_IMAGE: ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev
+    depends_on:
+      log-collector:
+        condition: service_healthy
+    environment:
+      - IMAGE_NAME=local-edgenode-unyt
+      - UNYT_PUB_KEY=uhCAkDM-p0oBsRJn5Ebpk8c_TNkrp2NEwF9C5ppJq8cE77I-n3qfO
+      - LOG_SENDER_UNYT_PUB_KEY=uhCAkDM-p0oBsRJn5Ebpk8c_TNkrp2NEwF9C5ppJq8cE77I-n3qfO
+      - LOG_SENDER_REPORT_INTERVAL_SECONDS=60
+      - LOG_SENDER_LOG_PATH=/data/logs
+      - LOG_SENDER_ENDPOINT=http://log-collector:8787
+      - RUST_LOG=info
+    volumes:
+      - holo-data-test:/data
+    networks:
+      - test-net
+
   log-collector:
     build:
       context: ./log-collector
       dockerfile: Dockerfile
     ports:
       - "8787:8787"
-    networks:
-      - test-net
-
-  edgenode-test:
-    build:
-      context: .
-      dockerfile: Dockerfile.unyt
-    depends_on:
-      - log-collector
     environment:
-      - IMAGE_NAME=local-edgenode-unyt
-    volumes:
-      - ./holo-data-test:/data
+      - ADMIN_SECRET=test_admin_secret
+      - ENVIRONMENT=development
     networks:
       - test-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   test-net:
+
+volumes:
+  holo-data-test:
+    driver: local

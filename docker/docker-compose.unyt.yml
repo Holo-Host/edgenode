@@ -1,0 +1,52 @@
+# Docker Compose configuration for Holochain UNYT testing
+# This image depends on hc-0.6.0-dev-go-pion base image AND requires log-collector
+
+services:
+  # Log collector service (only needed for unyt)
+  log-collector:
+    build:
+      context: ./log-collector
+      dockerfile: Dockerfile
+    ports:
+      - "8787:8787"
+    environment:
+      - ADMIN_SECRET=${ADMIN_SECRET:-test_admin_secret}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  edgenode-unyt:
+    image: ${EDGENODE_IMAGE:-local-edgenode-unyt}
+    build:
+      context: .
+      dockerfile: Dockerfile.unyt
+      args:
+        BASE_IMAGE: ${EDGENODE_HC_0_6_0_IMAGE:-ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev}
+    depends_on:
+      log-collector:
+        condition: service_healthy
+    environment:
+      - IMAGE_NAME=local-edgenode-unyt
+      # UNYT-specific environment variables
+      - UNYT_PUB_KEY=${UNYT_PUB_KEY:-uhCAkDM-p0oBsRJn5Ebpk8c_TNkrp2NEwF9C5ppJq8cE77I-n3qfO}
+      - LOG_SENDER_UNYT_PUB_KEY=${LOG_SENDER_UNYT_PUB_KEY:-uhCAkDM-p0oBsRJn5Ebpk8c_TNkrp2NEwF9C5ppJq8cE77I-n3qfO}
+      - LOG_SENDER_REPORT_INTERVAL_SECONDS=${LOG_SENDER_REPORT_INTERVAL_SECONDS:-60}
+      - LOG_SENDER_LOG_PATH=${LOG_SENDER_LOG_PATH:-/data/logs}
+      - LOG_SENDER_ENDPOINT=http://log-collector:8787
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - edgenode-data:/data
+      - edgenode-logs:/data/logs
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "pgrep", "holochain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

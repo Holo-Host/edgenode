@@ -7,7 +7,7 @@ set -u
 VERSION="0.1.0"
 
 # Configuration
-LOG_SENDER_BIN="/bin/log-sender"
+LOG_SENDER_BIN="/usr/local/bin/log-sender"
 CONFIG_FILE="/etc/log-sender/config.json"
 ENDPOINT="https://log-collector.example.com"
 UNYT_PUB_KEY="${LOG_SENDER_UNYT_PUB_KEY:-}"
