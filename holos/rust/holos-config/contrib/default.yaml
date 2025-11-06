@@ -1,7 +1,7 @@
 # A sample/default configuration file suitable for a holoport
 storage:
-    install_partition: /dev/sda1
-    persist_partition: /dev/sda2
+    system_device: /dev/sda
+    data_device: /dev/sda
 network:
     nameservers:
     interfaces:

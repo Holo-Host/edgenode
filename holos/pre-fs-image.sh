@@ -10,3 +10,6 @@ do
 	echo "Calculating module dependencies for kernel $ver"
 	/sbin/depmod -av -b "$1" "$ver"
 done
+
+# Prevent us from trying to mount cgroupfs twice.
+rm -f "$1"/etc/init.d/S30cgroupfs

@@ -1,0 +1,45 @@
+#!/bin/sh
+
+PROCESS="klogd"
+
+start() {
+	if [ "$RC_RUNLEVEL" == "holos-install" ]
+	then
+		printf 'Starting %s: ' "$PROCESS"
+		/bin/install-draft > /dev/console 2>&1 < /dev/console
+		status=$?
+		if [ "$status" -eq 0 ]; then
+			echo "OK"
+		else
+			echo "FAIL"
+		fi
+	fi
+	return "$status"
+}
+
+stop() {
+	printf 'Stopping %s: ' "$PROCESS"
+	status=$?
+	if [ "$status" -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+	return "$status"
+}
+
+restart() {
+	stop
+	sleep 1
+	start
+}
+
+case "$1" in
+	start|stop|restart)
+		"$1";;
+	reload)
+		restart;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+esac

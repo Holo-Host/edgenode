@@ -4,15 +4,29 @@ use anyhow::Error;
 use bitmask_enum::bitmask;
 use glob::glob;
 use log::info;
+use std::env;
 use std::fmt;
 use std::fs;
-//use std::path::Path;
 
 pub struct ModelConfig {}
 
 impl ModelConfig {
-    pub fn config_file() -> Option<String> {
-        Some("/etc/holos/configs/default.yaml".to_string())
+    const DEFAULT_CONFIG_PATH: &str = "/etc/holos/configs";
+    pub fn config_file(model: &Model) -> Option<String> {
+        let cfg_name: &str = match model {
+            Model::Unknown => "default",
+            Model::DellXPS13 => "dell-xps13",
+            Model::Holoport => "holoport",
+            Model::HoloportPlus => "holoport-plus",
+            Model::VirtioVM => "virtio-vm",
+        };
+
+        let config_path = match env::var("CONFIG_PATH") {
+            Ok(v) => v,
+            Err(_) => Self::DEFAULT_CONFIG_PATH.to_string(),
+        };
+
+        Some(format!("{}/{}.yaml", config_path, cfg_name))
     }
 }
 
@@ -189,9 +203,12 @@ impl Model {
             found_flags & ModelHeuristicFlags::HasVirtIODrive
         );
         // A match statement would be more rusty than this if block, but the bitwise operation on
-        // the bitmask enum doesn't seem to work...
+        // the bitmask enum doesn't seem to work. We currently match _any_ SSD as a holoport SSD,
+        // so including that here temporarily for my hardware.
         let model = if found_flags
-            == ModelHeuristicFlags::HasDellXpsSMI | ModelHeuristicFlags::HasDellXpsFPR
+            == ModelHeuristicFlags::HasDellXpsSMI
+                | ModelHeuristicFlags::HasDellXpsFPR
+                | ModelHeuristicFlags::HasHoloportPlusSSD
         {
             Model::DellXPS13
         } else if found_flags

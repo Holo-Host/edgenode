@@ -8,32 +8,89 @@ die() {
     exit 1
 }
 
-dest="$1"
+echo ""
+echo "---=== Performing installation of HolOS ===---"
+echo ""
+
+# Check with the rust code to get some config/model information for ourselves.
+eval `holos-config query-model`
+
+[ -z "$MODEL" ] && die "Can't detect platform model. This installer cannot currently continue."
+
+if [ -n "$SYSTEM_DEVICE" ]
+then
+	dest="`basename $SYSTEM_DEVICE`"
+	echo "Using $dest as system device, per default model config."
+else
+	dest="$1"
+fi
 [ -z "$dest" ] && die "usage: $0 <dest_device>"
+
+
+# A few constants for various well-known filesystem labels. We'll also use these labels moving
+# forward in the Rust code too, preventing anymore breaking changes in the installer (famous
+# last words).
+# This is the label we use for the source media filesystem.
+SOURCE_FS_LABEL="HolOS-install"
+# We create two filesystems that are almost identical for the operating system. One nicknamed 'flip'
+# one nicknamed 'flop' that will contain (at various stages of life) the current and the previous
+# or the previous version of the operating system.
+SYS_FLIP_LABEL="HolOS-sys-flip"
+SYS_FLOP_LABEL="HolOS-sys-flop"
+# We create a separate volume for application data. This gives us separation between church and
+# state when doing things like operating system upgrades. It also allows us to place the 
+# application data on a separate physical device to isolate I/O. Once the operating system has
+# booted, there generally won't be a lot of random I/O and having it on a rotational/mechanical
+# drive is no problem. For very busy holochain apps, they may be better off on an SSD.
+DATA_FS_LABEL="HolOS-data"
 
 # We should be able to detect the source device. Eventually, we should
 # provide a way to override this, and likely use things like a URL
 # instead.
-source=`blkid -L HolOS-install 2>/dev/null`
-[ -z "$source" ] && die "Unable to find source media. Ensure USB stick is inserted."
-echo "Discovered HolOS source media on device ${source}"
+source=`blkid -L "$SOURCE_FS_LABEL" 2>/dev/null`
+[ -z "$source" ] && die "Unable to find source media volume with label '$SOURCE_FS_LABEL'. Ensure USB stick is inserted."
+echo "Discovered HolOS source media ('$SOURCE_FS_LABEL') on device ${source}"
 
 partition() {
+	if [ -n "$DATA_DEVICE" -a "$DATA_DEVICE" != "$SYSTEM_DEVICE" ]
+	then
+		optional_data_partition=""
+	else
+		optional_data_partition="mkpart primary ext4 40% 100%"
+	fi
+
+	echo "Partitioning ${dest}"
 	parted -s -j /dev/$dest \
 		mklabel msdos \
-		mkpart primary ext4 0% 100% \
+		mkpart primary ext4 0% 20% \
+		mkpart primary ext4 20% 40% \
+		$optional_data_partition \
 		print > /var/lib/holos/parted-$dest.json
 
-	mkfs.ext4 -F -L HolOS-system /dev/${dest}1
+	echo "Creating system volume filesystems on ${dest}"
+	mkfs.ext4 -F -L "$SYS_FLIP_LABEL" /dev/${dest}1 >> /var/log/install.log 2>&1
+	mkfs.ext4 -F -L "$SYS_FLOP_LABEL" /dev/${dest}2 >> /var/log/install.log 2>&1
+	if [ -n "$DATA_DEVICE" -a "$DATA_DEVICE" != "$SYSTEM_DEVICE" ]
+	then
+		echo "Creating data volume on ${DATA_FS_LABEL}"
+		parted -s -j $DATA_DEVICE \
+			mklabel msdos \
+			mkpart primary ext4 0% 100% \
+			print > /var/lib/holos/parted-`basename $DATA_DEVICE`.json
+		mkfs.ext4 -F -L "$DATA_FS_LABEL" "${DATA_DEVICE}"1 >> /var/log/install.log 2>&1
+	else
+		echo "Creating data volume filesystem on ${dest}"
+		mkfs.ext4 -F -L "$DATA_FS_LABEL" /dev/${dest}3 >> /var/log/install.log 2>&1
+	fi
 
-	mkdir -p $src_mnt 
+	mkdir -p $src_mnt
 	mkdir -p $dest_mnt
 
 }
 
 install() {
 	echo "Unpacking root filesystem"
-	zcat $src_mnt/boot/rootfs.cpio.gz | cpio -di
+	bzcat $src_mnt/boot/rootfs.cpio.bz2 | cpio -di
 	cp $src_mnt/boot/bzImage $dest_mnt/boot
 }
 
@@ -55,7 +112,7 @@ mkinitrd() {
 	cp -a /lib/modules tmp/initrd-root/lib
 
 	echo "Packing initial ramdisk"
-	( cd tmp/initrd-root ; find . -print0 | cpio --null --create --format=newc | gzip > ../../boot/holos-initrd.img )
+	( cd tmp/initrd-root ; find . -print0 | cpio --null --create --format=newc | bzip2 -zc > ../../boot/holos-initrd.img )
 }
 
 bootloader() {
@@ -66,30 +123,42 @@ bootloader() {
 	chroot $dest_mnt depmod -a
 	chroot $dest_mnt grub-install /dev/${dest}
 
+	# We always write to the FLIP volume during install. Later functionality around upgrades
+	# will write to the FLOP label (also) and we'll manage switching the GRUB config between
+	# the two, whilst also allowing an option for booting into the previous version.
 	cat > $dest_mnt/boot/grub/grub.cfg <<EOF
 set default="0"
 set timeout="5"
 
 menuentry "HolOS `cat $dest_mnt/etc/holos-version`" {
-	linux /boot/bzImage root=LABEL=HolOS-system ro vga=791
+	linux /boot/bzImage root=LABEL="$SYS_FLIP_LABEL" ro vga=791
 	initrd /boot/holos-initrd.img
 }
 EOF
+}
+
+fstab(){
+	(
+	echo "LABEL=\"$SYS_FLIP_LABEL\" / ext4 defaults 1 1"
+	echo "LABEL=\"$DATA_FS_LABEL\" /var/lib/docker ext4 defaults 1 1"
+	) >> "$dest_mnt/etc/fstab"
 }
 
 dest_mnt="/tmp/mnt/dest"
 src_mnt="/tmp/mnt/src"
 
 partition
-mount /dev/${dest}1 $dest_mnt
-mount ${source} $src_mnt
+mount LABEL="$SYS_FLIP_LABEL" $dest_mnt >> /var/log/install.log 2>&1
+mount ${source} $src_mnt >> /var/log/install.log 2>&1
 
 cd $dest_mnt
 install
+fstab
 mkinitrd
 bootloader
 
 cp -a /root/.ssh $dest_mnt/root/
+cd /
 
 umount $src_mnt
 umount $dest_mnt/dev
@@ -97,6 +166,8 @@ umount $dest_mnt/proc
 umount $dest_mnt/sys
 umount --lazy $dest_mnt
 
+echo ""
 echo "Installation done. Rebooting. It's safe to remove your installation media."
+echo ""
 
 reboot

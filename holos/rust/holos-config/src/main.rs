@@ -1,7 +1,5 @@
 use clap::{Parser, Subcommand};
-use holos_config::{
-    HolosConfig, cmdline::CmdLine, install::do_install, models::Model, models::ModelConfig,
-};
+use holos_config::{HolosConfig, cmdline::CmdLine, models::Model, models::ModelConfig};
 use local_ip_address::list_afinet_netifas;
 use log::info;
 use serde::Deserialize;
@@ -28,6 +26,7 @@ enum Commands {
     EtcIssue {},
     Install {},
     DetectModel {},
+    QueryModel {},
 }
 
 /// The structure we get keys from github in
@@ -59,6 +58,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         false => env_logger::init(),
     }
 
+    // First, we try to discover what model we're running on. This just gives us a set of sensible
+    // defaults for the most common cases, with the possibility to override everything, as needed.
+    let platform_model = match Model::detect_model() {
+        Ok(model) => {
+            info!("Detected model: {}", model);
+            model
+        }
+        Err(e) => {
+            // Anything to do with models is best-case as a way to provide defaults. Not being able
+            // to discover the model shouldn't be a show stopper.
+            info!("Failed to detect model with error: {}", e);
+            Model::Unknown
+        }
+    };
+
     let cmdline_path = match env::var("CMDLINE_PATH") {
         Ok(v) => v,
         Err(_) => "/proc/cmdline".to_string(),
@@ -71,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // likely via a boot-time command line argument.
     if let Some(config_file) = overrides.config_file {
         config_file_path = config_file.to_owned();
-    } else if let Some(model_config) = ModelConfig::config_file() {
+    } else if let Some(model_config) = ModelConfig::config_file(&platform_model) {
         config_file_path = model_config.to_owned();
     }
     info!("Configuration file {} selected.", config_file_path);
@@ -87,7 +101,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match &cli.command {
         Commands::DetectModel {} => {
-            println!("Model: {}", Model::detect_model().unwrap());
+            println!("{}", platform_model);
+        }
+        Commands::QueryModel {} => {
+            // This just displays some config stuff in a bourne-shell compatible syntax to eval.
+            println!("MODEL=\"{}\"", platform_model);
+            if let Some(system_device) = config.storage.system_device {
+                println!("SYSTEM_DEVICE=\"{}\"", system_device);
+            }
+            if let Some(data_device) = config.storage.data_device {
+                println!("DATA_DEVICE=\"{}\"", data_device);
+            }
         }
         Commands::TrustedKeys {} => {
             // Retrieve keys from github, if desired.
@@ -145,13 +169,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             issue += "\n\n";
-            issue += format!("Hardware Model: {}", Model::detect_model().unwrap()).as_str();
-            issue += "\n";
+            issue += format!("Hardware Model: {}", platform_model).as_str();
+            issue += "\n\n";
 
             fs::write("/etc/issue", issue)?;
         }
         Commands::Install {} => {
-            do_install(&config)?;
+            // TODO: temporarily still incomplete.
+            //Installer::do_install(&config, &platform_model)?;
         }
         Commands::Configure {} => {
             let interfaces_path = match env::var("INTERFACES_PATH") {
