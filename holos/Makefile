@@ -44,12 +44,17 @@ ${TMPDIR}/overlay: ${TMPDIR}
 ${TMPDIR}/overlay/usr/bin: ${TMPDIR}
 	mkdir -p $@
 
-${TMPDIR}/overlay/usr/bin/holos-config: rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config ${TMPDIR}/overlay/usr/bin
-	cp $< $@
-	strip $@
+#${TMPDIR}/overlay/usr/bin/holos-config: rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config ${TMPDIR}/overlay/usr/bin
+#	cp $< $@
+#	strip $@
 
-rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config:
-	cd rust/holos-config && cargo build --release --target x86_64-unknown-linux-musl
+## This has been replaced with a configuration that has buildroot do the Rust compilation for,
+## which allows us to inherit all the right flags for libc, but also all of the compiled libraries
+## without us having to manage that ourselves.
+#rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config:
+#	cd rust/holos-config && cargo build --release --target x86_64-unknown-linux-musl
+
+
 
 ${TMPDIR}/overlay/etc/holos/configs:
 	mkdir -p $@
@@ -60,13 +65,18 @@ default-configs: ${TMPDIR}/overlay/etc/holos/configs
 version-file: ${TMPDIR}/overlay/etc/holos/configs
 	echo ${HOLOS_VERSION} > ${TMPDIR}/overlay/etc/holos-version
 
-external-artifacts: ${TMPDIR}/overlay/usr/bin/holos-config default-configs version-file
+external-artifacts: default-configs version-file #${TMPDIR}/overlay/usr/bin/holos-config
 
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz: ${TMPDIR}
 	curl -q -o $@ ${BUILDROOT_URL}
 
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz
 	tar Jxf $< -C ${TMPDIR}
+
+${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+	cp -a buildroot-packages/* $</package/
+	# patch any files with global variables
+	sed -i -e "s/__HOLOS_VERSION__/${HOLOS_VERSION}/g" $</package/holos-config/holos-config.mk
 
 ${BR_BUILD_DIR}: ${TMPDIR}
 	mkdir -p ${BR_BUILD_DIR}
@@ -75,11 +85,11 @@ ${BR_BUILD_DIR}/.config: ${BR_BUILD_DIR} ${BUILDROOT_CONFIG} external-artifacts
 	cp ${BUILDROOT_CONFIG} $@
 
 # The kernel is one of the artifacts built
-${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config
 	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
 
 # The initial ramdisk filesystem image is the other
-${BR_BUILD_DIR}/images/${INITRD_NAME}: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+${BR_BUILD_DIR}/images/${INITRD_NAME}: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config
 	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
 
 ${TMPDIR}/isoroot/boot: ${TMPDIR}

@@ -4,7 +4,7 @@
 #
 
 start() {
-	printf "Loading platform drivers: "
+	printf "Loading platform drivers and mounting filesystems: "
 	# Load drivers for specific generic layers (ie, block drivers) that sit
 	# atop hardware-specific drivers.
 	modprobe -a virtio_blk usb_storage sd_mod 2>/dev/null
@@ -21,6 +21,8 @@ start() {
 			[ -z "$MODALIAS" ] || modprobe "$MODALIAS" 2>/dev/null
 		done
 	done
+	mkdir -p /var/lib/docker
+	mount -a
 	echo "OK"
 
 }

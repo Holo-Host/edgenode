@@ -3,7 +3,8 @@ use serde_derive::{Deserialize, Serialize};
 use serde_with::serde_as;
 use std::net::IpAddr;
 
-pub mod install;
+//pub mod blockdev;
+//pub mod install;
 pub mod models;
 
 /// Configuration file to define how HolOS should be run and where it should persist itself or its
@@ -22,9 +23,9 @@ pub struct HolosConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StorageConfig {
     /// Partition to install Holos to.
-    pub install_partition: Option<String>,
+    pub system_device: Option<String>,
     /// Partition to persist Holo and Holochain data to.
-    pub persist_partition: Option<String>,
+    pub data_device: Option<String>,
 }
 
 /// Network interface and nameserver configuration.
