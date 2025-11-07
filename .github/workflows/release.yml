@@ -66,6 +66,7 @@ jobs:
           toolchain: stable
           target: x86_64-unknown-linux-musl
           override: true
+          components: rust-src
 
       - name: Build HolOS ISO
         run: |
