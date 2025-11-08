@@ -81,7 +81,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: holos/tmp/holos-${{ github.ref_name }}.iso
+          asset_path: holos/tmp/holos-0.0.7.iso
           asset_name: holos-${{ github.ref_name }}.iso
           asset_content_type: application/octet-stream
 
