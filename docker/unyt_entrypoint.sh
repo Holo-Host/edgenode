@@ -10,4 +10,4 @@ if [ -f /tmp/setup_test_env.sh ]; then
 fi
 
 # Execute the original entrypoint
-exec /usr/local/bin/entrypoint.sh
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

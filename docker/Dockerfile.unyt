@@ -14,8 +14,13 @@ RUN chmod +x /usr/local/bin/log_tool
 COPY unyt_entrypoint.sh /usr/local/bin/unyt_entrypoint.sh
 RUN chmod +x /usr/local/bin/unyt_entrypoint.sh
 
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 SHELL ["/bin/sh", "-c"]
 EXPOSE 4444
 
 # Set entrypoint to keep container running and allow interactive shell access
-ENTRYPOINT ["/usr/local/bin/unyt_entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/start.sh"]

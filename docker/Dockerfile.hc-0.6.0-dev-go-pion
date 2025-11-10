@@ -2,7 +2,7 @@ FROM cgr.dev/chainguard/wolfi-base AS base
 
 VOLUME ["/data"]
 
-RUN apk update && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils tini logrotate shadow gosu uuidgen xz libstdc++
+RUN apk update && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils tini anacron logrotate shadow gosu uuidgen xz libstdc++ supervisor
 
 ARG HOLOCHAIN_VERSION=0.6.0-rc.0
 
