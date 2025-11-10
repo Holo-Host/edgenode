@@ -11,6 +11,14 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
+      - name: Check for pre-release tag
+        id: check_prerelease
+        run: |
+          if [[ "${{ github.ref_name }}" =~ -alpha || "${{ github.ref_name }}" =~ -beta || "${{ github.ref_name }}" =~ -rc ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -20,7 +28,7 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.check_prerelease.outputs.is_prerelease }}
 
   build-holos-iso:
     needs: create-release
