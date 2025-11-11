@@ -34,8 +34,6 @@ case "$IMAGE_NAME" in
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.5.6.yml"
         DOCKERFILE_SUFFIX="hc-0.5.6"
         SERVICE_NAME="edgenode-hc-0.5.6"
-        # Note: Docker Compose creates container names with project prefix
-        # The actual container name will be "docker-edgenode-hc-0.5.6-1"
         ;;
     *)
         echo "Unknown image: $IMAGE_NAME"
