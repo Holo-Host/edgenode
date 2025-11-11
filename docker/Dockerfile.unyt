@@ -6,18 +6,18 @@ RUN wget https://github.com/Holo-Host/log-sender/releases/download/v0.1.3/log-se
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender
 
-COPY conductor-config-0.6.0.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
+COPY docker/conductor-config-0.6.0.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
 
-COPY log_tool /usr/local/bin/log_tool
+COPY docker/log_tool /usr/local/bin/log_tool
 RUN chmod +x /usr/local/bin/log_tool
 
-COPY unyt_entrypoint.sh /usr/local/bin/unyt_entrypoint.sh
+COPY docker/unyt_entrypoint.sh /usr/local/bin/unyt_entrypoint.sh
 RUN chmod +x /usr/local/bin/unyt_entrypoint.sh
 
-COPY start.sh /usr/local/bin/start.sh
+COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 SHELL ["/bin/sh", "-c"]
 EXPOSE 4444
