@@ -66,11 +66,11 @@ trap cleanup EXIT
 # Note: For UNYT images, we skip the initial build here because docker compose up --build
 # will build it with the correct base image context. Building twice causes the second build
 # to overwrite the first with potentially different layers.
-if [[ "$IMAGE_NAME" == local-edgenode-* ]] && [[ "$IMAGE_NAME" != *unyt* ]]; then
+if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode-* ]] && [[ "$IMAGE_NAME" != *unyt* ]]; then
     echo "Building local image: $IMAGE_NAME"
     DOCKERFILE_NAME="Dockerfile.$(echo "$IMAGE_NAME" | sed 's/^local-edgenode-//')"
     ./build-images.sh "$DOCKERFILE_NAME"
-elif [[ "$IMAGE_NAME" == ghcr.io/* ]]; then
+elif [[ "$CI_RELEASE_TEST" == "true" ]]; then
     echo "CI release workflow detected. Skipping local build for $IMAGE_NAME."
 fi
 
