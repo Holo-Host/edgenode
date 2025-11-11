@@ -70,6 +70,8 @@ if [[ "$IMAGE_NAME" == local-edgenode-* ]] && [[ "$IMAGE_NAME" != *unyt* ]]; the
     echo "Building local image: $IMAGE_NAME"
     DOCKERFILE_NAME="Dockerfile.$(echo "$IMAGE_NAME" | sed 's/^local-edgenode-//')"
     ./build-images.sh "$DOCKERFILE_NAME"
+elif [[ "$IMAGE_NAME" == ghcr.io/* ]]; then
+    echo "CI release workflow detected. Skipping local build for $IMAGE_NAME."
 fi
 
 # Export environment variables
