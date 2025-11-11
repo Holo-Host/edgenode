@@ -142,7 +142,7 @@ jobs:
           
           # Test using the multi-image test runner
           cd docker
-          CI_RELEASE_TEST=true ./run_tests_multi.sh "${{ matrix.image_name }}"
+          CI_RELEASE_TEST=true ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           
           # Push the main image
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
@@ -202,7 +202,7 @@ jobs:
           # Test using the multi-image test runner
           IMAGE_TAG="${{ github.ref_name }}-unyt"
           # Test using the multi-image test runner
-          ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
+          CI_RELEASE_TEST=true ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
 
       - name: Push UNYT Docker image
         if: success()
