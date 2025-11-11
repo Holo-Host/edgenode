@@ -11,9 +11,6 @@ COPY docker/conductor-config-0.6.0.template.yaml /usr/local/share/holochain/cond
 COPY docker/log_tool /usr/local/bin/log_tool
 RUN chmod +x /usr/local/bin/log_tool
 
-COPY docker/unyt_entrypoint.sh /usr/local/bin/unyt_entrypoint.sh
-RUN chmod +x /usr/local/bin/unyt_entrypoint.sh
-
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 

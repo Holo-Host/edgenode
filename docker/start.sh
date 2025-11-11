@@ -44,6 +44,27 @@ while true; do
   sleep 86400
 done &
 
+# Ensure /tmp is writable and executable for nonroot
+chmod 1777 /tmp
+
+# Define the path for the log-sender config file
+LOG_SENDER_CONFIG_FILE="/etc/log-sender/config.json"
+
+# Check if the log-sender config file exists
+if [ ! -f "$LOG_SENDER_CONFIG_FILE" ]; then
+  # Prompt the user for their unyt-pub-key
+  echo "Please enter your Unyt pub key:"
+  read unyt_pub_key
+
+  # Initialize log-sender
+  log-sender init \
+    --config-file "$LOG_SENDER_CONFIG_FILE" \
+    --endpoint "https://log-collector.holo.host" \
+    --unyt-pub-key "$unyt_pub_key" \
+    --report-interval-seconds 300
+    --conductor-config-path /etc/holochain/conductor-config.yaml
+fi
+
 # Keep the container running for interactive access
 echo "Container is running. Use 'docker exec -it <container_name> /bin/sh' to access interactive shell."
 
