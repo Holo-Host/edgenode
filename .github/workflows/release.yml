@@ -142,7 +142,7 @@ jobs:
           
           # Test using the multi-image test runner
           cd docker
-          ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
+          ./run_tests_multi.sh "${{ matrix.image_name }}"
           
           # Push the main image
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
@@ -200,7 +200,9 @@ jobs:
         run: |
           cd docker
           # Test using the multi-image test runner
-          ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${{ github.ref_name }}-unyt"
+          IMAGE_TAG="${{ github.ref_name }}-unyt"
+          # Test using the multi-image test runner
+          ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
 
       - name: Push UNYT Docker image
         if: success()
