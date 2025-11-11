@@ -139,7 +139,7 @@ jobs:
 
           # Build image using the multi-image build approach
           cd docker
-          docker build --file ${{ matrix.dockerfile }} --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" ..
+          docker build --file ${{ matrix.dockerfile }} --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" .
           
           # Test using the multi-image test runner
           ./run_tests_multi.sh "${{ matrix.image_name }}"
@@ -195,7 +195,7 @@ jobs:
           # Build unyt image using the hc-0.6.0-dev-go-pion base
           docker build --file Dockerfile.unyt \
             --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" \
-            --build-arg BASE_IMAGE="ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev" ..
+            --build-arg BASE_IMAGE="ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev" .
 
       - name: Test UNYT Docker image
         run: |
