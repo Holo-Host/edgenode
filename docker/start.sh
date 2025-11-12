@@ -47,6 +47,16 @@ done &
 # Ensure /tmp is writable and executable for nonroot
 chmod 1777 /tmp
 
+# Start supervisord in the background
+/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf &
+
+# Wait for Holochain conductor to start
+echo "Waiting for Holochain conductor to start..."
+while ! pgrep -x "holochain" > /dev/null; do
+    sleep 1
+done
+echo "Holochain conductor started."
+
 # Define the path for the log-sender config file
 LOG_SENDER_CONFIG_FILE="/etc/log-sender/config.json"
 
@@ -68,4 +78,5 @@ fi
 # Keep the container running for interactive access
 echo "Container is running. Use 'docker exec -it <container_name> /bin/sh' to access interactive shell."
 
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# Bring supervisord to the foreground
+fg
