@@ -63,6 +63,8 @@ export SCRIPT_DIR
 export COMPOSE_FILES
 export COMPOSE_PROJECT_NAME="edgenode"
 export SERVICE_NAME="$SERVICE_NAME"
+export UNYT_PUB_KEY="uhCAkjC1PlxEz1LTEPytaNL10L9oy2kixwAABEjRWeKvN7xIAAAAB"
+export UNYT_PUB_KEY="uhCAkjC1PlxEz1LTEPytaNL10L9oy2kixwAABEjRWeKvN7xIAAAAB"
 
 # For UNYT images, ensure we use the locally built base image
 if [[ "$IMAGE_NAME" == *unyt* ]]; then
@@ -73,6 +75,8 @@ fi
 # Ensure a clean slate before starting
 echo "Ensuring a clean slate by running docker compose down..."
 docker compose $COMPOSE_FILES down -v --remove-orphans || true
+# Also remove any dangling containers that might cause conflicts
+docker ps -aq --filter "name=edgenode" | xargs -r docker rm -f
 
 # Check if services are already running and clean up if needed
 echo "Checking for existing services..."

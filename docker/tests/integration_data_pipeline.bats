@@ -141,22 +141,12 @@ wait_for_database_data() {
         --conductor-config-path /tmp/dummy_conductor_config.yaml \
         --report-interval-seconds 2
     assert_success
-    
-    # Add a small delay to ensure the config file is written
-    sleep 2
-    
-    # Verify registration occurred
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" test -f "$test_config"
+
+    # Install hApp, which will trigger DNA registration
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
-    
-    # Get drone_id for verification
-    local drone_id=$(get_drone_id "$test_config")
-    if [[ -z "$drone_id" || "$drone_id" == "null" ]]; then
-        echo "❌ Failed to get drone_id from config"
-        return 1
-    fi
-    echo "✅ Got drone_id: $drone_id"
-    
+
     # Start log-sender service
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
         timeout 20 log-sender service \
@@ -224,7 +214,12 @@ wait_for_database_data() {
         --conductor-config-path /tmp/dummy_conductor_config.yaml \
         --report-interval-seconds 2
     assert_success
-    
+
+    # Install hApp, which will trigger DNA registration
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    assert_success
+
     # Start log-sender service
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
         timeout 25 log-sender service \
@@ -278,7 +273,13 @@ wait_for_database_data() {
         --conductor-config-path /tmp/dummy_conductor_config.yaml \
         --report-interval-seconds 2
     assert_success
-    
+
+    # Install hApp, which will trigger DNA registration
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    assert_success
+
+    # Run log-sender again with same config (should use existing registration)
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
         timeout 15 log-sender service \
         --config-file "$test_config"
@@ -343,7 +344,12 @@ wait_for_database_data() {
         --conductor-config-path /tmp/dummy_conductor_config.yaml \
         --report-interval-seconds 3  # 3 second intervals for real-time testing
     assert_success
-    
+
+    # Install hApp, which will trigger DNA registration
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    assert_success
+
     # Start log-sender service in background
     echo "--- Starting log-sender service for real-time processing ---"
     docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
@@ -433,7 +439,12 @@ wait_for_database_data() {
         --conductor-config-path /tmp/dummy_conductor_config.yaml \
         --report-interval-seconds 2
     assert_success
-    
+
+    # Install hApp, which will trigger DNA registration
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    assert_success
+
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
         timeout 20 log-sender service \
         --config-file "$test_config"
@@ -503,7 +514,11 @@ wait_for_database_data() {
         --conductor-config-path /tmp/dummy_conductor_config.yaml \
         --report-interval-seconds 2
     assert_success
-    
+
+    # Install hApp, which will trigger DNA registration
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    assert_success
     
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
         timeout 15 log-sender service \
@@ -564,6 +579,11 @@ wait_for_database_data() {
         --report-path "$verification_log_dir" \
         --conductor-config-path /tmp/dummy_conductor_config.yaml \
         --report-interval-seconds 2
+    assert_success
+
+    # Install hApp, which will trigger DNA registration
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
     
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \

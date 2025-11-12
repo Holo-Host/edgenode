@@ -33,7 +33,7 @@ services:
     environment:
       - IMAGE_NAME=local-edgenode-unyt
       # UNYT-specific environment variables
-      - UNYT_PUB_KEY=${UNYT_PUB_KEY:-uhCAkDM-p0oBsRJn5Ebpk8c_TNkrp2NEwF9C5ppJq8cE77I-n3qfO}
+      - UNYT_PUB_KEY=${UNYT_PUB_KEY}
       - LOG_SENDER_UNYT_PUB_KEY=${LOG_SENDER_UNYT_PUB_KEY:-uhCAkDM-p0oBsRJn5Ebpk8c_TNkrp2NEwF9C5ppJq8cE77I-n3qfO}
       - LOG_SENDER_REPORT_INTERVAL_SECONDS=${LOG_SENDER_REPORT_INTERVAL_SECONDS:-60}
       - LOG_SENDER_LOG_PATH=${LOG_SENDER_LOG_PATH:-/data/logs}

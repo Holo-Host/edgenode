@@ -6,15 +6,15 @@ RUN wget https://github.com/unytco/log-sender/releases/download/v0.1.4/log-sende
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender
 
-COPY docker/conductor-config-0.6.0.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
+COPY conductor-config-0.6.0.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
 
-COPY docker/log_tool /usr/local/bin/log_tool
+COPY log_tool /usr/local/bin/log_tool
 RUN chmod +x /usr/local/bin/log_tool
 
-COPY docker/start.sh /usr/local/bin/start.sh
+COPY start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 SHELL ["/bin/sh", "-c"]
 EXPOSE 4444

@@ -251,4 +251,16 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
   fi
 fi
 
+# After installing and enabling the app, if log-sender is configured,
+# register the DNA hash with it.
+if [ -f /etc/log-sender/config.json ]; then
+  echo "[*] Found log-sender config, registering DNA hash..."
+  log-sender register-dna \
+    --config-file /etc/log-sender/config.json \
+    --dna-hash "$DNA_HASH" \
+    --agreement-id "dummy-agreement-id" \
+    --price-sheet-hash "dummy-price-sheet-hash"
+  echo "[✔] DNA hash registered with log-sender."
+fi
+
 echo "[✔] App $APP_NAME ($APP_ID) installed and enabled!"
