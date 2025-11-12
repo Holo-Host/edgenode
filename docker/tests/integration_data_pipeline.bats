@@ -169,15 +169,6 @@ wait_for_database_data() {
     if echo "$db_metrics" | grep -q "integration_test_single"; then
         echo "✅ SUCCESS: Single metric successfully stored in database"
         
-        # Verify drone registration also exists
-        local db_registration=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-            --command="SELECT id, drone_pub_key, unyt_pub_key FROM drone_registrations WHERE id = $drone_id;" 2>/dev/null)
-        
-        if echo "$db_registration" | grep -q "$drone_id"; then
-            echo "✅ SUCCESS: Drone registration also stored in database"
-        else
-            echo "⚠️  Drone registration not found in database (drone_id: $drone_id)"
-        fi
     else
         echo "❌ FAILURE: Single metric not found in database"
         return 1

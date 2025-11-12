@@ -107,18 +107,6 @@ if [ -n "$EXISTING_CONTAINERS" ]; then
     sleep 3
 fi
 
-# Create log-sender config file
-if [[ "$IMAGE_NAME" == *unyt* ]]; then
-    echo "Creating log-sender config file..."
-    mkdir -p "$SCRIPT_DIR/log-sender"
-    log-sender init \
-        --config-file "$SCRIPT_DIR/log-sender/config.json" \
-        --endpoint "http://log-collector:8787" \
-        --unyt-pub-key "$UNYT_PUB_KEY" \
-        --report-interval-seconds 300 \
-        --conductor-config-path /etc/holochain/conductor-config.yaml
-fi
-
 # Start services
 echo "Starting services..."
 if [[ "$IMAGE_NAME" == *unyt* ]]; then
@@ -127,6 +115,13 @@ if [[ "$IMAGE_NAME" == *unyt* ]]; then
 else
     echo "HC image detected - using pre-built images"
     docker compose $COMPOSE_FILES up -d
+fi
+
+# Set DOCKER_INTERNAL_HOST if not already set
+if [ -z "$DOCKER_INTERNAL_HOST" ]; then
+  NETWORK_NAME="edgenode-test-net"
+  export DOCKER_INTERNAL_HOST=$(docker network inspect $NETWORK_NAME | grep 'Gateway' | awk '{print $2}' | tr -d '"')
+  echo "DOCKER_INTERNAL_HOST is not set, using: $DOCKER_INTERNAL_HOST"
 fi
 
 # Wait for services to be healthy

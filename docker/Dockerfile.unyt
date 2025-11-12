@@ -16,6 +16,12 @@ RUN chmod +x /usr/local/bin/start.sh
 
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+USER root
+RUN apk update && apk add supervisor && \
+    mkdir -p /var/log/supervisor /data && \
+    chown -R nonroot:nonroot /var/log/supervisor /data
+USER nonroot
+
 SHELL ["/bin/sh", "-c"]
 EXPOSE 4444
 

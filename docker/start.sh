@@ -2,9 +2,12 @@
 set -eu
 
 # Create persistent storage directories
+chown -R nonroot:nonroot /data
 mkdir -p /data/holochain/etc /data/holochain/var /data/logs /data/log-sender
 touch /data/logs/startup.log
-chown -R nonroot:nonroot /data
+
+# Log all environment variables to the startup log
+printenv > /data/logs/startup.log
 
 # Fix ownership for copied files in nonroot home
 chown -R nonroot:nonroot /home/nonroot
@@ -47,8 +50,8 @@ done &
 # Ensure /tmp is writable and executable for nonroot
 chmod 1777 /tmp
 
-# Start supervisord in the background
-/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf &
+# Start supervisord as nonroot
+gosu nonroot supervisord -c /etc/supervisor/conf.d/supervisord.conf &
 
 # Wait for Holochain conductor to start
 echo "Waiting for Holochain conductor to start..."
@@ -62,6 +65,9 @@ LOG_SENDER_CONFIG_FILE="/etc/log-sender/config.json"
 
 # Check if the log-sender config file exists
 if [ ! -f "$LOG_SENDER_CONFIG_FILE" ]; then
+  # Log the value of UNYT_PUB_KEY before initializing log-sender
+  echo "UNYT_PUB_KEY is: $UNYT_PUB_KEY" >> /data/logs/startup.log
+
   # Prompt the user for their unyt-pub-key
   echo "Please enter your Unyt pub key:"
   read unyt_pub_key
