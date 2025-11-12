@@ -61,7 +61,7 @@ if [ ! -f "$LOG_SENDER_CONFIG_FILE" ]; then
     --config-file "$LOG_SENDER_CONFIG_FILE" \
     --endpoint "https://log-collector.holo.host" \
     --unyt-pub-key "$unyt_pub_key" \
-    --report-interval-seconds 300
+    --report-interval-seconds 300 \
     --conductor-config-path /etc/holochain/conductor-config.yaml
 fi
 

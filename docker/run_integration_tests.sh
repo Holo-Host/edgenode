@@ -107,6 +107,18 @@ if [ -n "$EXISTING_CONTAINERS" ]; then
     sleep 3
 fi
 
+# Create log-sender config file
+if [[ "$IMAGE_NAME" == *unyt* ]]; then
+    echo "Creating log-sender config file..."
+    mkdir -p "$SCRIPT_DIR/log-sender"
+    log-sender init \
+        --config-file "$SCRIPT_DIR/log-sender/config.json" \
+        --endpoint "http://log-collector:8787" \
+        --unyt-pub-key "$UNYT_PUB_KEY" \
+        --report-interval-seconds 300 \
+        --conductor-config-path /etc/holochain/conductor-config.yaml
+fi
+
 # Start services
 echo "Starting services..."
 if [[ "$IMAGE_NAME" == *unyt* ]]; then
@@ -193,8 +205,8 @@ echo ""
 # Run the integration tests
 sleep 10
 set +e # Disable exit on error
-./tests/libs/bats/bin/bats tests/log_sender_debug.bats
-./tests/libs/bats/bin/bats tests/integration_data_pipeline.bats
+env UNYT_PUB_KEY=$UNYT_PUB_KEY ./tests/libs/bats/bin/bats tests/log_sender_debug.bats
+env UNYT_PUB_KEY=$UNYT_PUB_KEY ./tests/libs/bats/bin/bats tests/integration_data_pipeline.bats
 TEST_EXIT_CODE=$?
 set -e # Re-enable exit on error
 
