@@ -20,7 +20,7 @@ USER root
 RUN apk update && apk add supervisor && \
     mkdir -p /var/log/supervisor /data && \
     chown -R nonroot:nonroot /var/log/supervisor /data
-USER nonroot
+#USER nonroot
 
 SHELL ["/bin/sh", "-c"]
 EXPOSE 4444

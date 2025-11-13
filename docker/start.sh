@@ -1,5 +1,5 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+set -eum
 
 # Create persistent storage directories
 chown -R nonroot:nonroot /data
@@ -51,7 +51,7 @@ done &
 chmod 1777 /tmp
 
 # Start supervisord as nonroot
-gosu nonroot supervisord -c /etc/supervisor/conf.d/supervisord.conf &
+supervisord -c /etc/supervisor/conf.d/supervisord.conf & 
 
 # Wait for Holochain conductor to start
 echo "Waiting for Holochain conductor to start..."
@@ -66,7 +66,7 @@ LOG_SENDER_CONFIG_FILE="/etc/log-sender/config.json"
 # Check if the log-sender config file exists
 if [ ! -f "$LOG_SENDER_CONFIG_FILE" ]; then
   # Log the value of UNYT_PUB_KEY before initializing log-sender
-  echo "UNYT_PUB_KEY is: $UNYT_PUB_KEY" >> /data/logs/startup.log
+  # echo "UNYT_PUB_KEY is: $UNYT_PUB_KEY" >> /data/logs/startup.log
 
   # Prompt the user for their unyt-pub-key
   echo "Please enter your Unyt pub key:"
@@ -75,7 +75,7 @@ if [ ! -f "$LOG_SENDER_CONFIG_FILE" ]; then
   # Initialize log-sender
   log-sender init \
     --config-file "$LOG_SENDER_CONFIG_FILE" \
-    --endpoint "https://log-collector.holo.host" \
+    --endpoint "https://log-collector.unyt.dev" \
     --unyt-pub-key "$unyt_pub_key" \
     --report-interval-seconds 300 \
     --conductor-config-path /etc/holochain/conductor-config.yaml
