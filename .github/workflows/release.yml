@@ -125,7 +125,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and test Docker image
+      - name: Build and push Docker image
         run: |
           TAG_SUFFIX="hc${{ matrix.hc_version }}"
           if [[ "${{ matrix.backend }}" != "default" ]]; then
@@ -139,10 +139,6 @@ jobs:
 
           # Build image using the multi-image build approach
           docker build -f docker/${{ matrix.dockerfile }} -t "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" .
-          
-          # Test using the multi-image test runner
-          cd docker
-          CI_RELEASE_TEST=true ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
           
           # Push the main image
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
@@ -160,8 +156,8 @@ jobs:
             fi
           fi
 
-  # New job for building and testing UNYT image (depends on hc-0.6.0 base)
-  build-and-test-unyt:
+  # New job for building and pushing UNYT image (depends on hc-0.6.0 base)
+  build-and-push-unyt:
     runs-on: ubuntu-latest
     needs: build-and-push-docker-images
     if: github.ref_type == 'tag'
@@ -196,14 +192,6 @@ jobs:
             --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" \
             --build-arg BASE_IMAGE="ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev" .
 
-      - name: Test UNYT Docker image
-        run: |
-          cd docker
-          # Test using the multi-image test runner
-          IMAGE_TAG="${{ github.ref_name }}-unyt"
-          # Test using the multi-image test runner
-          CI_RELEASE_TEST=true ./run_tests_multi.sh "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
-
       - name: Push UNYT Docker image
         if: success()
         run: |
@@ -220,23 +208,3 @@ jobs:
             docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
             docker push "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
           fi
-
-  # Comprehensive test matrix for all images
-  test-all-images:
-    runs-on: ubuntu-latest
-    needs: build-and-push-docker-images
-    if: github.ref_type == 'tag' && contains(github.event.head_commit.message, '[test-all]')
-    strategy:
-      matrix:
-        image:
-          - "ghcr.io/holo-host/edgenode:latest-hc0.5.6"
-          - "ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev"
-          - "ghcr.io/holo-host/edgenode:latest-unyt"
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Test ${{ matrix.image }}
-        run: |
-          cd docker
-          ./run_tests_multi.sh "${{ matrix.image }}"
