@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
+      is_prerelease: ${{ steps.check_prerelease.outputs.is_prerelease }}
     steps:
       - name: Check for pre-release tag
         id: check_prerelease
@@ -92,6 +93,7 @@ jobs:
 
   build-and-push-docker-images:
     runs-on: ubuntu-latest
+    needs: create-release
     if: github.ref_type == 'tag'
     permissions:
       contents: write
@@ -150,7 +152,8 @@ jobs:
             docker push "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
 
             # If this is the default build, also tag it as 'latest'
-            if [[ "${{ matrix.is_default }}" == "true" ]]; then
+            # If this is the default build and not a pre-release, also tag it as 'latest'
+            if [[ "${{ matrix.is_default }}" == "true" && "${{ needs.create-release.outputs.is_prerelease }}" == "false" ]]; then
               docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:latest"
               docker push "ghcr.io/holo-host/edgenode:latest"
             fi
@@ -159,7 +162,7 @@ jobs:
   # New job for building and pushing UNYT image (depends on hc-0.6.0 base)
   build-and-push-unyt:
     runs-on: ubuntu-latest
-    needs: build-and-push-docker-images
+    needs: [create-release, build-and-push-docker-images]
     if: github.ref_type == 'tag'
     permissions:
       contents: write
@@ -204,7 +207,8 @@ jobs:
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
 
           # Push the versioned latest tag
-          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
+          # Push the versioned latest tag, but only for non-pre-releases
+          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* && "${{ needs.create-release.outputs.is_prerelease }}" == "false" ]]; then
             docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
             docker push "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
           fi
