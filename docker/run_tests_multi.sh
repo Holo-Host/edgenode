@@ -13,39 +13,24 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$SCRIPT_DIR"
 
 # Parse command line arguments
-IMAGE_NAME="${1:-local-edgenode-hc-0.5.6}"
+IMAGE_NAME="${1:-local-edgenode-hc0.5.6}"
 COMPOSE_FILES="-f docker-compose.base.yml"
 DOCKERFILE_SUFFIX=""
 CLEANUP="${CLEANUP:-true}"
 
 # Determine compose file and service name based on image
 case "$IMAGE_NAME" in
-    *unyt*)
+    *unyt*|ghcr.io/*unyt*)
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.unyt.yml"
         DOCKERFILE_SUFFIX="unyt"
         SERVICE_NAME="edgenode-unyt"
         ;;
-    *hc-0.6.0-dev-go-pion*|*go-pion*)
+    *hc0.6.0-dev-go-pion*|*go-pion*|ghcr.io/*hc0.6.0-dev-go-pion*|ghcr.io/*go-pion*)
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.6.0-dev-go-pion.yml"
         DOCKERFILE_SUFFIX="hc-0.6.0-dev-go-pion"
         SERVICE_NAME="edgenode-hc-0.6.0-dev-go-pion"
         ;;
-    *hc-0.5.6*)
-        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.5.6.yml"
-        DOCKERFILE_SUFFIX="hc-0.5.6"
-        SERVICE_NAME="edgenode-hc-0.5.6"
-        ;;
-    ghcr.io/*unyt*)
-        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.unyt.yml"
-        DOCKERFILE_SUFFIX="unyt"
-        SERVICE_NAME="edgenode-unyt"
-        ;;
-    ghcr.io/*hc-0.6.0-dev-go-pion*|ghcr.io/*go-pion*)
-        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.6.0-dev-go-pion.yml"
-        DOCKERFILE_SUFFIX="hc-0.6.0-dev-go-pion"
-        SERVICE_NAME="edgenode-hc-0.6.0-dev-go-pion"
-        ;;
-    ghcr.io/*hc-0.5.6*)
+    *hc0.5.6*|ghcr.io/*hc0.5.6*)
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.5.6.yml"
         DOCKERFILE_SUFFIX="hc-0.5.6"
         SERVICE_NAME="edgenode-hc-0.5.6"
