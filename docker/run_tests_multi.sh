@@ -35,6 +35,21 @@ case "$IMAGE_NAME" in
         DOCKERFILE_SUFFIX="hc-0.5.6"
         SERVICE_NAME="edgenode-hc-0.5.6"
         ;;
+    ghcr.io/*unyt*)
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.unyt.yml"
+        DOCKERFILE_SUFFIX="unyt"
+        SERVICE_NAME="edgenode-unyt"
+        ;;
+    ghcr.io/*hc-0.6.0-dev-go-pion*|ghcr.io/*go-pion*)
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.6.0-dev-go-pion.yml"
+        DOCKERFILE_SUFFIX="hc-0.6.0-dev-go-pion"
+        SERVICE_NAME="edgenode-hc-0.6.0-dev-go-pion"
+        ;;
+    ghcr.io/*hc-0.5.6*)
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.5.6.yml"
+        DOCKERFILE_SUFFIX="hc-0.5.6"
+        SERVICE_NAME="edgenode-hc-0.5.6"
+        ;;
     *)
         echo "Unknown image: $IMAGE_NAME"
         echo "Supported images:"
