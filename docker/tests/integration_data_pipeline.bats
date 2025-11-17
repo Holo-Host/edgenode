@@ -9,6 +9,10 @@ LOCAL_LOG_COLLECTOR_URL="http://localhost:8787"
 ADMIN_SECRET="test_admin_secret"
 UNYT_PUB_KEY="uhCAkjC1PlxEz1LTEPytaNL10L9oy2kixwAABEjRWeKvN7xIAAAAB"
 
+is_hc_0_6_0() {
+  [[ "$IMAGE_NAME" =~ hc.*0\.6\.0 ]] || [[ "$IMAGE_NAME" =~ unyt ]]
+}
+
 # Helper function to clear database before tests
 clear_test_data() {
     echo "=== CLEARING TEST DATABASE ==="
@@ -91,7 +95,7 @@ wait_for_database_data() {
 
 @setup() {
     # Only run these tests on unyt image
-    if [[ -z "$IMAGE_NAME" || ! "$IMAGE_NAME" =~ "unyt" ]]; then
+    if ! is_hc_0_6_0(); then
         skip "Not running on unyt image - integration tests skipped"
     fi
     
