@@ -9,6 +9,10 @@ LOCAL_LOG_COLLECTOR_URL="http://localhost:8787"
 ADMIN_SECRET="test_admin_secret"
 UNYT_PUB_KEY="uhCAkjC1PlxEz1LTEPytaNL10L9oy2kixwAABEjRWeKvN7xIAAAAB"
 
+is_unyt() {
+  [[ "$IMAGE_NAME" =~ unyt ]]
+}
+
 # Helper function to verify prerequisites before tests
 verify_test_prerequisites() {
     echo "=== VERIFYING TEST PREREQUISITES ==="
@@ -300,6 +304,7 @@ wait_for_log_processing() {
 }
 
 @test "log-sender service connectivity verification" {
+  if is_unyt; then
     # Setup test environment
     local test_config="/etc/log-sender/connectivity-config.json"
     
@@ -355,9 +360,13 @@ wait_for_log_processing() {
     
     # Cleanup
     run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -f "$test_config"
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "log-sender registration workflow verification" {
+  if is_unyt; then
     echo "=== TESTING LOG-SENDER REGISTRATION WORKFLOW ==="
     echo "Expected behavior (based on log-sender process flow):"
     echo "  1. log-sender init generates RSA keypair and calls drone-registration endpoint"
@@ -435,9 +444,13 @@ wait_for_log_processing() {
     
     # Cleanup
     run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -f "$test_config"
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "end-to-end log transmission test with database population" {
+  if is_unyt; then
     # Setup test environment
     TEST_NAMESPACE="bats_$(date +%s)"
     TEST_LOG_DIR="/data/logs/e2e_test"
@@ -550,9 +563,13 @@ EOF
     # Cleanup
     run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -rf "$TEST_LOG_DIR" /etc/log-sender/config.json
     rm -f /tmp/metrics_logs.jsonl
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "end-to-end log transmission test" {
+  if is_unyt; then
     # Setup test environment
     TEST_NAMESPACE="bats_$(date +%s)"
     TEST_LOG_DIR="/data/logs/e2e_test"
@@ -641,9 +658,13 @@ EOF
     
     # Cleanup
     run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -rf "$TEST_LOG_DIR" /etc/log-sender/config.json
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "log-sender processes JSONL files correctly" {
+  if is_unyt; then
     local test_log_dir="/data/logs/jsonl_test"
     
     # Cleanup any existing config (using same pattern as working tests)
@@ -703,9 +724,13 @@ EOF
     # Cleanup
     run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -rf "$test_log_dir" /etc/log-sender/config.json
     rm -f /tmp/test_logs.jsonl
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "admin logs endpoint authentication" {
+  if is_unyt; then
     # Test admin endpoint requires proper authentication
     local start_time=$(($(date +%s) - 300))
     local end_time=$(($(date +%s) + 60))
@@ -726,9 +751,13 @@ EOF
     
     # Should succeed (even if empty results)
     refute_output --partial "UNAUTHORIZED_ADMIN"
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "log-sender error handling and recovery" {
+  if is_unyt; then
     # Test with invalid endpoint
     echo "=== TESTING ERROR HANDLING ==="
     
@@ -789,9 +818,13 @@ EOF
     
     # Cleanup
     run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -f "$test_config"
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "log-sender performance and load testing" {
+  if is_unyt; then
     # Test with larger log files to verify performance
     echo "=== TESTING PERFORMANCE AND LOAD ==="
     
@@ -875,9 +908,13 @@ EOF
     # Cleanup
     run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -rf "$test_log_dir" "$test_config"
     rm -f /tmp/large_test_logs.jsonl
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "log-sender configuration validation" {
+  if is_unyt; then
     echo "=== TESTING CONFIGURATION VALIDATION ==="
     
     # Test with different configuration scenarios
@@ -933,9 +970,13 @@ EOF
     done
     
     echo "✅ All configuration validation tests passed"
+  else
+    skip "Not running on unyt image"
+  fi
 }
 
 @test "log-sender concurrent operations" {
+  if is_unyt; then
     echo "=== TESTING CONCURRENT OPERATIONS ==="
     
     # Test multiple concurrent log-sender instances
@@ -1003,4 +1044,7 @@ EOF
     done
     
     echo "✅ Concurrent operations test completed successfully"
+  else
+    skip "Not running on unyt image"
+  fi
 }

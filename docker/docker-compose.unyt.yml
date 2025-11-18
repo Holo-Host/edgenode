@@ -39,6 +39,7 @@ services:
       - LOG_SENDER_LOG_PATH=${LOG_SENDER_LOG_PATH:-/data/logs}
       - LOG_SENDER_ENDPOINT=http://log-collector:8787
       - RUST_LOG=${RUST_LOG:-info}
+      - DOCKER_INTERNAL_HOST=${DOCKER_INTERNAL_HOST:-}
     volumes:
       - edgenode-data:/data
       - edgenode-logs:/data/logs

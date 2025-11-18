@@ -9,11 +9,14 @@ is_hc_0_6_0() {
 
 @test "Happ installation" {
   if is_hc_0_6_0; then
-    docker compose cp "$SCRIPT_DIR/relay.json" ${SERVICE_NAME:-edgenode-test}:/home/nonroot/
-    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME":/home/nonroot/
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'mkdir -p /home/nonroot/.hc'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    echo "Output of install_happ:"
+    echo "$output"
     assert_success
     
-    run docker compose exec -T -u nonroot ${SERVICE_NAME:-edgenode-test} sh -c 'hc s call -r 4444 list-apps'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc s call -r 4444 list-apps'
     assert_output --partial "relay"
   else
     docker compose cp kando-nosha.json ${SERVICE_NAME:-edgenode-test}:/home/nonroot/

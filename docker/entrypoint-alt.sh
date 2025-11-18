@@ -46,10 +46,3 @@ done &
 
 # Keep the container running for interactive access
 echo "Container is running. Use 'docker exec -it <container_name> /bin/sh' to access interactive shell."
-
-if [ "${CONDUCTOR_MODE:-}" = "false" ]; then
-  exec tini -s -- tail -f /dev/null
-else
-#  exec tini -s -- tail -f /dev/null
-  exec tini -s -v -- gosu nonroot sh -c 'echo "Starting conductor as nonroot" >> /data/logs/startup.log && yes | holochain --piped --config-path /etc/holochain/conductor-config.yaml' 2>&1 | tee -a /data/logs/holochain.log
-fi
