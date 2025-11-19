@@ -41,7 +41,7 @@ struct InitZomeCall {
 #[serde(rename_all = "camelCase")]
 struct Modifiers {
     network_seed: String,
-    properties: String,
+    properties: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -214,11 +214,12 @@ fn do_create(
     let template = ConfigFile {
         app: App {
             name: app_name,
-            version: "0.1.0".to_string(),
-            happ_url: "https://github.com/example/v0.1.0/example_happ.happ".to_string(),
+            version: "3.2.0".to_string(),
+            happ_url: "https://github.com/unytco/circulo-tx5/releases/download/v3.2.0/unyt.happ"
+                .to_string(),
             modifiers: Modifiers {
-                network_seed: "0000-0000-0000-0000-0000".to_string(),
-                properties: "".to_string(),
+                network_seed: "co.unyt.tx5.circulo-3.2-add3".to_string(),
+                properties: None,
             },
             init_zome_calls: if include_init_calls {
                 Some(vec![InitZomeCall {
@@ -250,7 +251,7 @@ fn do_create(
         },
         economics: if include_economics {
             let agent_hash: AgentPubKeyB64 =
-                AgentPubKey::try_from("uhCAkJCuynkgVdMn_bzZ2ZYaVfygkn0WCuzfFspczxFnZM1QAyXoo")
+                AgentPubKey::try_from("uhCAk4RwM1303s1z9ZGWlYUBMuBeeMb79qZ9TTPc2169HExn2mjpO")
                     .unwrap()
                     .into();
             let agreement_hash: ActionHashB64 =

@@ -1,4 +1,4 @@
-# Log-Sender Quickstart 
+# Log-Sender Quickstart
 
 ## Quick Start
 

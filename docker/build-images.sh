@@ -16,6 +16,7 @@ cd "$SCRIPT_DIR"
 declare -A IMAGES=(
     ["Dockerfile.hc-0.5.6"]="local-edgenode-hc-0.5.6"
     ["Dockerfile.hc-0.6.0-dev-go-pion"]="local-edgenode-hc-0.6.0-dev-go-pion"
+    ["Dockerfile.hc-0.6.0-custom-go-pion"]="local-edgenode-hc-0.6.0-custom-go-pion"
     ["Dockerfile.unyt"]="local-edgenode-unyt"
 )
 
@@ -25,6 +26,7 @@ if [ $# -eq 0 ]; then
     echo "Build specific image or all images:"
     echo "  local-edgenode-hc-0.5.6"
     echo "  local-edgenode-hc-0.6.0-dev-go-pion"
+    echo "  local-edgenode-hc-0.6.0-custom-go-pion"
     echo "  local-edgenode-unyt"
     echo "  all (builds all images)"
     exit 1
@@ -38,19 +40,19 @@ if [ "$TARGET" == "all" ]; then
         image_name="${IMAGES[$dockerfile]}"
         echo "Building $image_name from $dockerfile"
         
-        # Handle special case for unyt which needs hc-0.6.0 base image
+        # Handle special case for unyt which needs hc-0.6.0-custom base image
         if [[ "$dockerfile" == "Dockerfile.unyt" ]]; then
-            echo "Note: unyt image depends on hc-0.6.0-dev-go-pion image"
-            if ! docker image inspect "${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}" >/dev/null 2>&1; then
-                echo "Building base image: ${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}"
-                docker build -t "${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}" . -f "${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}"
+            echo "Note: unyt image depends on hc-0.6.0-custom-go-pion image"
+            if ! docker image inspect "${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}" >/dev/null 2>&1; then
+                echo "Building base image: ${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}"
+                docker build --no-cache -t "${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}" . -f "Dockerfile.hc-0.6.0-custom-go-pion"
             fi
             
             # For local builds, use the local base image, for remote builds use registry
-            BASE_IMAGE="${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}"
-            docker build -t "$image_name" . -f "$dockerfile" --build-arg BASE_IMAGE="$BASE_IMAGE"
+            BASE_IMAGE="${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}"
+            docker build --no-cache -t "$image_name" . -f "$dockerfile" --build-arg BASE_IMAGE="$BASE_IMAGE"
         else
-            docker build -t "$image_name" . -f "$dockerfile"
+            docker build --no-cache -t "$image_name" . -f "$dockerfile"
         fi
         
         echo "Successfully built $image_name"
@@ -63,14 +65,14 @@ elif [[ " ${!IMAGES[@]} " =~ " $TARGET " ]]; then
     
     if [[ "$dockerfile" == "Dockerfile.unyt" ]]; then
         # Ensure base image exists for unyt
-        if ! docker image inspect "${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}" >/dev/null 2>&1; then
-            echo "Building base image: ${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}"
-            docker build -t "${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}" . -f "Dockerfile.hc-0.6.0-dev-go-pion"
+        if ! docker image inspect "${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}" >/dev/null 2>&1; then
+            echo "Building base image: ${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}"
+            docker build --no-cache -t "${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}" . -f "Dockerfile.hc-0.6.0-custom-go-pion"
         fi
-        BASE_IMAGE="${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}"
-        docker build -t "$image_name" . -f "$dockerfile" --build-arg BASE_IMAGE="$BASE_IMAGE"
+        BASE_IMAGE="${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}"
+        docker build --no-cache -t "$image_name" . -f "$dockerfile" --build-arg BASE_IMAGE="$BASE_IMAGE"
     else
-        docker build -t "$image_name" . -f "$dockerfile"
+        docker build --no-cache -t "$image_name" . -f "$dockerfile"
     fi
     echo "Successfully built $image_name"
 else
@@ -90,14 +92,14 @@ else
         
         if [[ "$dockerfile" == "Dockerfile.unyt" ]]; then
             # Ensure base image exists for unyt
-            if ! docker image inspect "${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}" >/dev/null 2>&1; then
-                echo "Building base image: ${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}"
-                docker build -t "${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}" . -f "Dockerfile.hc-0.6.0-dev-go-pion"
+            if ! docker image inspect "${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}" >/dev/null 2>&1; then
+                echo "Building base image: ${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}"
+                docker build --no-cache -t "${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}" . -f "Dockerfile.hc-0.6.0-custom-go-pion"
             fi
-            BASE_IMAGE="${IMAGES[Dockerfile.hc-0.6.0-dev-go-pion]}"
-            docker build -t "$image_name" . -f "$dockerfile" --build-arg BASE_IMAGE="$BASE_IMAGE"
+            BASE_IMAGE="${IMAGES[Dockerfile.hc-0.6.0-custom-go-pion]}"
+            docker build --no-cache -t "$image_name" . -f "$dockerfile" --build-arg BASE_IMAGE="$BASE_IMAGE"
         else
-            docker build -t "$image_name" . -f "$dockerfile"
+            docker build --no-cache -t "$image_name" . -f "$dockerfile"
         fi
         echo "Successfully built $image_name"
     else

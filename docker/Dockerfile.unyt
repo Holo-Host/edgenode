@@ -1,4 +1,4 @@
-FROM local-edgenode-hc-0.6.0-dev-go-pion
+FROM local-edgenode-hc-0.6.0-custom-go-pion
 
 RUN wget https://github.com/unytco/log-sender/releases/download/v0.1.4/log-sender && \
     mv log-sender /usr/local/bin/log-sender && \
