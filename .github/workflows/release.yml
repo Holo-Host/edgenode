@@ -147,7 +147,7 @@ jobs:
           LATEST_VERSIONED_TAG="latest-${TAG_SUFFIX}"
 
           # Build image using the multi-image build approach
-          docker build -f docker/${{ matrix.dockerfile }} -t "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" .
+          docker build -f ${{ matrix.dockerfile }} -t "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" .
           
           # Push the main image
           docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
