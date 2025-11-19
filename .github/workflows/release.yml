@@ -135,6 +135,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
+          cd docker
           TAG_SUFFIX="hc${{ matrix.hc_version }}"
           if [[ "${{ matrix.backend }}" != "default" ]]; then
             TAG_SUFFIX="${TAG_SUFFIX}-${{ matrix.backend }}"
