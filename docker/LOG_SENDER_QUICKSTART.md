@@ -3,6 +3,7 @@
 ## Quick Start
 
 See the [Docker README.md](/README.md) for the basics on Edge Node Container Setup and you will need to be using `Dockerfile.unyt` as the template for your Unyt-based Edge Node container image.
+See the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md) for detailed usage guide.
 
 **Prerequisites:**
 
