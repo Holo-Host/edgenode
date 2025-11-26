@@ -36,7 +36,7 @@ A [specialized OS builder](holos/README.md) for creating custom ISO images using
 
 ### Log Sender
 
-A specialized binary that can deliver standard holochain reports to a specific location , featuring:
+A [specialized binary](docker/LOG_SENDER_QUICKSTART.md) that can deliver standard holochain reports to a specific location , featuring:
 
 - Unyt specific configuration.
 - Scripts for initializing and configuring your version of log-sender.
