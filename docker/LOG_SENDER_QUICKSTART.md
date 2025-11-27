@@ -3,14 +3,16 @@
 ## Quick Start
 
 See the [Docker README.md](/README.md) for the basics on Edge Node Container Setup and you will need to be using `Dockerfile.unyt` as the template for your Unyt-based Edge Node container image.
+
 See the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md) for detailed usage guide.
 
 **Prerequisites:**
 
-- Holochain 0.6.0 conductor with reporting enabled
-- Access to Holochain agent key (unyt public key)
-- Log-collector service endpoint
-- Log directories where Holochain conductor writes JSONL files
+- Holochain 0.6.0 conductor with reporting enabled.
+- Access to your Unyt agent public key.
+- Log-collector service endpoint.
+- Log directories where Holochain conductor writes JSONL files (var/local/lib/holochain/reports by default).
+- An installed happ which has an agreemnt setup in Unyt.
 
 ### 1. Basic Setup
 
@@ -24,6 +26,12 @@ log-sender init \
   --report-interval-seconds 60 \
   --report-path /var/log/holochain \
   --conductor-config-path /etc/holochain/conductor-config.toml
+
+# Register a DNA confirm the DNA hash and agreement id
+log-sender register-dna \
+--config-file /etc/log-sender/config.json \
+--dna-hash "uhC0kFLU..." \
+--agreement-id "uhCkk9zj..."
 
 # Start the service
 log-sender service --config-file /etc/log-sender/config.json
