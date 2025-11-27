@@ -6,6 +6,7 @@ See the [Docker README.md](/README.md) for the basics on Edge Node Container Set
 
 See the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md) for detailed usage guide.
 
+
 **Prerequisites:**
 
 - Holochain 0.6.0 conductor with reporting enabled.
@@ -14,7 +15,15 @@ See the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_U
 - Log directories where Holochain conductor writes JSONL files (var/local/lib/holochain/reports by default).
 - An installed happ which has an agreemnt setup in Unyt.
 
-### 1. Basic Setup
+### 1. Pull log-sender enabled image
+
+```bash
+docker run --name unytnode -dit \
+  -v $(pwd)/holo-data:/data \
+  ghcr.io/holo-host/edgenode:v0.0.8-alpha29-unyt
+```
+
+### 2. Basic Setup
 
 ```bash
 # Initialize configuration with your log-collector endpoint
@@ -37,7 +46,7 @@ log-sender register-dna \
 log-sender service --config-file /etc/log-sender/config.json
 ```
 
-### 2. Running as a Service
+### 3. Running as a Service
 
 The `log-sender` is automatically started as a service by `supervisord` when the container starts. You can check the status of the service by running the following command:
 
