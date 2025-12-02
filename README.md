@@ -6,7 +6,6 @@ The tooling consists of:
 
 1. A Docker container specification for running Holochain with hApps in an OCI-compliant containerized environment.
 2. A streamlined Linux ISO (HolOS) that enables the deployment of this container on physical or virtual hardware (especially HoloPorts).
-3. Integration with Unyt log-sender [binary](https://github.com/unytco/log-sender) to send standard holochain reports (JSONL) to a specific location.
 
 For a detailed overview and usage instructions [see here](/USAGE.md).
 
@@ -34,18 +33,11 @@ A [specialized OS builder](holos/README.md) for creating custom ISO images using
 - Custom init scripts for automatic network configuration.
 - Generates ready-to-burn disk images for deployment.
 
-### Log Sender
-
-A [specialized binary](docker/LOG_SENDER_QUICKSTART.md) that can deliver standard holochain reports to a specific location , featuring:
-
-- Unyt specific configuration.
-- Scripts for initializing and configuring your version of log-sender.
-- Scripts for registering your happ with Unyt based happs (ex - Circulo).
 
 ### Tools
 
 - A CLI utility for creating and validating [hApp config files](tools/happ_config_file/README.md).
-- A CLI utility for initializing log-sender and registering your happ DNA (with Unyt based happs).
+
 
 ## Quick Start
 
