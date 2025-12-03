@@ -1,10 +1,16 @@
-# Log-Sender Quickstart 
+# Log-Sender integration
+
+A specialized binary that can deliver standard holochain reports to a specific location , featuring:
+- Unyt specific configuration.
+- Scripts for initializing and configuring your version of log-sender.
+- Scripts for registering your happ with Unyt based happs (ex - Circulo).
+- A CLI utility for initializing log-sender and registering your happ DNA (with Unyt based happs).
 
 ## Quick Start
 
-See the [Docker README.md](/README.md) for the basics on Edge Node Container Setup and you will need to be using `Dockerfile.unyt` as the template for your Unyt-based Edge Node container image.
+See the [Docker README.md](/README.md) for the basics on Edge Node Container Setup and you will need to be using [Dockerfile.unyt](/Dockerfile.unyt) as the template for your Unyt-based Edge Node container image.
 
-See the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md) for detailed usage guide.
+For detailed user guide see the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md) .
 
 
 **Prerequisites:**
