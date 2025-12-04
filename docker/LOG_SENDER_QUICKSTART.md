@@ -51,7 +51,7 @@ log-sender register-dna \
 # Start the service
 log-sender service --config-file /etc/log-sender/config.json
 ```
-
+See [here](/log-sender-CLI.md) for more details.
 ### 3. Running as a Service
 
 The `log-sender` is automatically started as a service by `supervisord` when the container starts. You can check the status of the service by running the following command:
