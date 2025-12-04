@@ -1,9 +1,9 @@
 # Log-Sender integration
-
-A specialized binary that can deliver standard holochain reports to a specific location , featuring:
+An Edge Node container featuring:
+- `log-sender` binary that can deliver standard holochain reports to a specific location , 
 - Unyt specific configuration.
-- Scripts for initializing and configuring your version of log-sender.
-- Scripts for registering your happ with Unyt based happs (ex - Circulo).
+- Scripts for initializing and configuring your version of `log-sender`.
+- Scripts for registering the dna of Unyt based happs (e.g. Circulo).
 - A CLI utility for initializing log-sender and registering your happ DNA (with Unyt based happs).
 
 ## Quick Start
