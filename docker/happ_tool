@@ -254,13 +254,29 @@ fi
 # After installing and enabling the app, if log-sender is configured,
 # register the DNA hash with it.
 if [ -f /etc/log-sender/config.json ]; then
-  echo "[*] Found log-sender config, registering DNA hash..."
-  log-sender register-dna \
-    --config-file /etc/log-sender/config.json \
-    --dna-hash "$DNA_HASH" \
-    --agreement-id "dummy-agreement-id" \
-    --price-sheet-hash "dummy-price-sheet-hash"
-  echo "[✔] DNA hash registered with log-sender."
+  # Extract economics values from hApp config
+  AGREEMENT_ID=$(jq -r '.economics.agreementHash // empty' "$CONFIG_FILE")
+  PRICE_SHEET_HASH=$(jq -r '.economics.priceSheetHash // empty' "$CONFIG_FILE")
+  
+  if [ -z "$AGREEMENT_ID" ]; then
+    echo "[!] No agreement-id found in hApp config (economics.agreementHash). Skipping DNA registration."
+  else
+    echo "[*] Found log-sender config, registering DNA hash..."
+    echo "[*] Registering DNA with agreement-id: $AGREEMENT_ID"
+    
+    # Build the command with required args
+    REGISTER_CMD="log-sender register-dna --config-file /etc/log-sender/config.json --dna-hash \"$DNA_HASH\" --agreement-id \"$AGREEMENT_ID\""
+    
+    # Add optional price-sheet-hash if provided
+    if [ -n "$PRICE_SHEET_HASH" ]; then
+      echo "[*] Using price-sheet-hash: $PRICE_SHEET_HASH"
+      REGISTER_CMD="$REGISTER_CMD --price-sheet-hash \"$PRICE_SHEET_HASH\""
+    fi
+    
+    # Execute the registration
+    eval $REGISTER_CMD
+    echo "[✔] DNA hash registered with log-sender."
+  fi
 fi
 
 echo "[✔] App $APP_NAME ($APP_ID) installed and enabled!"
