@@ -1,6 +1,6 @@
 # Edge Node Container Developers Guide
 
-A docker container for running Holochain and installing hApps to host them as always-on-nodes.
+A docker container for running Holochain and installing hApps to host them as always-on nodes.
 
 Besides `holochain` and `hc`, the following commands are available in the container to manage the hApp lifecycle:
 
@@ -211,7 +211,7 @@ Logs are rotated daily (see [Process Management and Logging](#process-management
 
 To deploy in production using the Holochain conductor:
 
-0. Remove any prior containers if you need to: `docker stop edgenode && docker rm edgenode`
+0. IMPORTANT: Remove any prior containers if you need to: `docker stop edgenode && docker rm edgenode`
 1. __Run the Container__
    The Holochain conductor will start up automatically with the container:
 

@@ -1,11 +1,11 @@
 # Edge Node
 
-This repo contains the tooling needed to deploy and operate Holochain Edge Nodes and run decentralized hApps on them!
+This repo contains the tooling needed to deploy and operate always-on nodes for Holochain applications (hApps).
 
 The tooling consists of:
 
-1. A Docker container specification for running Holochain with hApps in an OCI-compliant containerized environment.
-2. A streamlined Linux ISO that enables the deployment of this container on physical or virtual hardware (especially HoloPorts).
+1. Edge Node - A Docker container specification for running Holochain with hApps in an OCI-compliant containerized environment.
+2. HolOS - A streamlined Linux ISO that enables the deployment of this container on physical or virtual hardware (especially HoloPorts).
 
 For a detailed overview and usage instructions [see here](/USAGE.md).
 
@@ -21,10 +21,10 @@ For a detailed overview and usage instructions [see here](/USAGE.md).
 
 ### Container Build System
 
-A [Docker-based container](docker/README.md) that delivers a Holochain Edge Node ready to run hApps:
+A [Docker-based container](docker/README.md) that delivers Edge Node, ready to run hApps:
 
 - Holochain conductor configured to automatically run via `tini`.
-- Tools for installing and managing hApps from configuration files provided by hApp publishers.
+- Tools for installing and managing hApps from configuration files.
 
 ### HolOS Build System
 
@@ -64,10 +64,9 @@ ps -ef
 
 ### For HolOS Users
 
-1. Download a release of the iso from our releases page: TBD
-2. Burn a USB stick, to install on your own hardware or install it in a virtualized environment of your choosing.
-3. Follow the instructions provided to choose persistence, container instance, and other configuration options for the machine.
-4. Follow [these](TBD) instructions to install and manage hApp instances you will be running on your node.
+1. Download a release of the iso from our releases page: https://github.com/Holo-Host/edgenode/releases/download/v0.0.7ga.5/holos-v0.0.7ga.5.iso
+2. Burn the iso to a USB stick to install on your own physical hardware or install it in a virtualized environment of your choosing. For a more detailed step-by-step on this, please follow the instructions in the Support [How To Guide](https://docs.google.com/document/d/1f3_5Ddff50pFIuzRJAmqGwT9nE873TKQC182LKyJJ4k/edit?tab=t.0#heading=h.ik0z3qmvpegt).
+3. Choose live-mode or install from the Grub boot menu
 
 ## Documentation
 
