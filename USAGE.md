@@ -66,7 +66,7 @@ Some notes on the contents of the fields:
 
 ** Experimental fields for Unyt support: **
 - `payorUnytAgentPubKey`: Unyt Agent who should receive resource accounting information
-- `agreementHash`: the action hash agreement that invoices will get attached to for the work performed.
+- `agreementHash`: the action hash agreement that associated governing how work performed should be treated.
 - `payeeUnytAgentPubKey`: Optional Unyt Agent who will get paid (will be validated against sys registered agent)
 - `priceSheetHash`: Optional data blob action hash, in case different nodes can use different prices and it's not fixed in the Agreement
 
