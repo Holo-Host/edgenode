@@ -67,7 +67,7 @@ Some notes on the contents of the fields:
 ** Experimental fields for Unyt support: **
 - `payorUnytAgentPubKey`: Unyt Agent who should receive resource accounting information
 - `agreementHash`: the action hash agreement that associated governing how work performed should be treated.
-- `payeeUnytAgentPubKey`: Optional Unyt Agent who will get paid (will be validated against sys registered agent)
+- `payeeUnytAgentPubKey`: Optional Unyt Agent considered to be providing the accounted for resources (will be validated against sys registered agent)
 - `priceSheetHash`: Optional data blob action hash, in case different nodes can use different prices and it's not fixed in the Agreement
 
 Step 2: Send the file to the Edge Node Operator or put it someplace on the internet so that it can be downloaded, i.e. a github.gist, etc.
