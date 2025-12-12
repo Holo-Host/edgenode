@@ -64,7 +64,8 @@ Some notes on the contents of the fields:
 - `init_zome_calls`: This array allows you to specify zome calls that should be executed right after the hApp is installed. This is useful for initialization tasks.
   - The `payload` field in a zome call can contain the placeholder `<NODE_NAME>`. This placeholder will be dynamically replaced with the `NODE_NAME` provided during the `install_happ` execution. If no `NODE_NAME` is provided, it defaults to the machine's hostname. This is particularly useful for creating flexible configurations that can be reused across different nodes without modification. For example, you could have a payload like `{"node_name": "<NODE_NAME>"}` and the script will substitute `<NODE_NAME>` with the actual node name.
 
-- `payorUnytAgentPubKey`: Unyt Agent who will be paying
+** Experimental fields for Unyt support: **
+- `payorUnytAgentPubKey`: Unyt Agent who should receive resource accounting information
 - `agreementHash`: the action hash agreement that invoices will get attached to for the work performed.
 - `payeeUnytAgentPubKey`: Optional Unyt Agent who will get paid (will be validated against sys registered agent)
 - `priceSheetHash`: Optional data blob action hash, in case different nodes can use different prices and it's not fixed in the Agreement
