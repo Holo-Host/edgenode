@@ -6,7 +6,7 @@ Using Edge Node to run an always-on node for your Holochain application solves o
 
 Applications are installed in the Edge Node container via the  'install_happ' tool using a configuration file which can be generated and validated using the 'happ_config_file' tool. The happ config file specifies the application to be installed in the Edge Node container instance. 
 
-When it comes to remuneration for providing this service,the terms are up to the agreed terms of the relevant parties involved. Included in the configuration file and in the container image, there are information slots and service reporting tools to account for the services using a Unyt based mutual credit currency. While automated invoicing is possible and has been tested with Unyt accounting applications like Circulo, this feature has not yet been released. For more about Unyt please see: https://unyt.co
+The configuration file and the container image, include some experimental support for connection with Unyt (https://unyt.co) based accounting tools for tracking resources used. 
 
 The rest of this usage documentation provides instructions from two vantage points:  Application Managers and Edge Node Operators. Please note it's possible these two can be one in the same.
 
