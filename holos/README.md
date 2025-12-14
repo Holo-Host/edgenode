@@ -19,7 +19,7 @@ Once the kernel and initrd are built, the Makefile then assembles it into a hybr
 
 This Linux distribution can be booted and run in the same way as any other Linux distribution. Burn the ISO image to a USB, an MMC card, USB stick or other block device and tell your hardware to boot from that device. The kernel and initrd in the `boot/` directory could also be used to PXE boot the OS, for those familiar with that process.
 
-HolOS doesn't set a root password, which is blank.
+By default, HolOS locks the root account. The recommended approach is to pass in a list of Github usernames for trusted users whose public ssh keys will be trusted by the root user on the edge node.
 
 ### Via Make Target
 

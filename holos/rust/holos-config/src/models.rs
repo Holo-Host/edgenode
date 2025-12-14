@@ -104,14 +104,14 @@ impl Model {
                 if modalias.starts_with("usb:v27C6p533Cd") {
                     // This exists in the Dell XPS-13 and gives me a device to test this code path
                     // against on my laptop. Otherwise, entirely useless. :)
-                    found_flags = found_flags | ModelHeuristicFlags::HasDellXpsFPR;
+                    found_flags |= ModelHeuristicFlags::HasDellXpsFPR;
                 } else if modalias.starts_with("usb:v1A86p7523d") {
                     // This is the USB-attached LED present in holoports
                     info!(
                         "Found USB device matching holoport LED at {}",
                         dev.display()
                     );
-                    found_flags = found_flags | ModelHeuristicFlags::HasHoloportLED;
+                    found_flags |= ModelHeuristicFlags::HasHoloportLED;
                 }
             }
         }
@@ -134,11 +134,7 @@ impl Model {
                 Self::integer_attr(format!("{}/queue/rotational", dev.display()))
             {
                 info!("Rotational: {}", rotational);
-                if rotational == 1 {
-                    is_rotational = true;
-                } else {
-                    is_rotational = false;
-                }
+                is_rotational = rotational == 1;
             } else {
                 // semi-sane default
                 is_rotational = false;
@@ -147,11 +143,7 @@ impl Model {
             // Is it a removable drive?
             if let Some(removable) = Self::integer_attr(format!("{}/removable", dev.display())) {
                 info!("Removable: {}", removable);
-                if removable == 1 {
-                    is_removable = true;
-                } else {
-                    is_removable = false;
-                }
+                is_removable = removable == 1;
             } else {
                 // semi-sane default
                 is_removable = true;
@@ -174,16 +166,16 @@ impl Model {
             // model of SATA controller that matches the holoports, but probably not critical for
             // right now.
             if is_rotational && !is_removable {
-                found_flags = found_flags | ModelHeuristicFlags::HasHoloportHDD;
+                found_flags |= ModelHeuristicFlags::HasHoloportHDD;
             } else if !is_rotational && !is_removable {
-                found_flags = found_flags | ModelHeuristicFlags::HasHoloportPlusSSD;
+                found_flags |= ModelHeuristicFlags::HasHoloportPlusSSD;
             }
 
             // This is to detect KVM VMs -- primary for internal testing.
             if let Some(device_name) = dev.file_name() {
                 let device_name = device_name.to_string_lossy();
                 if device_name.starts_with("vd") {
-                    found_flags = found_flags | ModelHeuristicFlags::HasVirtIODrive;
+                    found_flags |= ModelHeuristicFlags::HasVirtIODrive;
                 }
             }
         }
@@ -193,7 +185,7 @@ impl Model {
             // Specific to the Dell I'm testing on. Other models with SMI/DMI data could be added
             // here too.
             if product_name == "XPS 13 9310" {
-                found_flags = found_flags | ModelHeuristicFlags::HasDellXpsSMI;
+                found_flags |= ModelHeuristicFlags::HasDellXpsSMI;
             }
         }
 

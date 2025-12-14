@@ -1,5 +1,5 @@
 # Version string
-HOLOS_VERSION := 0.0.7
+HOLOS_VERSION := 0.0.8
 
 # We need some temporary scratch space for build artifacts. Everything generated
 # by this build process will be under this tree and we shouldn't be modifying
@@ -72,11 +72,24 @@ ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz: ${TMPDIR}
 
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz
 	tar Jxf $< -C ${TMPDIR}
+	# Add a menu to the Config.in file where we'll insert our additional packages.
+	sed -i -e '$$s/endmenu/menu "HolOS-specific packages"\n\t# holos-specifics\nendmenu\n\nendmenu\n/' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in
+
+#${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/sysbox-runtime: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+	#cp -a buildroot-packages/sysbox-runtime $</package/
+	## patch any files with global variables
+	#sed -i -e "s/__HOLOS_VERSION__/${HOLOS_VERSION}/g" $</package/sysbox-runtime/sysbox-runtime.mk
+	## add this package to the HolOS packages submenu if not already there
+	#grep 'sysbox-runtime' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in >/dev/null 2>&1 || sed -i -e '/.*# holos-specifics/a\
+	#\tsource "package/sysbox-runtime/Config.in"' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in
 
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
-	cp -a buildroot-packages/* $</package/
+	cp -a buildroot-packages/holos-config $</package/
 	# patch any files with global variables
 	sed -i -e "s/__HOLOS_VERSION__/${HOLOS_VERSION}/g" $</package/holos-config/holos-config.mk
+	# add this package to the HolOS packages submenu
+	grep 'holos-config' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in >/dev/null 2>&1 || sed -i -e '/.*# holos-specifics/a\
+	\tsource "package/holos-config/Config.in"' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in
 
 ${BR_BUILD_DIR}: ${TMPDIR}
 	mkdir -p ${BR_BUILD_DIR}
@@ -85,11 +98,11 @@ ${BR_BUILD_DIR}/.config: ${BR_BUILD_DIR} ${BUILDROOT_CONFIG} external-artifacts
 	cp ${BUILDROOT_CONFIG} $@
 
 # The kernel is one of the artifacts built
-${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config
+${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config #${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/sysbox-runtime
 	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
 
 # The initial ramdisk filesystem image is the other
-${BR_BUILD_DIR}/images/${INITRD_NAME}: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config
+${BR_BUILD_DIR}/images/${INITRD_NAME}: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config #${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/sysbox-runtime
 	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
 
 ${TMPDIR}/isoroot/boot: ${TMPDIR}

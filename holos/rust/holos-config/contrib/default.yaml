@@ -12,7 +12,8 @@ network:
           static_addresses:
 security:
     github_usernames:
-        - holosupport
     ssh_keys:
     rootpw_hash:
-
+updates:
+    channel_url: http://localhost/channels.yaml
+    channel_name: release
