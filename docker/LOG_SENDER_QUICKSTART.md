@@ -20,6 +20,7 @@ For detailed user guide see the [Log-sender](https://github.com/unytco/log-sende
 - Log-collector service endpoint.
 - Log directories where Holochain conductor writes JSONL files (var/local/lib/holochain/reports by default).
 - An installed happ which has an agreemnt setup in Unyt.
+- happ_config file with 'economics' section (You can generate by using command happ_config_filre with --economics as an argument).
 
 ### 1. Pull log-sender enabled image
 
@@ -30,6 +31,8 @@ docker run --name unytnode -dit \
 ```
 
 ### 2. Basic Setup
+
+Note that if you have a pre-existing log-sender config file (at /etc/log-sender/config.json by default), then the container will use these values as default when starting and call register_dna endpoint automatically as well.
 
 ```bash
 # Initialize configuration with your log-collector endpoint
