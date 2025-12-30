@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# Potentially start WPA supplicant to join a Wi-Fi network.
+#
+
+PID_FILE=/var/run/wpa_suppliant.pid
+
+start() {
+	printf "Checking for Wi-Fi configuration: "
+	/usr/bin/holos-config -s wifi-config
+	wifi_ret=$?
+	echo "OK"
+
+	# holos-config will return success if there's a wi-fi network configured. If so, we
+	# need to start wpa_supplicant to handle WPA2 authentication.
+	if [ $wifi_ret = 0 ]
+	then
+		# We currently only support a single Wi-Fi adapter, which will be named 'wlan0'.
+		# This is just a short-term solution to get something working, but really needs
+		# to change.
+		printf "Starting WPA supplicant: "
+		wpa_supplicant -s -d -B -c /etc/wpa_supplicant.conf -i wlan0 -P "$PID_FILE"
+		printf "OK"
+	fi
+}
+
+stop() {
+	printf "Stopping wpa_supplicant: "
+	if [ -r "$PID_FILE" ]
+	then
+		kill $( cat "$PID_FILE" )
+	fi
+	echo "OK"
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart|reload)
+		restart
+		;;
+	*)
+		echo "Usage: $0 (start|stop|restart)"
+		exit 1
+esac
