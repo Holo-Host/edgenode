@@ -236,6 +236,7 @@ use std::net::IpAddr;
 
 //pub mod blockdev;
 //pub mod install;
+pub mod led;
 pub mod models;
 pub mod network;
 pub mod update;

@@ -6,8 +6,9 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::env;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
+use std::process::Command;
 
 /// A list of named channels published online somewhere.
 pub struct UpdateChannelsList(HashMap<String, UpdateChannel>);
@@ -52,12 +53,9 @@ pub struct Updater {}
 
 impl Updater {
     const DOWNLOAD_DIRECTORY: &str = "/var/tmp";
+    const HOLOS_VERSION_FILE: &str = "/etc/holos-version";
 
     pub async fn do_update(config: &UpdateConfig) -> Result<(), Error> {
-        // Update process:
-        //  * Download channels list
-        //  * Match the channel we're supposed to be downloading from
-        //  - Pull the configured image object
         //  - Mount destination (flip or flop)
         //  - Extract the root filesystem to flip or flop
         //  - Update bootloader
@@ -66,6 +64,17 @@ impl Updater {
         info!("Updating through channel {}", config.channel_name);
         let channels = UpdateChannelsList::new(&config.channel_url).await?;
         if let Some(mychan) = channels.channel_by_name(&config.channel_name) {
+            // Is an update required?
+            let version_file = fs::read_to_string(Self::HOLOS_VERSION_FILE)?;
+            let current_version = version_file.trim();
+            if mychan.version == current_version {
+                info!(
+                    "Already running version {}. No update required.",
+                    mychan.version
+                );
+                return Ok(());
+            }
+
             let destination_file = match env::var("DOWNLOAD_DIRECTORY") {
                 Ok(dir) => format!("{}/update.iso", dir),
                 Err(_) => format!("{}/update.iso", Self::DOWNLOAD_DIRECTORY),
@@ -82,7 +91,7 @@ impl Updater {
                     // it once it's done.
                     let mut hasher = Sha256::new();
 
-                    let mut dest_file = File::create(destination_file)?;
+                    let mut dest_file = File::create(&destination_file)?;
                     while let Some(chunk) = &response.chunk().await? {
                         hasher.update(chunk);
                         dest_file.write_all(chunk)?;
@@ -125,6 +134,18 @@ impl Updater {
             }
 
             info!("SHA256 hash check for {} succeeded.", mychan.media_url);
+
+            // Trading off time vs resilience, much of the update mechanism has been implemented
+            // as a shell script.
+            let output = Command::new("/bin/update-extractor.sh")
+                .arg(&destination_file)
+                .arg("/flipflop")
+                .output()?;
+
+            info!("Update stdout: {}", &str::from_utf8(&output.stdout)?);
+            info!("Update stderr: {}", &str::from_utf8(&output.stderr)?);
+
+            // TODO: Automatically reboot here?
 
             return Ok(());
         }

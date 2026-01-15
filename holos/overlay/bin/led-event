@@ -1,0 +1,23 @@
+#!/bin/zsh
+
+. /usr/share/holos/shell-functions.sh
+
+# We need a directory on the data volume for user-defined configuration, so that it 
+# will persist across updates.
+EVENT_DIR=/var/lib/docker/holos/events
+
+[ -d "$EVENT_DIR" ] || mkdir -p "$EVENT_DIR"
+
+event_name="$1"
+[ -z "$1" ] && die "Usage: $0 <event_name>"
+
+# Handlers are just shell-format files that define a couple of variables. We source
+# the one that's named, and use it to feed arguments to holos-config set-led.
+if [ -r "$EVENT_DIR"/"$event_name" ]
+then
+	holos_log holos_event "Triggering event handler '$event_name'"
+	. "$EVENT_DIR"/"$event_name"
+	flash=""
+	[ -n "$FLASH" ] && flash="--flash"
+	RUST_LOG=debug holos-config set-led $flash $COLOR
+fi

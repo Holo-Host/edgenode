@@ -14,7 +14,7 @@ use tera::{Context, Tera};
 // compile templates into the binary
 lazy_static! {
     pub static ref TERA: Tera = {
-        let tera = match Tera::new("templates/**/*.conf") {
+        let tera = match Tera::new("/etc/holos/templates/**/*.conf") {
             Ok(t) => t,
             Err(e) => {
                 println!("Template parse error: {}", e);
@@ -107,20 +107,21 @@ impl Network {
     /// interface. Currently only supports DHCP and should be changed in future to support static
     /// IPv4 and IPv6 addressing.
     fn write_interface_config(interface: &str) -> Result<(), Error> {
-        symlink(
-            format!("{}.lo", Self::OPENRC_LINK_BASE),
-            format!("{}.{}", Self::OPENRC_LINK_BASE, interface),
-        )?;
+        let src_iface = format!("{}.lo", Self::OPENRC_LINK_BASE);
+        let dst_iface = format!("{}.{}", Self::OPENRC_LINK_BASE, interface);
+        info!("Symlink {} => {}", src_iface, dst_iface);
+        symlink(src_iface, dst_iface)?;
 
         // The lines we need to write to the network configuration file.
         let netifrc_stanza = format!(
-            "config_{}=\"dhcp\"\nudhcpc_{}\"-b -t 7\"\n",
+            "config_{}=\"dhcp\"\nudhcpc_{}=\"-b -t 7\"\n",
             interface, interface
         );
 
         // We overwrite the file each time, leaving us with only the last interface configured. We
         // should change this in future, so that we can potentially support more than one
         // interface.
+        info!("Writing network config to {}", Self::OPENRC_NET_FILE);
         let mut file = OpenOptions::new()
             .append(true)
             .create(false)
@@ -139,6 +140,9 @@ impl Network {
             wpa_ssid = wireless.ssid.clone();
             wpa_psk = wireless.wpa_psk.clone();
         }
+
+        info!("Asked to join Wi-Fi network with SSID '{}'", wpa_ssid);
+
         // tera templating context
         let mut context = Context::new();
         context.insert("wpa_ssid", &wpa_ssid);
@@ -153,11 +157,13 @@ impl Network {
             Ok(v) => v,
             Err(_) => "/etc/wpa_supplicant.conf".to_string(),
         };
+        info!("Writing WPA Supplicant configuration to {}", config_path);
         fs::write(config_path, rendered_config)?;
 
         // TODO: We also hard-code this to be the first interface name that's likely to be
         // assigned. This should really be done by having the user select the interface by its
         // vendor and device ID.
+        info!("Writing wlan0 interface configuration");
         Self::write_interface_config("wlan0")?;
 
         Ok(())

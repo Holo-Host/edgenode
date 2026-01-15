@@ -5,7 +5,9 @@
 
 start() {
 	printf "Populating /etc/issue: "
-	/usr/bin/holos-config -s etc-issue
+	RUST_LOG=debug /usr/bin/holos-config -s etc-issue
+	# Call LED event hook
+	/bin/led-event finish-boot
 	# we should probably check the return value here later.
 	echo "OK"
 }
