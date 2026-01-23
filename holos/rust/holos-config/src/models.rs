@@ -26,7 +26,7 @@ impl ModelConfig {
             Err(_) => Self::DEFAULT_CONFIG_PATH.to_string(),
         };
 
-        Some(format!("{}/{}.yaml", config_path, cfg_name))
+        Some(format!("{config_path}/{cfg_name}.yaml"))
     }
 }
 
@@ -74,7 +74,7 @@ impl fmt::Display for Model {
             Self::DellXPS13 => "Dell XPS 13 9310",
         };
 
-        write!(f, "{}", ret)
+        write!(f, "{ret}")
     }
 }
 
@@ -133,7 +133,7 @@ impl Model {
             if let Some(rotational) =
                 Self::integer_attr(format!("{}/queue/rotational", dev.display()))
             {
-                info!("Rotational: {}", rotational);
+                info!("Rotational: {rotational}");
                 is_rotational = rotational == 1;
             } else {
                 // semi-sane default
@@ -142,7 +142,7 @@ impl Model {
 
             // Is it a removable drive?
             if let Some(removable) = Self::integer_attr(format!("{}/removable", dev.display())) {
-                info!("Removable: {}", removable);
+                info!("Removable: {removable}");
                 is_removable = removable == 1;
             } else {
                 // semi-sane default
@@ -189,7 +189,7 @@ impl Model {
             }
         }
 
-        info!("Flags of found stuff be: 0x{:02x}", found_flags);
+        info!("Flags of found stuff be: 0x{found_flags:02x}");
         info!(
             "Masked be: 0x{:02x}",
             found_flags & ModelHeuristicFlags::HasVirtIODrive
@@ -218,7 +218,7 @@ impl Model {
         } else {
             Model::Unknown
         };
-        log::info!("Detected model: {}", model);
+        log::info!("Detected model: {model}");
         Ok(model)
     }
 
