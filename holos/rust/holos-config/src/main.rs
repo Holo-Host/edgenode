@@ -2,6 +2,8 @@ use clap::{Parser, Subcommand};
 use holos_config::{
     HolosConfig, WiFiConfig, cmdline::CmdLine, models::Model, models::ModelConfig,
     network::Network, update::Updater, utils::cmd_stdin,
+    HolosConfig, cmdline::CmdLine, models::Model, models::ModelConfig, update::Updater,
+    utils::atomic_write_with_permissions, utils::cmd_stdin,
 };
 use local_ip_address::list_afinet_netifas;
 use log::info;
@@ -71,13 +73,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // defaults for the most common cases, with the possibility to override everything, as needed.
     let platform_model = match Model::detect_model() {
         Ok(model) => {
-            info!("Detected model: {}", model);
+            info!("Detected model: {model}");
             model
         }
         Err(e) => {
             // Anything to do with models is best-case as a way to provide defaults. Not being able
             // to discover the model shouldn't be a show stopper.
-            info!("Failed to detect model with error: {}", e);
+            info!("Failed to detect model with error: {e}");
             Model::Unknown
         }
     };
@@ -86,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(v) => v,
         Err(_) => "/proc/cmdline".to_string(),
     };
-    info!("Using {} as kernel command line source", cmdline_path);
+    info!("Using {cmdline_path} as kernel command line source");
     let overrides = CmdLine::from_file(&cmdline_path)?;
 
     // Order of precedence for various configuration file paths:
@@ -104,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else if let Some(model_config) = ModelConfig::config_file(&platform_model) {
         config_file_path = model_config.to_owned();
     }
-    info!("Configuration file {} selected.", config_file_path);
+    info!("Configuration file {config_file_path} selected.");
     let path = Path::new(&config_file_path);
     let file = File::open(path)?;
     let reader = BufReader::new(file);
@@ -150,23 +152,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(local) => local,
             Err(_) => LOCAL_CONFIG_FILE_PATH.to_string(),
         };
-        info!("Writing local configuration file to {}", local_config);
+        info!("Writing local configuration file to {local_config}");
         let config_string = serde_yaml::to_string(&config)?;
-        fs::write(local_config, config_string)?;
+        // Use atomic write with restricted permissions (0o600) for security
+        atomic_write_with_permissions(Path::new(&local_config), config_string.as_bytes(), 0o600)?;
     }
 
     match &cli.command {
         Commands::DetectModel {} => {
-            println!("{}", platform_model);
+            println!("{platform_model}");
         }
         Commands::QueryModel {} => {
             // This just displays some config stuff in a bourne-shell compatible syntax to eval.
-            println!("MODEL=\"{}\"", platform_model);
+            println!("MODEL=\"{platform_model}\"");
             if let Some(system_device) = config.storage.system_device {
-                println!("SYSTEM_DEVICE=\"{}\"", system_device);
+                println!("SYSTEM_DEVICE=\"{system_device}\"");
             }
             if let Some(data_device) = config.storage.data_device {
-                println!("DATA_DEVICE=\"{}\"", data_device);
+                println!("DATA_DEVICE=\"{data_device}\"");
             }
         }
         Commands::RootPassword {} => {
@@ -176,7 +179,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // the passwd and shadow files have some particular semantics about permissions,
                 // syntax and locking. The `chpasswd` tool handles all of that and reduces the
                 // changes of us bricking the machine.
-                let input = format!("root:{}", hash);
+                let input = format!("root:{hash}");
                 let system_root = match env::var("PASSWD_SYSTEM_ROOT") {
                     Ok(v) => v,
                     Err(_) => "/".to_string(),
@@ -194,55 +197,62 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(v) => v,
                 Err(_) => DEFAULT_AUTH_KEYS_DIR.to_string(),
             };
-            let trusted_keys_path = format!("{}/authorized_keys", trusted_keys_dir);
+            let trusted_keys_path = format!("{trusted_keys_dir}/authorized_keys");
             let mut keys = String::new();
             for user in config.security.github_usernames {
-                info!("Downloading keys for github user: {}", user);
+                info!("Downloading keys for github user: {user}");
                 let mut count = 0;
-                let uri = format!("https://api.github.com/users/{}/keys", user);
-                info!("URI: {}", uri);
+                let uri = format!("https://api.github.com/users/{user}/keys");
+                info!("URI: {uri}");
                 let client = reqwest::Client::new();
-                let res = client
-                    .get(uri)
+                let response = client
+                    .get(&uri)
                     .header("User-Agent", "HolOS Configurator")
                     .send()
-                    .await?
-                    .json::<Vec<GithubKeys>>()
                     .await?;
+
+                let status = response.status();
+                if !status.is_success() {
+                    return Err(format!(
+                        "Failed to fetch SSH keys for GitHub user '{user}': HTTP {status} from {uri}"
+                    )
+                    .into());
+                }
+
+                let res: Vec<GithubKeys> = response.json().await.map_err(|e| {
+                    format!("Failed to parse SSH keys response for GitHub user '{user}': {e}")
+                })?;
 
                 for key in res {
                     keys += format!("{} {}_{}\n", key.key, user, key.id).as_str();
                     count += 1;
                 }
 
-                info!("Downloaded {} keys for user {}", count, user);
+                info!("Downloaded {count} keys for user {user}");
             }
 
             // Now loop through and add and keys explicitly passed on the kernel command line or
             // stored in the config file.
             let mut key_num = 0;
             for key in config.security.ssh_keys {
-                info!("Adding explicit public key: {}", key);
+                info!("Adding explicit public key: {key}");
                 key_num += 1;
-                keys += format!("{} explicit_{}\n", key, key_num).as_str();
+                keys += format!("{key} explicit_{key_num}\n").as_str();
             }
             fs::create_dir_all(&trusted_keys_dir)?;
-            fs::write(&trusted_keys_path, keys)?;
             // OpenSSH has strict requirements about the permissions of the trusted keys file and
             // the directory containing it.
             let metadata = fs::metadata(&trusted_keys_dir)?;
             let mut permissions = metadata.permissions();
             permissions.set_mode(0o700);
             fs::set_permissions(&trusted_keys_dir, permissions)?;
-            let metadata = fs::metadata(&trusted_keys_path)?;
-            let mut permissions = metadata.permissions();
-            permissions.set_mode(0o600);
-            fs::set_permissions(&trusted_keys_path, permissions)?;
+            // Use atomic write with restricted permissions (0o600) for security
+            atomic_write_with_permissions(Path::new(&trusted_keys_path), keys.as_bytes(), 0o600)?;
         }
         Commands::EtcIssue {} => {
             let mut issue: String;
             let version = fs::read_to_string("/etc/holos-version")?;
-            issue = format!("\n\nHolOS Version: {}\n", version);
+            issue = format!("\n\nHolOS Version: {version}\n");
             issue += format!("Live boot: {}\n", overrides.live_flag).as_str();
             issue += format!(
                 "Superuser trusts keys from github users: {}\n",
@@ -255,7 +265,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(nics) => {
                     for (name, ip) in nics {
                         if name != "lo" && name != "virbr0" && name != "docker0" {
-                            issue += format!("    {} => {}\n", name, ip).as_str();
+                            issue += format!("    {name} => {ip}\n").as_str();
                         }
                     }
                 }
@@ -264,7 +274,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             issue += "\n\n";
-            issue += format!("Hardware Model: {}", platform_model).as_str();
+            issue += format!("Hardware Model: {platform_model}").as_str();
             issue += "\n\n";
 
             fs::write("/etc/issue", issue)?;
@@ -293,6 +303,75 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => {
                     info!("Wireless configuration failed with: {}", e);
+        Commands::Configure {} => {
+            let interfaces_path = match env::var("INTERFACES_PATH") {
+                Ok(v) => v,
+                Err(_) => "/etc/network/interfaces.d".to_string(),
+            };
+            info!("Using {interfaces_path} as network interface definition path");
+            // Create network interface configurations
+            for iface in config.network.interfaces {
+                info!("Configuring interface: {:?}", iface.identifier);
+                if !iface.static_addresses.is_empty() {
+                    // Adding support for static IPs isn't hard, we're just time constrained. The process
+                    // would still be the same -- writing the configuration to the interfaces files.
+                    eprintln!("Static addresses have not yet been implemented.");
+                    info!("Static addresses have not yet been implemented.");
+                    // Fall through and use DHCP anyway
+                }
+                let interface_name = match iface.identifier {
+                    holos_config::DeviceIdentifier::PciAddress { address } => {
+                        // Given that all of the network drivers have been loaded at this point, we can
+                        // take a look at the PCI device specified by the address in the configuration
+                        // file, and map it back to an interface name. This will work regardless of driver
+                        // load order, or which network interface device naming convention is employed.
+                        let net_path = format!("/sys/bus/pci/devices/{address}/net");
+                        info!("Looking for interface name for {address} in {net_path}");
+                        let mut entries = fs::read_dir(&net_path)?;
+                        // There is only ever one entry in this directory.
+                        let mut ret = String::new();
+                        if let Some(entry) = entries.next() {
+                            let entry = entry?;
+                            info!(
+                                "Using interface name {} for address {}",
+                                entry.file_name().display(),
+                                address
+                            );
+                            ret = format!("{}", entry.file_name().display());
+                        }
+                        Some(ret)
+                    }
+                    holos_config::DeviceIdentifier::Virtio { address } => {
+                        // Not currently supported. Assume the name `eth0`
+                        info!(
+                            "Virtio devices not currently fully implemented for device {address}"
+                        );
+                        None
+                    }
+                    holos_config::DeviceIdentifier::Usb { address } => {
+                        // Not currently supported. Assume the name `eth0`
+                        info!("USB devices not currently fully implemented for device {address}");
+                        None
+                    }
+                };
+                if let Some(interface) = interface_name {
+                    // Magic OpenRC ju-ju. Try and create the symlink. If it fails, continue
+                    // anyway.
+                    symlink("/etc/init.d/net.lo", format!("/etc/init.d/net.{interface}")).ok();
+                    // TODO: This is not necessary for each boot when the OS is installed. We
+                    // should first check for a `config_XXX` line for our interface first, and
+                    // replace it if present, or append it if not. The code below is fine. It just
+                    // appends a duplicate line each boot.
+                    let netifrc_stanza =
+                        format!("config_{interface}=\"dhcp\"\nudhcpc_{interface}=\"-b -t 7\"\n");
+                    let mut file = OpenOptions::new()
+                        .append(true)
+                        .create(false)
+                        .open("/etc/conf.d/net")?;
+                    file.write_all(netifrc_stanza.as_bytes())?;
+                } else {
+                    info!("Unable to determine interface name for interface. Skipping.");
+                    continue;
                 }
             }
         }

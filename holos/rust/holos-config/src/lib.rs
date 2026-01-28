@@ -292,6 +292,14 @@ pub struct WiFiConfig {
     pub ssid: String,
     /// The corresponding WPA2 pre-shared key
     pub wpa_psk: String,
+/// Default URL for the update channels configuration
+fn default_channel_url() -> String {
+    "https://github.com/Holo-Host/edgenode/releases/latest/download/channels.yaml".to_string()
+}
+
+/// Default channel name
+fn default_channel_name() -> String {
+    "release".to_string()
 }
 
 /// Configuration of the updates channel
@@ -299,9 +307,23 @@ pub struct WiFiConfig {
 pub struct UpdateConfig {
     /// URL to pull from. Should generally always be a `channels.yaml` file in Github release page
     /// for Holo Edgenode.
+    #[serde(default = "default_channel_url")]
     channel_url: String,
     /// The name of the channel to update through. Will generally be _release_.
+    #[serde(default = "default_channel_name")]
     channel_name: String,
+}
+
+impl UpdateConfig {
+    /// Returns the URL for the update channels configuration
+    pub fn channel_url(&self) -> &str {
+        &self.channel_url
+    }
+
+    /// Returns the name of the update channel
+    pub fn channel_name(&self) -> &str {
+        &self.channel_name
+    }
 }
 
 #[serde_as]
@@ -347,19 +369,21 @@ pub struct SecurityConfig {
     pub ssh_keys: Vec<String>,
     /// The root password is disabled by default, with ssh keys being preferred. If a root password
     /// is required or desired, include the hashed password as a string here.
+    /// Note: This field is intentionally not serialized to local.yaml for security reasons.
+    /// The hash is only needed once to call chpasswd, after which it's stored in /etc/shadow.
+    #[serde(skip_serializing, default)]
     pub rootpw_hash: Option<String>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_yaml;
     use std::str::FromStr;
 
     const TEST_CONFIG: &str = "
 storage:
-    install_partition: /dev/sda1
-    persist_partition: /dev/sda2
+    system_device: /dev/sda1
+    data_device: /dev/sda2
 network:
     nameservers:
         - 1.1.1.1
@@ -376,6 +400,9 @@ security:
         - someuser
     ssh_keys:
     rootpw_hash:
+updates:
+    channel_url: https://example.com/channels.yaml
+    channel_name: release
 ";
 
     #[test]
@@ -385,8 +412,8 @@ security:
 
         dbg!(&c);
 
-        assert_eq!(c.storage.persist_partition, Some("/dev/sda2".to_string()));
-        assert_eq!(c.storage.install_partition, Some("/dev/sda1".to_string()));
+        assert_eq!(c.storage.data_device, Some("/dev/sda2".to_string()));
+        assert_eq!(c.storage.system_device, Some("/dev/sda1".to_string()));
         assert_eq!(
             c.network.nameservers[0],
             IpAddr::from_str("1.1.1.1").unwrap()
@@ -395,6 +422,33 @@ security:
         assert_eq!(c.network.interfaces[0].static_addresses.len(), 2);
         assert_eq!(c.security.github_usernames.len(), 1);
         assert_eq!(c.security.ssh_keys.len(), 0);
+    }
+
+    #[test]
+    /// Verify rootpw_hash is not serialized
+    fn security_config_rootpw_hash_not_serialized() {
+        let security = SecurityConfig {
+            github_usernames: vec!["testuser".to_string()],
+            ssh_keys: vec![],
+            rootpw_hash: Some("$5$somehash".to_string()),
+        };
+
+        let yaml = serde_yaml::to_string(&security).unwrap();
+        // rootpw_hash should not appear in the serialized output
+        assert!(!yaml.contains("rootpw_hash"));
+        assert!(!yaml.contains("$5$somehash"));
+    }
+
+    #[test]
+    /// Verify UpdateConfig uses defaults when fields are missing
+    fn update_config_defaults() {
+        let yaml = "{}";
+        let config: UpdateConfig = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            config.channel_url(),
+            "https://github.com/Holo-Host/edgenode/releases/latest/download/channels.yaml"
+        );
+        assert_eq!(config.channel_name(), "release");
     }
 }
 
@@ -507,9 +561,9 @@ pub mod cmdline {
             // Write a string to a throwaway file and then make sure the above code can parse it.
             let tempfile = NamedTempFile::new().unwrap();
             let filename = tempfile.path();
-            fs::write(&filename, CMDLINE_WITH_CONFIG_FILE).unwrap();
+            fs::write(filename, CMDLINE_WITH_CONFIG_FILE).unwrap();
 
-            let overrides = CmdLine::from_file(&filename.to_str().unwrap()).unwrap();
+            let overrides = CmdLine::from_file(filename.to_str().unwrap()).unwrap();
             assert_eq!(
                 overrides.config_file,
                 Some("/etc/holos/configs/holoport.yaml".to_string())
@@ -521,9 +575,9 @@ pub mod cmdline {
             // Write a string to a throwaway file and then make sure the above code can parse it.
             let tempfile = NamedTempFile::new().unwrap();
             let filename = tempfile.path();
-            fs::write(&filename, CMDLINE_WITH_GITHUB_USERS).unwrap();
+            fs::write(filename, CMDLINE_WITH_GITHUB_USERS).unwrap();
 
-            let overrides = CmdLine::from_file(&filename.to_str().unwrap()).unwrap();
+            let overrides = CmdLine::from_file(filename.to_str().unwrap()).unwrap();
             assert_eq!(overrides.github_usernames, vec!["username1", "username2"]);
         }
 
@@ -532,10 +586,10 @@ pub mod cmdline {
             // Write a string to a throwaway file and then make sure the above code can parse it.
             let tempfile = NamedTempFile::new().unwrap();
             let filename = tempfile.path();
-            fs::write(&filename, CMDLINE_WITH_INSTALL_FLAG).unwrap();
+            fs::write(filename, CMDLINE_WITH_INSTALL_FLAG).unwrap();
 
-            let overrides = CmdLine::from_file(&filename.to_str().unwrap()).unwrap();
-            assert_eq!(overrides.install_flag, true);
+            let overrides = CmdLine::from_file(filename.to_str().unwrap()).unwrap();
+            assert!(overrides.install_flag);
         }
 
         #[test]
@@ -543,10 +597,10 @@ pub mod cmdline {
             // Write a string to a throwaway file and then make sure the above code can parse it.
             let tempfile = NamedTempFile::new().unwrap();
             let filename = tempfile.path();
-            fs::write(&filename, CMDLINE_WITH_GITHUB_USERS).unwrap();
+            fs::write(filename, CMDLINE_WITH_GITHUB_USERS).unwrap();
 
-            let overrides = CmdLine::from_file(&filename.to_str().unwrap()).unwrap();
-            assert_eq!(overrides.install_flag, false);
+            let overrides = CmdLine::from_file(filename.to_str().unwrap()).unwrap();
+            assert!(!overrides.install_flag);
         }
     }
 }

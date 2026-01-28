@@ -15,8 +15,27 @@ pub struct UpdateChannelsList(HashMap<String, UpdateChannel>);
 impl UpdateChannelsList {
     pub async fn new(channel_url: &str) -> Result<Self, Error> {
         let client = Client::new();
-        let response_body = client.get(channel_url).send().await?.text().await?;
-        let channels: HashMap<String, UpdateChannel> = serde_yaml::from_str(&response_body)?;
+        let response = client
+            .get(channel_url)
+            .header("User-Agent", "HolOS Configurator")
+            .send()
+            .await?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(anyhow!(
+                "Failed to fetch update channels from '{channel_url}': HTTP {status}"
+            ));
+        }
+
+        let response_body = response.text().await.map_err(|e| {
+            anyhow!("Failed to read update channels response from '{channel_url}': {e}")
+        })?;
+
+        let channels: HashMap<String, UpdateChannel> = serde_yaml::from_str(&response_body)
+            .map_err(|e| {
+                anyhow!("Failed to parse update channels YAML from '{channel_url}': {e}")
+            })?;
         Ok(Self(channels))
     }
     pub fn channel_by_name(&self, name: &str) -> Option<&UpdateChannel> {
@@ -126,8 +145,14 @@ impl Updater {
 
             info!("SHA256 hash check for {} succeeded.", mychan.media_url);
 
+        let channels = UpdateChannelsList::new(config.channel_url()).await?;
+        if let Some(mychan) = channels.channel_by_name(config.channel_name()) {
+            debug!("{mychan:?}");
             return Ok(());
         }
-        Err(anyhow!("Channel not found"))
+        let channel_name = config.channel_name();
+        Err(anyhow!(
+            "Channel '{channel_name}' not found in update channels list"
+        ))
     }
 }
