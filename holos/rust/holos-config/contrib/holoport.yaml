@@ -11,7 +11,9 @@ network:
           static_addresses:
 security:
     github_usernames:
-        - changeme
     ssh_keys:
     rootpw_hash:
+updates:
+    channel_url: http://localhost/channels.yaml
+    channel_name: release
 

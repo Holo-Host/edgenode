@@ -134,6 +134,10 @@ menuentry "HolOS `cat $dest_mnt/etc/holos-version`" {
 	linux /boot/bzImage root=LABEL="$SYS_FLIP_LABEL" ro vga=791
 	initrd /boot/holos-initrd.img
 }
+menuentry "HolOS `cat $dest_mnt/etc/holos-version`" {
+	linux /boot/bzImage root=LABEL="$SYS_FLOP_LABEL" ro vga=791
+	initrd /boot/holos-initrd.img
+}
 EOF
 }
 
