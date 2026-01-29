@@ -1,9 +1,7 @@
 use clap::{Parser, Subcommand};
 use holos_config::{
     HolosConfig, WiFiConfig, cmdline::CmdLine, models::Model, models::ModelConfig,
-    network::Network, update::Updater, utils::cmd_stdin,
-    HolosConfig, cmdline::CmdLine, models::Model, models::ModelConfig, update::Updater,
-    utils::atomic_write_with_permissions, utils::cmd_stdin,
+    network::Network, update::Updater, utils::atomic_write_with_permissions, utils::cmd_stdin,
 };
 use local_ip_address::list_afinet_netifas;
 use log::info;
@@ -303,75 +301,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => {
                     info!("Wireless configuration failed with: {}", e);
-        Commands::Configure {} => {
-            let interfaces_path = match env::var("INTERFACES_PATH") {
-                Ok(v) => v,
-                Err(_) => "/etc/network/interfaces.d".to_string(),
-            };
-            info!("Using {interfaces_path} as network interface definition path");
-            // Create network interface configurations
-            for iface in config.network.interfaces {
-                info!("Configuring interface: {:?}", iface.identifier);
-                if !iface.static_addresses.is_empty() {
-                    // Adding support for static IPs isn't hard, we're just time constrained. The process
-                    // would still be the same -- writing the configuration to the interfaces files.
-                    eprintln!("Static addresses have not yet been implemented.");
-                    info!("Static addresses have not yet been implemented.");
-                    // Fall through and use DHCP anyway
-                }
-                let interface_name = match iface.identifier {
-                    holos_config::DeviceIdentifier::PciAddress { address } => {
-                        // Given that all of the network drivers have been loaded at this point, we can
-                        // take a look at the PCI device specified by the address in the configuration
-                        // file, and map it back to an interface name. This will work regardless of driver
-                        // load order, or which network interface device naming convention is employed.
-                        let net_path = format!("/sys/bus/pci/devices/{address}/net");
-                        info!("Looking for interface name for {address} in {net_path}");
-                        let mut entries = fs::read_dir(&net_path)?;
-                        // There is only ever one entry in this directory.
-                        let mut ret = String::new();
-                        if let Some(entry) = entries.next() {
-                            let entry = entry?;
-                            info!(
-                                "Using interface name {} for address {}",
-                                entry.file_name().display(),
-                                address
-                            );
-                            ret = format!("{}", entry.file_name().display());
-                        }
-                        Some(ret)
-                    }
-                    holos_config::DeviceIdentifier::Virtio { address } => {
-                        // Not currently supported. Assume the name `eth0`
-                        info!(
-                            "Virtio devices not currently fully implemented for device {address}"
-                        );
-                        None
-                    }
-                    holos_config::DeviceIdentifier::Usb { address } => {
-                        // Not currently supported. Assume the name `eth0`
-                        info!("USB devices not currently fully implemented for device {address}");
-                        None
-                    }
-                };
-                if let Some(interface) = interface_name {
-                    // Magic OpenRC ju-ju. Try and create the symlink. If it fails, continue
-                    // anyway.
-                    symlink("/etc/init.d/net.lo", format!("/etc/init.d/net.{interface}")).ok();
-                    // TODO: This is not necessary for each boot when the OS is installed. We
-                    // should first check for a `config_XXX` line for our interface first, and
-                    // replace it if present, or append it if not. The code below is fine. It just
-                    // appends a duplicate line each boot.
-                    let netifrc_stanza =
-                        format!("config_{interface}=\"dhcp\"\nudhcpc_{interface}=\"-b -t 7\"\n");
-                    let mut file = OpenOptions::new()
-                        .append(true)
-                        .create(false)
-                        .open("/etc/conf.d/net")?;
-                    file.write_all(netifrc_stanza.as_bytes())?;
-                } else {
-                    info!("Unable to determine interface name for interface. Skipping.");
-                    continue;
                 }
             }
         }

@@ -3,7 +3,7 @@
 # Potentially start WPA supplicant to join a Wi-Fi network.
 #
 
-PID_FILE=/var/run/wpa_suppliant.pid
+PID_FILE=/var/run/wpa_supplicant.pid
 
 start() {
 	printf "Checking for Wi-Fi configuration: "

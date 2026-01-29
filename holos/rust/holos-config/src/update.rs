@@ -145,14 +145,13 @@ impl Updater {
 
             info!("SHA256 hash check for {} succeeded.", mychan.media_url);
 
-        let channels = UpdateChannelsList::new(config.channel_url()).await?;
-        if let Some(mychan) = channels.channel_by_name(config.channel_name()) {
-            debug!("{mychan:?}");
-            return Ok(());
-        }
+
+            Ok(())
+        } else {
         let channel_name = config.channel_name();
         Err(anyhow!(
             "Channel '{channel_name}' not found in update channels list"
         ))
     }
+}
 }

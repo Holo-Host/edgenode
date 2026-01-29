@@ -292,6 +292,7 @@ pub struct WiFiConfig {
     pub ssid: String,
     /// The corresponding WPA2 pre-shared key
     pub wpa_psk: String,
+}
 /// Default URL for the update channels configuration
 fn default_channel_url() -> String {
     "https://github.com/Holo-Host/edgenode/releases/latest/download/channels.yaml".to_string()
