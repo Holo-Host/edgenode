@@ -15,4 +15,4 @@ security:
     rootpw_hash:
 updates:
     channel_url: http://localhost/channels.yaml
-    channel_name: release
+    channel_name: testing

@@ -10,12 +10,12 @@
 //!
 //! To append new parameters:
 //! * For the hybrid ISO boot (the blue boot menu), select the menu option you wish to boot, and
-//! hit the `<TAB>` key. It will display the current kernel command line, and you can add any of
-//! the parameters below that you choose.
+//!   hit the `<TAB>` key. It will display the current kernel command line, and you can add any of
+//!   the parameters below that you choose.
 //! * For the GRUB boot menu (the black and white one), select the menu option you wish to boot,
-//! and hit the `'e'` key. In the editor window that appears, navigate to the line that starts with
-//! `linux ....`, and append your desired options to the end of that line, and hit `Ctrl-X` to boot
-//! it when ready.
+//!   and hit the `'e'` key. In the editor window that appears, navigate to the line that starts with
+//!   `linux ....`, and append your desired options to the end of that line, and hit `Ctrl-X` to boot
+//!   it when ready.
 //!
 //! _Note: whilst all of the options will be described here, it is anticipated that the most common
 //! use case will involve appending just the parameter to specify a set of Github usernames for
@@ -84,16 +84,16 @@
 //!
 //! ```text
 //! xorriso -as mkisofs \
-//!	-r \
-//!	-V HolOS-install \
-//!	-o ../holos-${HOLOS_VERSION}.iso \
-//!	-isohybrid-mbr ../br-build/host/share/syslinux/isohdpfx.bin \
-//!	-b isolinux/isolinux.bin \
-//!	-c boot/boot.cat \
-//!	-no-emul-boot \
-//!	-boot-load-size 4 \
-//!	-boot-info-table \
-//!	.
+//!     -r \
+//!     -V HolOS-install \
+//!     -o ../holos-${HOLOS_VERSION}.iso \
+//!     -isohybrid-mbr ../br-build/host/share/syslinux/isohdpfx.bin \
+//!     -b isolinux/isolinux.bin \
+//!     -c boot/boot.cat \
+//!     -no-emul-boot \
+//!     -boot-load-size 4 \
+//!     -boot-info-table \
+//!     .
 //! ```
 //!
 //! ## `rootpw_hash` kernel parameter
@@ -119,6 +119,14 @@
 //! $5$xkiafp66GGm9of1e$vkQbuykUdRT/oEc8RqUTf4XEJwWBDnFGU2s9nrCNMyD
 //! ```
 //!
+//! ## `wifi_ssid` and `wifi_psk` kernel parameters
+//!
+//! HolOS has some early support for some USB wireless devices and these kernel parameters are used
+//! to override the default configuration for Wi-FI networks. The `wifi_ssid` is a string
+//! representation (no spaces at this time) of the SSID of the network to connect to. If the
+//! `wifi_psk` parameter is also specified, it is treated as a plaintext WPA2 pre-shared key for
+//! the named wireless network. If it is not present, it is assumed that the network is completely
+//! insecure.
 //!
 //! # `holos-config` command line
 //!
@@ -205,20 +213,20 @@
 //! aims to describe each:
 //!
 //! * `CMDLINE_PATH` -- There are various parameters that can be passed in on the Linux kernel
-//! command line. This is parsed from `/proc/cmdline`, but this path can be overriden with the
-//! `CMDLINE_PATH` environment variable when testing.
+//!   command line. This is parsed from `/proc/cmdline`, but this path can be overriden with the
+//!   `CMDLINE_PATH` environment variable when testing.
 //! * `CONFIG_PATH` -- The directory under which `holos-config` searches for default and per-model
-//! configuration files. This can be overriden with this environment variable.
+//!   configuration files. This can be overriden with this environment variable.
 //! * `LOCAL_CONFIG_FILE` -- When configuration parameters are overriden using mechanisms such as
-//! the kernel command line, they are written to a new configuration file with all of the local
-//! changes. This file takes precedence over other configuration files. For testing, the path where
-//! this file is _written_ can be overridden using the `LOCAL_CONFIG_FILE` environment variable.
+//!   the kernel command line, they are written to a new configuration file with all of the local
+//!   changes. This file takes precedence over other configuration files. For testing, the path where
+//!   this file is _written_ can be overridden using the `LOCAL_CONFIG_FILE` environment variable.
 //! * `AUTHORIZED_KEYS_DIR` -- When `holos-config` writes downloaded or provided ssh public keys to
-//! trust, it will write to the root user's `authorized_keys` file in the `/root/.ssh` directory.
-//! The directory can be overridden with this environment variable.
+//!   trust, it will write to the root user's `authorized_keys` file in the `/root/.ssh` directory.
+//!   The directory can be overridden with this environment variable.
 //! * `INTERFACES_PATH` -- This variable allows the network configuration directory to be
-//! overridden during testing, to allow the tester to write and check network interface
-//! configuration files independently of HolOS.
+//!   overridden during testing, to allow the tester to write and check network interface
+//!   configuration files independently of HolOS.
 //!
 
 use ipnet::IpNet;
@@ -229,6 +237,7 @@ use std::net::IpAddr;
 //pub mod blockdev;
 //pub mod install;
 pub mod models;
+pub mod network;
 pub mod update;
 pub mod utils;
 
@@ -262,6 +271,8 @@ pub struct NetworkConfig {
     pub nameservers: Vec<IpAddr>,
     /// A list of network interfaces to bring up on boot.
     pub interfaces: Vec<NetworkInterface>,
+    /// A single configuration for a Wi-Fi network.
+    pub wireless: Option<WiFiConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -275,6 +286,13 @@ pub struct NetworkInterface {
     pub static_addresses: Vec<InterfaceAddress>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WiFiConfig {
+    /// A Wi-FI network SSID
+    pub ssid: String,
+    /// The corresponding WPA2 pre-shared key
+    pub wpa_psk: String,
+}
 /// Default URL for the update channels configuration
 fn default_channel_url() -> String {
     "https://github.com/Holo-Host/edgenode/releases/latest/download/channels.yaml".to_string()
@@ -454,6 +472,11 @@ pub mod cmdline {
         /// This gives the user a way to pass in a root password hash to add to the shadow file,
         /// should the user want to enable interactive logins for root on the console.
         pub rootpw_hash: String,
+        /// The SSID of the 802.11 wireless network to join
+        pub wifi_ssid: String,
+        /// The WPA2 pre-shared key for the Wi-Fi network. If empty, assumes a totally insecure
+        /// network.
+        pub wifi_psk: String,
         /// This flag sets whether we ought to try and install the operating system permanently or
         /// not.
         pub install_flag: bool,
@@ -468,6 +491,8 @@ pub mod cmdline {
             let mut github_usernames: Vec<String> = vec![];
             let mut ssh_pubkeys: Vec<String> = vec![];
             let mut rootpw_hash = String::new();
+            let mut wifi_ssid = String::new();
+            let mut wifi_psk = String::new();
             let mut install_flag: bool = false;
             let mut live_flag: bool = false;
 
@@ -495,6 +520,10 @@ pub mod cmdline {
                         // This is expected to be a sha256-encoded hash of the root password we
                         // want to set.
                         rootpw_hash = rootpw.to_string();
+                    } else if let Some(ssid) = arg.strip_prefix("wifi_ssid=") {
+                        wifi_ssid = ssid.to_string();
+                    } else if let Some(psk) = arg.strip_prefix("wifi_psk=") {
+                        wifi_psk = psk.to_string();
                     } else if arg == "install" {
                         install_flag = true;
                     } else if arg == "live" {
@@ -508,6 +537,8 @@ pub mod cmdline {
                 github_usernames,
                 ssh_pubkeys,
                 rootpw_hash,
+                wifi_ssid,
+                wifi_psk,
                 install_flag,
                 live_flag,
             })

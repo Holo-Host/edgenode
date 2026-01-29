@@ -3,3 +3,5 @@ test-data/
 holo-data-test/
 .roo/
 AGENTS.md
+holos/tmp
+holos/rust/holos-config/target
