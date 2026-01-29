@@ -93,8 +93,6 @@ impl Updater {
             let client = Client::new();
             let mut response = client.get(&mychan.media_url).send().await?;
 
-            dbg!(&response);
-
             let media_hash_string = match response.status() {
                 StatusCode::OK => {
                     // As we download and write the file, calculate its SHA256 hash, so that we can check
@@ -102,9 +100,9 @@ impl Updater {
                     let mut hasher = Sha256::new();
 
                     let mut dest_file = File::create(destination_file)?;
-                    while let Some(chunk) = &response.chunk().await? {
-                        hasher.update(chunk);
-                        dest_file.write_all(chunk)?;
+                    while let Some(chunk) = response.chunk().await? {
+                        hasher.update(&chunk);
+                        dest_file.write_all(&chunk)?;
                     }
 
                     let hash_bytes = hasher.finalize();
