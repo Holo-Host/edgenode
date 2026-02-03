@@ -3,10 +3,7 @@
 # reimplemented as part of the holos-config Rust code to be made more
 # robust and flexible.
 
-die() {
-    echo "$*" 1>&2
-    exit 1
-}
+. /usr/share/holos/shell-functions.sh
 
 echo ""
 echo "---=== Performing installation of HolOS ===---"
@@ -94,27 +91,6 @@ install() {
 	cp $src_mnt/boot/bzImage $dest_mnt/boot
 }
 
-mkinitrd() {
-	# This is executed from the root directory of the destination
-	mkdir tmp/initrd-root
-	for i in bin dev etc lib mnt proc sbin sys usr usr/bin usr/sbin
-	do
-		mkdir tmp/initrd-root/$i
-	done
-	cp bin/busybox tmp/initrd-root/bin
-	cp -a lib/{ld-musl-x86_64,libc}* tmp/initrd-root/lib
-	chroot tmp/initrd-root /bin/busybox --install
-
-	cp bin/ramdisk-init tmp/initrd-root/init && chmod a+rx tmp/initrd-root/init
-
-	# We actually only need the storage drivers. That can be an optimisation for later.
-	echo "Copying kernel modules"
-	cp -a /lib/modules tmp/initrd-root/lib
-
-	echo "Packing initial ramdisk"
-	( cd tmp/initrd-root ; find . -print0 | cpio --null --create --format=newc | bzip2 -zc > ../../boot/holos-initrd.img )
-}
-
 bootloader() {
 	mount --bind /dev $dest_mnt/dev
 	mount --bind /proc $dest_mnt/proc
@@ -145,6 +121,7 @@ fstab(){
 	(
 	echo "LABEL=\"$SYS_FLIP_LABEL\" / ext4 defaults 1 1"
 	echo "LABEL=\"$DATA_FS_LABEL\" /var/lib/docker ext4 defaults 1 1"
+	echo "LABEL=\"$SYS_FLOP_LABEL\" /flipflop ext4 defaults 1 1"
 	) >> "$dest_mnt/etc/fstab"
 }
 
@@ -153,12 +130,15 @@ src_mnt="/tmp/mnt/src"
 
 partition
 mount LABEL="$SYS_FLIP_LABEL" $dest_mnt >> /var/log/install.log 2>&1
+mkdir -p $dest_mnt/flipflop
+mount LABEL="$SYS_FLOP_LABEL" $dest_mnt/flipflop >> /var/log/install.log 2>&1
+mkdir -p $dest_mnt/flipflop/flipflop
 mount ${source} $src_mnt >> /var/log/install.log 2>&1
 
 cd $dest_mnt
 install
 fstab
-mkinitrd
+holos_mkinitrd
 bootloader
 
 cp -a /root/.ssh $dest_mnt/root/

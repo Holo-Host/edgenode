@@ -7,7 +7,7 @@ PID_FILE=/var/run/wpa_supplicant.pid
 
 start() {
 	printf "Checking for Wi-Fi configuration: "
-	/usr/bin/holos-config -s wifi-config
+	RUST_LOG=debug /usr/bin/holos-config -s wifi-config
 	wifi_ret=$?
 	echo "OK"
 
@@ -19,7 +19,8 @@ start() {
 		# This is just a short-term solution to get something working, but really needs
 		# to change.
 		printf "Starting WPA supplicant: "
-		wpa_supplicant -s -d -B -c /etc/wpa_supplicant.conf -i wlan0 -P "$PID_FILE"
+		/usr/sbin/wpa_supplicant -s -d -B -c /etc/wpa_supplicant.conf -i wlan0 -P "$PID_FILE"
+		status=$?
 		printf "OK"
 	fi
 }

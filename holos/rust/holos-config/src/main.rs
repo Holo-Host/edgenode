@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use holos_config::{
-    HolosConfig, WiFiConfig, cmdline::CmdLine, models::Model, models::ModelConfig,
+    HolosConfig, WiFiConfig, cmdline::CmdLine, led::HoloLed, models::Model, models::ModelConfig,
     network::Network, update::Updater, utils::atomic_write_with_permissions, utils::cmd_stdin,
 };
 use local_ip_address::list_afinet_netifas;
@@ -29,6 +29,12 @@ enum Commands {
     RootPassword {},
     EtcIssue {},
     Install {},
+    SetLed {
+        #[arg(short, long, default_value_t = false)]
+        flash: bool,
+        #[arg(short, long)]
+        color: String,
+    },
     DetectModel {},
     QueryModel {},
     WifiConfig {},
@@ -283,6 +289,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Update {} => {
             Updater::do_update(&config.updates).await?;
+        }
+        Commands::SetLed { flash, color } => {
+            HoloLed::set_led(*flash, color)?;
         }
         Commands::WifiConfig {} => {
             if let Some(wireless) = &config.network.wireless {

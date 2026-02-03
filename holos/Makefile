@@ -1,5 +1,5 @@
 # Version string
-HOLOS_VERSION := 0.0.9
+HOLOS_VERSION := 0.0.10
 
 # We need some temporary scratch space for build artifacts. Everything generated
 # by this build process will be under this tree and we shouldn't be modifying
@@ -54,6 +54,11 @@ ${TMPDIR}/overlay/usr/bin: ${TMPDIR}
 #rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config:
 #	cd rust/holos-config && cargo build --release --target x86_64-unknown-linux-musl
 
+${TMPDIR}/overlay/etc/holos/templates:
+	mkdir -p $@
+
+tera-templates: ${TMPDIR}/overlay/etc/holos/templates rust/holos-config/templates/*.conf
+	cp rust/holos-config/templates/*.conf $<
 
 
 ${TMPDIR}/overlay/etc/holos/configs:
@@ -62,10 +67,10 @@ ${TMPDIR}/overlay/etc/holos/configs:
 default-configs: ${TMPDIR}/overlay/etc/holos/configs
 	cp rust/holos-config/contrib/*.yaml $<
 
-version-file: ${TMPDIR}/overlay/etc/holos/configs
+version-file: ${TMPDIR}/overlay/etc/holos/configs ${TMPDIR}/overlay/etc/holos/templates
 	echo ${HOLOS_VERSION} > ${TMPDIR}/overlay/etc/holos-version
 
-external-artifacts: default-configs version-file #${TMPDIR}/overlay/usr/bin/holos-config
+external-artifacts: default-configs version-file tera-templates
 
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz: ${TMPDIR}
 	curl -q -o $@ ${BUILDROOT_URL}

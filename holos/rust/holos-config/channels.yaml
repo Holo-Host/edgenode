@@ -1,16 +1,16 @@
 release:
-  version: 0.0.8
-  media_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.8.iso
-  release_notes_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.8.txt
+  version: 0.0.10
+  media_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.10.iso
+  release_notes_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.10.txt
   generally_available: true
   date_released: 2025-11-26 18:58:53+00:00
   container_images:
     - name: edgenode
       tag: v0.1.0-hc-0.5.6
 testing:
-  version: 0.0.9-rc1
-  media_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.9-rc1.iso
-  release_notes_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.9-rc1.txt
+  version: 0.0.11
+  media_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.11.iso
+  release_notes_url: https://github.com/Holo-Host/edgenode/releases/raw/holos-0.0.11.txt
   generally_available: true
   date_released: 2025-11-25 18:58:53+00:00
   container_images:

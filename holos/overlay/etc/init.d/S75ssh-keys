@@ -5,10 +5,10 @@
 
 start() {
 	printf "Retrieving OpenSSH public keys for root to trust: "
-	/usr/bin/holos-config -s trusted-keys
+	RUST_LOG=debug /usr/bin/holos-config -s trusted-keys
 	echo "OK"
 	printf "Securing root password: "
-	/usr/bin/holos-config -s root-password
+	RUST_LOG=debug /usr/bin/holos-config -s root-password
 	echo "OK"
 	# we should probably check the return value here later.
 }

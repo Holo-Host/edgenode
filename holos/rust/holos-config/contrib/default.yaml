@@ -15,5 +15,5 @@ security:
     ssh_keys:
     rootpw_hash:
 updates:
-    channel_url: http://localhost/channels.yaml
+    channel_url: https://thisguy.wtf/holos-channels.yaml
     channel_name: release
