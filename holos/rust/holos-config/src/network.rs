@@ -6,9 +6,10 @@ use lazy_static::lazy_static;
 use log::info;
 use std::env;
 use std::fs;
-use std::fs::OpenOptions;
+use std::fs::{OpenOptions, Permissions};
 use std::io::Write;
-use std::os::unix::fs::symlink;
+use std::os::unix::fs::{symlink, PermissionsExt};
+use std::path::Path;
 use tera::{Context, Tera};
 
 // compile templates into the binary
@@ -114,8 +115,8 @@ impl Network {
 
         // The lines we need to write to the network configuration file.
         let netifrc_stanza = format!(
-            "config_{}=\"dhcp\"\nudhcpc_{}=\"-b -t 7\"\n",
-            interface, interface
+            "config_{iface}=\"dhcp\"\nudhcpc_{iface}=\"-b -t 7\"\n",
+            iface = interface
         );
 
         // We overwrite the file each time, leaving us with only the last interface configured. We
@@ -124,7 +125,7 @@ impl Network {
         info!("Writing network config to {}", Self::OPENRC_NET_FILE);
         let mut file = OpenOptions::new()
             .append(true)
-            .create(false)
+            .create(true)
             .open(Self::OPENRC_NET_FILE)?;
         file.write_all(netifrc_stanza.as_bytes())?;
         Ok(())
@@ -158,7 +159,13 @@ impl Network {
             Err(_) => "/etc/wpa_supplicant.conf".to_string(),
         };
         info!("Writing WPA Supplicant configuration to {}", config_path);
-        fs::write(config_path, rendered_config)?;
+
+        let path = Path::new(&config_path);
+        let mut opts = OpenOptions::new();
+        opts.write(true).create(true).truncate(true);
+        let mut file = opts.open(path)?;
+        file.write_all(rendered_config.as_bytes())?;
+        fs::set_permissions(path, Permissions::from_mode(0o600))?;
 
         // TODO: We also hard-code this to be the first interface name that's likely to be
         // assigned. This should really be done by having the user select the interface by its

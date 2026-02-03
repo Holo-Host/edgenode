@@ -16,8 +16,27 @@ pub struct UpdateChannelsList(HashMap<String, UpdateChannel>);
 impl UpdateChannelsList {
     pub async fn new(channel_url: &str) -> Result<Self, Error> {
         let client = Client::new();
-        let response_body = client.get(channel_url).send().await?.text().await?;
-        let channels: HashMap<String, UpdateChannel> = serde_yaml::from_str(&response_body)?;
+        let response = client
+            .get(channel_url)
+            .header("User-Agent", "HolOS Configurator")
+            .send()
+            .await?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(anyhow!(
+                "Failed to fetch update channels from '{channel_url}': HTTP {status}"
+            ));
+        }
+
+        let response_body = response.text().await.map_err(|e| {
+            anyhow!("Failed to read update channels response from '{channel_url}': {e}")
+        })?;
+
+        let channels: HashMap<String, UpdateChannel> = serde_yaml::from_str(&response_body)
+            .map_err(|e| {
+                anyhow!("Failed to parse update channels YAML from '{channel_url}': {e}")
+            })?;
         Ok(Self(channels))
     }
     pub fn channel_by_name(&self, name: &str) -> Option<&UpdateChannel> {
@@ -83,8 +102,6 @@ impl Updater {
             let client = Client::new();
             let mut response = client.get(&mychan.media_url).send().await?;
 
-            dbg!(&response);
-
             let media_hash_string = match response.status() {
                 StatusCode::OK => {
                     // As we download and write the file, calculate its SHA256 hash, so that we can check
@@ -92,9 +109,10 @@ impl Updater {
                     let mut hasher = Sha256::new();
 
                     let mut dest_file = File::create(&destination_file)?;
-                    while let Some(chunk) = &response.chunk().await? {
-                        hasher.update(chunk);
-                        dest_file.write_all(chunk)?;
+                    while let Some(chunk) = response.chunk().await? {
+                        hasher.update(&chunk);
+                        dest_file.write_all(&chunk)?;
+
                     }
 
                     let hash_bytes = hasher.finalize();
@@ -148,7 +166,12 @@ impl Updater {
             // TODO: Automatically reboot here?
 
             return Ok(());
-        }
-        Err(anyhow!("Channel not found"))
+        } else {
+             Err(anyhow!(
+                "Channel '{}' not found in update channels list",
+                config.channel_name
+            ))
+
     }
+}
 }
