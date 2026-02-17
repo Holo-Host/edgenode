@@ -2,6 +2,8 @@ holo-data/
 test-data/
 holo-data-test/
 .roo/
+.gemini/
+docker/log-collector/
 AGENTS.md
 log_fix.md
 UNYT_TEST_ANALYSIS.md
