@@ -66,9 +66,9 @@ get_table_sample() {
 
 # Function to create baseline snapshot
 create_baseline() {
-    echo -e "${BLUE}=== CREATING BASELINE DATABASE SNAPSHOT ===${NC}"
-    echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
-    echo ""
+    echo -e "${BLUE}=== CREATING BASELINE DATABASE SNAPSHOT ===${NC}" >&2
+    echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')" >&2
+    echo "" >&2
     
     # Create directory for baseline
     local baseline_dir="/tmp/db_baseline_$(date +%s)"
@@ -80,10 +80,10 @@ create_baseline() {
     local baseline_dna_regs=$(query_db_count "dna_registrations")
     local baseline_invoice_periods=$(query_db_count "invoice_periods")
     
-    echo "metrics: $baseline_metrics"
-    echo "drone_registrations: $baseline_drone_regs"
-    echo "dna_registrations: $baseline_dna_regs"
-    echo "invoice_periods: $baseline_invoice_periods"
+    echo "metrics: $baseline_metrics" >&2
+    echo "drone_registrations: $baseline_drone_regs" >&2
+    echo "dna_registrations: $baseline_dna_regs" >&2
+    echo "invoice_periods: $baseline_invoice_periods" >&2
     
     # Save counts to files
     echo "$baseline_metrics" > "$baseline_dir/metrics_baseline.txt"

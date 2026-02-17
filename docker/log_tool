@@ -37,45 +37,46 @@ EOF
 
 # Initialize command
 init_command() {
+    # Initialize variables with defaults
+    local endpoint_val="${LOG_SENDER_ENDPOINT:-$ENDPOINT}"
+    local pub_key_val="${LOG_SENDER_UNYT_PUB_KEY:-$UNYT_PUB_KEY}"
+    local interval_val="${LOG_SENDER_REPORT_INTERVAL_SECONDS:-$REPORT_INTERVAL}"
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --endpoint)
+                endpoint_val="$2"
+                shift 2
+                ;;
+            --unyt-pub-key)
+                pub_key_val="$2"
+                shift 2
+                ;;
+            --report-interval-seconds)
+                interval_val="$2"
+                shift 2
+                ;;
+            *)
+                echo "Unknown argument: $1"
+                exit 1
+                ;;
+        esac
+    done
+
     # Build the command
     local CMD=("$LOG_SENDER_BIN" init)
-    
-    # Add config file
     CMD+=(--config-file "$CONFIG_FILE")
+    CMD+=(--endpoint "$endpoint_val")
     
-    # Add endpoint (allow override via environment variable or command line)
-    local ENDPOINT_ARG="${LOG_SENDER_ENDPOINT:-$ENDPOINT}"
-    if [ $# -gt 0 ] && [[ "$1" == "--endpoint" ]]; then
-        CMD+=(--endpoint "$2")
-        shift 2
+    if [ -n "$pub_key_val" ]; then
+        CMD+=(--unyt-pub-key "$pub_key_val")
     else
-        CMD+=(--endpoint "$ENDPOINT_ARG")
+        log "Error: UNYT public key required for init (set via UNYT_PUB_KEY or LOG_SENDER_UNYT_PUB_KEY or --unyt-pub-key argument)"
+        exit 1
     fi
     
-    # Add unyt pub key (use LOG_SENDER_UNYT_PUB_KEY if set, otherwise UNYT_PUB_KEY)
-    local PUB_KEY_ARG="${LOG_SENDER_UNYT_PUB_KEY:-$UNYT_PUB_KEY}"
-    if [ -n "$PUB_KEY_ARG" ]; then
-        CMD+=(--unyt-pub-key "$PUB_KEY_ARG")
-    else
-        # If no pub key is set, check if it's provided as a command line argument
-        if [ $# -gt 0 ] && [[ "$1" == "--unyt-pub-key" ]]; then
-            CMD+=(--unyt-pub-key "$2")
-            shift 2
-        else
-            # If still no pub key, show error message
-            log "Error: UNYT public key required for init (set via UNYT_PUB_KEY or LOG_SENDER_UNYT_PUB_KEY or --unyt-pub-key argument)"
-            exit 1
-        fi
-    fi
-    
-    # Add report interval (allow override via environment variable or command line)
-    local INTERVAL_ARG="${LOG_SENDER_REPORT_INTERVAL_SECONDS:-$REPORT_INTERVAL}"
-    if [ $# -gt 0 ] && [[ "$1" == "--report-interval-seconds" ]]; then
-        CMD+=(--report-interval-seconds "$2")
-        shift 2
-    else
-        CMD+=(--report-interval-seconds "$INTERVAL_ARG")
-    fi
+    CMD+=(--report-interval-seconds "$interval_val")
     
     # Execute the command
     "${CMD[@]}"
