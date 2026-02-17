@@ -3,7 +3,7 @@ test-data/
 holo-data-test/
 .roo/
 .gemini/
-docker/log-collector/
+docker/log-collector
 AGENTS.md
 holos/tmp
 holos/rust/holos-config/target
