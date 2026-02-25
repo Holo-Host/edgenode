@@ -2,18 +2,18 @@ FROM cgr.dev/chainguard/wolfi-base AS base
 
 VOLUME ["/data"]
 
-RUN apk update && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils tini logrotate shadow gosu uuidgen xz libstdc++
+RUN apk update && apk upgrade && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils tini logrotate shadow gosu uuidgen xz libstdc++
 
-ARG HOLOCHAIN_VERSION=0.6.0-dev.28
-ARG HC_VERSION=0.6.0-dev.28
+ARG HOLOCHAIN_VERSION=0.6.1-rc.1
+ARG HC_VERSION=0.6.1-rc.1
 
-RUN wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-go-pion-unstable-x86_64-unknown-linux-gnu && \
+RUN wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-x86_64-unknown-linux-gnu && \
     wget https://github.com/holochain/holochain/releases/download/holochain-${HC_VERSION}/hc-x86_64-unknown-linux-gnu && \
-    mv holochain-go-pion-unstable-x86_64-unknown-linux-gnu /bin/holochain && \
+    mv holochain-x86_64-unknown-linux-gnu /bin/holochain && \
     mv hc-x86_64-unknown-linux-gnu /bin/hc && \
     chmod +x /bin/holochain && \
     chmod +x /bin/hc
-    
+
 # Copy and set up happ tool script
 COPY happ_tool /usr/local/bin/happ_tool
 RUN chmod +x /usr/local/bin/happ_tool
