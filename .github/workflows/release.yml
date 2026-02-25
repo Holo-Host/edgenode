@@ -111,9 +111,14 @@ jobs:
             backend: "default"
             dev: false
             is_default: true
-          - dockerfile: "docker/Dockerfile.hc-0.6.0-dev-go-pion"
+          - dockerfile: "docker/Dockerfile.hc-0.6.0-go-pion"
             hc_version: "0.6.0"
             backend: "go-pion"
+            dev: false
+            is_default: false
+          - dockerfile: "docker/Dockerfile.hc-0.6.1-rc.1"
+            hc_version: "0.6.1-rc.1"
+            backend: "default"
             dev: true
             is_default: false
     steps:
