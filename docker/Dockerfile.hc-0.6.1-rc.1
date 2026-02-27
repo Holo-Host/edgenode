@@ -6,11 +6,17 @@ RUN apk update && apk upgrade && apk add --no-cache bash curl wget htop jq strac
 
 ARG HOLOCHAIN_VERSION=0.6.1-rc.1
 ARG HC_VERSION=0.6.1-rc.1
+ARG TARGETARCH
 
-RUN wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-x86_64-unknown-linux-gnu && \
-    wget https://github.com/holochain/holochain/releases/download/holochain-${HC_VERSION}/hc-x86_64-unknown-linux-gnu && \
-    mv holochain-x86_64-unknown-linux-gnu /bin/holochain && \
-    mv hc-x86_64-unknown-linux-gnu /bin/hc && \
+RUN case "${TARGETARCH}" in \
+    amd64) HC_ARCH="x86_64-unknown-linux-gnu" ;; \
+    arm64) HC_ARCH="aarch64-unknown-linux-gnu" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-${HC_ARCH} && \
+    wget https://github.com/holochain/holochain/releases/download/holochain-${HC_VERSION}/hc-${HC_ARCH} && \
+    mv holochain-${HC_ARCH} /bin/holochain && \
+    mv hc-${HC_ARCH} /bin/hc && \
     chmod +x /bin/holochain && \
     chmod +x /bin/hc
 
