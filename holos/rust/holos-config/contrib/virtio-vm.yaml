@@ -1,0 +1,19 @@
+# A sample/default configuration file suitable for a holoport
+storage:
+    system_device: /dev/vda
+    data_device: /dev/vdb
+network:
+    nameservers:
+    interfaces:
+        # Use the onboard controller, with DHCP
+        - identifier: !pci_address
+            address: "0000:00:03.0"
+          static_addresses:
+security:
+    github_usernames:
+    ssh_keys:
+    rootpw_hash:
+updates:
+    channel_url: https://thisguy.wtf/holos-channels.yaml
+    channel_name: release
+

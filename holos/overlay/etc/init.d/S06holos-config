@@ -5,7 +5,7 @@
 
 start() {
 	printf "Loading configuration: "
-	/usr/bin/holos-config -s configure
+	RUST_LOG=debug /usr/bin/holos-config -s configure
 	# we should probably check the return value here later.
 	echo "OK"
 }

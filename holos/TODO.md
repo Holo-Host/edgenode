@@ -10,6 +10,7 @@ This contains a list of high level work items left to be done for HolOS. As each
 * Add support for Wi-Fi
 * Add support for (limited) USB network device support (to support Wi-Fi on holoports)
 * Flesh out the support for different models. Nothing too sophisticated initially, but need better support than we have today. For example, in the case of Holoport Plus, using the SSD for container volumes, and better support for at least one flavour of VM for easier testing.
+* Container config and autostart from HolOS
 * Propogate OS configuration to installed drive. Configuration is somewhat more a set of overrides for discovered detected defaults (for ease of use), but still needs to propagate to the installed drive.
 * Security:
     - Disable root password-based login

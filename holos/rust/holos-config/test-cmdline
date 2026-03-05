@@ -1,1 +1,1 @@
-config_file=contrib/dell-xps13.yaml live
+config_file=contrib/dell-xps13.yaml live github_usernames=mattgeddes,zippy,SIR-ROB ssh_keys=sk-ecdsa-sha2-nistp256@openssh.com_AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBK7RRUSKLV8IS52Fz3qdD7dZ+icZUlIGV/Zrk/9nlU9oQs5H2BtG8iHJkMq5UIFNhDvxdpx6attBUTF6ABJ+GbEAAAAEc3NoOg== rootpw_hash=$5$MFQqdqfM8o4CnTtW$wypuv4r8xI60YeuPV1fw/sM9/L6.bKZXwWZpDEItqk/

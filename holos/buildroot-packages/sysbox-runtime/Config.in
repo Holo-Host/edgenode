@@ -1,0 +1,4 @@
+    config BR2_PACKAGE_SYSBOX_RUNTIME
+        bool "sysbox-runtime"
+        help
+            A library-OS container runtime, compatible with OCI container managers.

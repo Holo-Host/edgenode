@@ -1,7 +1,7 @@
 # A sample/default configuration file suitable for a holoport
 storage:
-    install_partition: /dev/sda1
-    persist_partition: /dev/sda2
+    system_device: /dev/sda
+    data_device: /dev/sda
 network:
     nameservers:
     interfaces:
@@ -12,7 +12,8 @@ network:
           static_addresses:
 security:
     github_usernames:
-        - holosupport
     ssh_keys:
     rootpw_hash:
-
+updates:
+    channel_url: https://thisguy.wtf/holos-channels.yaml
+    channel_name: release

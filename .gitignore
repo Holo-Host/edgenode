@@ -9,3 +9,5 @@ log_fix.md
 UNYT_TEST_ANALYSIS.md
 UNYT_TEST_RESULTS*.*
 unyt_test_r*.*
+holos/tmp
+holos/rust/holos-config/target

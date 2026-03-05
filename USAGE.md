@@ -2,28 +2,20 @@
 
 ## Overview
 
-Edge Node provides a straightforward path for Holochain hApp providers to solve some of the core challenges of running p2p applications:
+Using Edge Node to run an always-on node for your Holochain application solves one of the core challenges faced by users of p2p applications - staying in sync with the latest changes while peers are constantly going online and offline at different times.
 
-1. Small p2p networks with mostly off-line nodes often need always-on-nodes to hold and relay information.
-2. P2p applications often need to interact with legacy centralized protocols and services, for example they may need to safely manage a boundary to the wider web and provide read-only access to portions of  the contents of the p2p app via http, or they may need to connect to email or sms service providers.
-3. Groups running such p2p apps may not have the technical resources to provision and maintain the hardware and software that overcomes these limitations.
+Applications are installed in the Edge Node container via the  'install_happ' tool using a configuration file which can be generated and validated using the 'happ_config_file' tool. The happ config file specifies the application to be installed in the Edge Node container instance. 
 
-We solve these challenges in a very simple way with two technical components and simple standard:
+The configuration file and the container image, include some experimental support for connection with Unyt (https://unyt.co) based accounting tools for tracking resources used. 
 
-1. An OCI compliant container configured to run a Holochain conductor which also comes with a few simple command line tools to install and manage Holochain applications (hApps).
-2. An lightweight linux distro image ISO (created with BuildBox) that is specially configured to easily run such containers.
-3. A simple configuration file standard for specifying a hApp for use by application providers to be used in the containers.
+The rest of this usage documentation provides instructions from two vantage points:  Application Managers and Edge Node Operators. Please note it's possible these two can be one in the same.
 
-With these tools it becomes very simple for a community-based distributed Holochain support network to emerge.  Groups that want to run an application and need to solve the challenges described above can simply create a configuration file specifying the application they want to run and send it to an Edge Node provider.  Of course the terms of that negotiation are completely up to the parties involved, but we also include in the configuration file and in the container image, the information slots and service reporting tools to  account for the services using a Unyt based mutual credit currency.  For more about Unyt please see: https://unyt.co
+- For Application Managers, the instructions are simply about how to create the configuration file of the hApp to be run on an Edge Node.
+- For Edge Node Operators, the instructions include how to set up a node, and how to install and manage always-on nodes for applications using configuration files.
 
-The rest of this documentation provides instructions from two vantage points:  Application providers and Edge Node providers.
+## Application Manager Instructions
 
-- For Application providers, the instructions are simply about how to create the configuration file of the hApp they want to run which they will send to an Edge Node provider.
-- For Edge Node providers, the instructions include how to set up a node, and how to install and manage applications using configuration files created by Application providers.
-
-## Application Provider Instructions
-
-Application providers need simply to create a json configuration file with the hApp details and then make it available to the Edge Node provider to install:
+Application managers create a json configuration file with the pertitent hApp details and then make it available to the Edge Node Operator to install:
 
 Step 1: Create JSON file using `happ_config_file create`, modifying the fields of the template created appropriately:
 
@@ -32,7 +24,7 @@ Step 1: Create JSON file using `happ_config_file create`, modifying the fields o
   "app": {  
     "name": "example_happ",  
     "version": "0.1.0",  
-    "happUrl": "https://github.com/example/v0.1.0/example_happ.happ",  
+    "happUrl": "https://github.com/example/v0.1.0/example_happ.happ", // Can also be a .webhapp URL  
     "modifiers": {  
       "networkSeed": "", // any string value  
       "properties": {} // any json value  
@@ -72,56 +64,53 @@ Some notes on the contents of the fields:
 - `init_zome_calls`: This array allows you to specify zome calls that should be executed right after the hApp is installed. This is useful for initialization tasks.
   - The `payload` field in a zome call can contain the placeholder `<NODE_NAME>`. This placeholder will be dynamically replaced with the `NODE_NAME` provided during the `install_happ` execution. If no `NODE_NAME` is provided, it defaults to the machine's hostname. This is particularly useful for creating flexible configurations that can be reused across different nodes without modification. For example, you could have a payload like `{"node_name": "<NODE_NAME>"}` and the script will substitute `<NODE_NAME>` with the actual node name.
 
-NOTE: these fields are placeholder for future use, they are not yet implemented.
-
-- `payorUnytAgentPubKey`: Unyt Agent who will be paying
-- `agreementHash`: the action hash agreement that invoices will get attached to for the work performed.
-- `payeeUnytAgentPubKey`: Optional Unyt Agent who will get paid (will be validated against sys registered agent)
+** Experimental fields for Unyt support: **
+- `payorUnytAgentPubKey`: Unyt Agent who should receive resource accounting information
+- `agreementHash`: the action hash agreement that associated governing how work performed should be treated.
+- `payeeUnytAgentPubKey`: Optional Unyt Agent considered to be providing the accounted for resources (will be validated against sys registered agent)
 - `priceSheetHash`: Optional data blob action hash, in case different nodes can use different prices and it's not fixed in the Agreement
 
-Step 2: Send the file to the Edge Node provider or put it someplace on the internet so that it can be downloaded, i.e. a github.gist, etc.
+Step 2: Send the file to the Edge Node Operator or put it someplace on the internet so that it can be downloaded, i.e. a github.gist, etc.
 
 That's it!
 
-## Edge Node Provider Instructions
+## Edge Node Operator Instructions
 
-To be an Edge Node provider, you simply need to run the OCI container on the platform of your choice.  This can be a virtual machine,  a machine that you already have that runs docker or some other OCI container executable device, or a machine on which you have installed our minimal Linux ISO image.  Here we provide instructions for various of these use-cases:
+To be an Edge Node Operator, you simply need to pull down and run the Edge Node container on the platform of your choice.  This can be a HoloPort, virtual machine, a machine that you already have that runs docker or some other OCI container executable device, or any other machine on which you have installed our minimal Linux ISO image. The key requirement is that you are running Docker. Here we provide instructions for various of these use-cases:
 
 ### I have a HoloPort or spare computer at home I want to use for providing an Edge Node
 
 Step 1: Install the ISO on the machine:
 
-1. Download the ISO image here: https://github.com/Holo-Host/edgenode/releases/tag/HolOS-v0.0.6
-2. Write it to a usb stick as a raw disk image. On Linux, a command such as the following may suffice:
+1. Download the ISO image here: https://github.com/Holo-Host/edgenode/releases/tag/v0.0.7ga.5
+2. Burn the ISO to a USB stick as a raw disk image. On Linux, a command such as the following may suffice:
 ```
-dd if=./holos-0.0.6.iso of=/dev/sdX bs=1024k conv=sync
+dd if=./holos-v0.0.7ga.5.iso of=/dev/sdX bs=1024k conv=sync
 ```
    Where `/dev/sdX` is the block device node for the USB stick.
 3. Boot your computer from the USB stick and log in as root with no password.
-4. Choose the configuration you want:
-5. Run the interim installer script, telling it which hard drive to install to (generally `sda` on holoports). The following command will likely suffice on holoports:
+4. Choose the live-mode or install option from the Grub Boot Menu
+5. Note: If desirable you can run the installer script from live-mode, telling it which hard drive to install to (generally `sda` on HoloPorts). The following command will work on HoloPorts:
 ```
 install-draft sda
 ```
-   Once the installation has completed, the holoport will automatically reboot. At which time, you should remove the USB stick and allow it to boot from the hard drive.
+   Once the installation has completed, the HoloPort will automatically reboot. Remove the USB stick and allow it to boot from the hard drive.
 
-Step 2: Run the container and verify that Holochain is installed an operational:
+Step 2: Run the container 
 
-1. Container run commands: [TODO]
-2. Holochain verification test commands: [TODO]
-
-Step 2.5 (If you are using Unyt for service logging and accounting)
-
-[TODO]
+Container run commands: 
+```
+docker run --name edgenode -dit -v $(pwd)/holo-data:/data ghcr.io/holo-host/edgenode
+```
 
 Step 3: Install a hApp from a configuration file:
 
-1. Use `wget` to get the configuration file on your machine, e.g.:  
+1. Use ``` happ_config_file create ``` command to generate a happ config file template, or you could use `wget` to get the configuration file on your machine, e.g.:  
    `wget https://gist.github.com/zippy/28a93d63470256bde57738336a476e18`
-2. Verify the configuration file use the `happ_config_file` tool:  
+2. Verify the configuration file using the `happ_config_file` tool:  
    `$ happ_config_file validate --input example_config.json`  
    This command will confirm that the structure and contents of the config file are valid.
 3. Install the app:  
    `install_happ example_config.json`
-4. Verify the installation by looking at the installed apps with:  
+4. Verify the installation from the output generated and by looking at the installed apps with:  
    `list_happs`

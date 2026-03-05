@@ -1,5 +1,5 @@
 # Version string
-HOLOS_VERSION := 0.0.6
+HOLOS_VERSION := 0.0.10
 
 # We need some temporary scratch space for build artifacts. Everything generated
 # by this build process will be under this tree and we shouldn't be modifying
@@ -15,6 +15,7 @@ BUILDROOT_VERSION := 2025.08
 BUILDROOT_URL := https://buildroot.org/downloads/buildroot-${BUILDROOT_VERSION}.tar.xz
 BUILDROOT_CONFIG := holos-buildroot-${BUILDROOT_VERSION}.config
 BR_BUILD_DIR := ${TMPDIR}/br-build
+INITRD_NAME := rootfs.cpio.bz2
 
 # There's a make target to create a qcow2 file and boot the holos ISO inside KVM
 # with the qcow2 image attached as its primary drive. This governs the size of 
@@ -43,12 +44,22 @@ ${TMPDIR}/overlay: ${TMPDIR}
 ${TMPDIR}/overlay/usr/bin: ${TMPDIR}
 	mkdir -p $@
 
-${TMPDIR}/overlay/usr/bin/holos-config: rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config ${TMPDIR}/overlay/usr/bin
-	cp $< $@
-	strip $@
+#${TMPDIR}/overlay/usr/bin/holos-config: rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config ${TMPDIR}/overlay/usr/bin
+#	cp $< $@
+#	strip $@
 
-rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config:
-	cd rust/holos-config && cargo build --release --target x86_64-unknown-linux-musl
+## This has been replaced with a configuration that has buildroot do the Rust compilation for,
+## which allows us to inherit all the right flags for libc, but also all of the compiled libraries
+## without us having to manage that ourselves.
+#rust/holos-config/target/x86_64-unknown-linux-musl/release/holos-config:
+#	cd rust/holos-config && cargo build --release --target x86_64-unknown-linux-musl
+
+${TMPDIR}/overlay/etc/holos/templates:
+	mkdir -p $@
+
+tera-templates: ${TMPDIR}/overlay/etc/holos/templates rust/holos-config/templates/*.conf
+	cp rust/holos-config/templates/*.conf $<
+
 
 ${TMPDIR}/overlay/etc/holos/configs:
 	mkdir -p $@
@@ -56,16 +67,34 @@ ${TMPDIR}/overlay/etc/holos/configs:
 default-configs: ${TMPDIR}/overlay/etc/holos/configs
 	cp rust/holos-config/contrib/*.yaml $<
 
-version-file: ${TMPDIR}/overlay/etc/holos/configs
+version-file: ${TMPDIR}/overlay/etc/holos/configs ${TMPDIR}/overlay/etc/holos/templates
 	echo ${HOLOS_VERSION} > ${TMPDIR}/overlay/etc/holos-version
 
-external-artifacts: ${TMPDIR}/overlay/usr/bin/holos-config default-configs version-file
+external-artifacts: default-configs version-file tera-templates
 
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz: ${TMPDIR}
 	curl -q -o $@ ${BUILDROOT_URL}
 
 ${TMPDIR}/buildroot-${BUILDROOT_VERSION}: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}.tar.xz
 	tar Jxf $< -C ${TMPDIR}
+	# Add a menu to the Config.in file where we'll insert our additional packages.
+	sed -i -e '$$s/endmenu/menu "HolOS-specific packages"\n\t# holos-specifics\nendmenu\n\nendmenu\n/' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in
+
+#${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/sysbox-runtime: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+	#cp -a buildroot-packages/sysbox-runtime $</package/
+	## patch any files with global variables
+	#sed -i -e "s/__HOLOS_VERSION__/${HOLOS_VERSION}/g" $</package/sysbox-runtime/sysbox-runtime.mk
+	## add this package to the HolOS packages submenu if not already there
+	#grep 'sysbox-runtime' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in >/dev/null 2>&1 || sed -i -e '/.*# holos-specifics/a\
+	#\tsource "package/sysbox-runtime/Config.in"' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in
+
+${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config: ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+	cp -a buildroot-packages/holos-config $</package/
+	# patch any files with global variables
+	sed -i -e "s/__HOLOS_VERSION__/${HOLOS_VERSION}/g" $</package/holos-config/holos-config.mk
+	# add this package to the HolOS packages submenu
+	grep 'holos-config' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in >/dev/null 2>&1 || sed -i -e '/.*# holos-specifics/a\
+	\tsource "package/holos-config/Config.in"' ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/package/Config.in
 
 ${BR_BUILD_DIR}: ${TMPDIR}
 	mkdir -p ${BR_BUILD_DIR}
@@ -74,7 +103,11 @@ ${BR_BUILD_DIR}/.config: ${BR_BUILD_DIR} ${BUILDROOT_CONFIG} external-artifacts
 	cp ${BUILDROOT_CONFIG} $@
 
 # The kernel is one of the artifacts built
-${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}
+${BR_BUILD_DIR}/images/bzImage: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config #${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/sysbox-runtime
+	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
+
+# The initial ramdisk filesystem image is the other
+${BR_BUILD_DIR}/images/${INITRD_NAME}: ${BR_BUILD_DIR}/.config ${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/holos-config #${TMPDIR}/buildroot-${BUILDROOT_VERSION}/packages/sysbox-runtime
 	make -C tmp/buildroot-${BUILDROOT_VERSION} O=../br-build
 
 ${TMPDIR}/isoroot/boot: ${TMPDIR}
@@ -90,9 +123,8 @@ ${TMPDIR}/isoroot/isolinux: ${TMPDIR}
 ${TMPDIR}/isoroot/boot/bzImage: ${BR_BUILD_DIR}/images/bzImage ${TMPDIR}/isoroot/boot
 	cp $< $@
 
-${TMPDIR}/isoroot/boot/rootfs.cpio.gz: ${BR_BUILD_DIR}/images/rootfs.cpio
-	# Compress it on the fly
-	gzip -c9 $< > $@
+${TMPDIR}/isoroot/boot/${INITRD_NAME}: ${BR_BUILD_DIR}/images/${INITRD_NAME} ${TMPDIR}/isoroot/boot
+	cp $< $@
 
 ${TMPDIR}/isoroot/isolinux/isolinux.bin: ${BR_BUILD_DIR}/host/share/syslinux/isolinux.bin ${TMPDIR}/isoroot/isolinux
 	cp $< $@
@@ -116,7 +148,7 @@ ${TMPDIR}/isoroot/isolinux/isolinux.cfg: isolinux.cfg
 	cp $< $@
 
 # Now that we have the artifacts we need, build a bootable hybrid ISO artifact
-${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/rootfs.cpio.gz ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg ${TMPDIR}/isoroot/isolinux/menu.c32
+${TMPDIR}/holos-${HOLOS_VERSION}.iso: ${TMPDIR}/isoroot/boot/bzImage ${TMPDIR}/isoroot/boot/${INITRD_NAME} ${TMPDIR}/isoroot/isolinux/isolinux.bin ${TMPDIR}/isoroot/isolinux/ldlinux.c32 ${TMPDIR}/isoroot/isolinux/isolinux.cfg ${TMPDIR}/isoroot/isolinux/menu.c32
 	echo ${HOLOS_VERSION} > ${TMPDIR}/isoroot/holos-version
 	# The volume name string is relevant. The code for installation and
 	# upgrades uses this to discover source media, so that the user doesn't

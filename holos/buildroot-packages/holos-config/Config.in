@@ -1,0 +1,4 @@
+    config BR2_PACKAGE_HOLOS_CONFIG
+        bool "holos-config"
+        help
+            A tool for installing, configuring and managing HolOS systems.

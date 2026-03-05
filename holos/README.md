@@ -4,8 +4,8 @@
 
 This module consists of tools to build an operating system dedicated to running Holochain containers. It is currently x86_64 only, but could easily be ported to other architectures. It ought to run on most x86_64 systems, but the primary platforms tested are:
 
-* Holoport
-* Holoport Plus
+* HoloPort
+* HoloPort Plus
 * KVM on Linux
 
 Under the hood, this Makefile will:
@@ -17,35 +17,17 @@ Once the kernel and initrd are built, the Makefile then assembles it into a hybr
 
 ## Booting
 
-This Linux distribution can be booted and run in the same way as any other Linux distribution. Write the ISO image to a CD-ROM, an MMC card, USB stick or other block device and tell your hardware to boot from that device. The kernel and initrd in the `boot/` directory could also be used to PXE boot the OS, for those familiar with that process.
+This Linux distribution can be booted and run in the same way as any other Linux distribution. Burn the ISO image to a USB, an MMC card, USB stick or other block device and tell your hardware to boot from that device. The kernel and initrd in the `boot/` directory could also be used to PXE boot the OS, for those familiar with that process.
 
-This initial commit also doesn't set a root password, which is blank while we're developing and testing.
-
-The operating system runs entirely in memory, and does not currently install or write to any permanent storage. This will change in the near future.
+By default, HolOS locks the root account. The recommended approach is to pass in a list of Github usernames for trusted users whose public ssh keys will be trusted by the root user on the edge node.
 
 ### Via Make Target
 
 There is a `make run` target in the Makefile that will use kvm/qemu on Linux to boot the image in a small VM, using the _curses_ display driver. This gives you the VM console in your terminal window, making is suitable over things like `ssh(1)`. To quit and shut the VM down, hit _Alt+2_ to change to the qemu monitor, and then type `quit` and hit enter. For this, you will want to boot using the `text` isolinux boot target. The default starts a VGA framebuffer console at 1024x768.
 
-## Configure Networking
-
-As of this initial commit, there is no automatic configuration present. In the meantime, to bring up the network on a Holoport or Holoport Plus, the following commands ought to suffice:
-
-```
-modprobe r8169 && ifconfig eth0 up && udhcpc eth0
-```
-
-This loads the kernel driver for the network interface, and uses DHCP to configure it. The same can also be done for KVM VMs with:
-
-```
-modprobe virtio_net && ifconfig eth0 up && udhcpc eth0
-```
-
-Other hypervisors or hardware platforms will likely work if you can identify your network interface driver.
-
 ### Wi-Fi
 
-The `wpa_supplicant` package is present, but we haven't yet included any automatic configuration of Wi-Fi networks. This will come soon, but those familiar with `wpa_supplicant` will likely find success.
+The `wpa_supplicant` package is present. We've also added a whole host of new WLAN drivers, especially for Realtek chipsets. While a full, user-friendly interface for configuring WiFi this is not, this critical background work paves the way for much broader hardware support in the near future.
 
 ## Development
 
@@ -74,6 +56,6 @@ This operating system is deliberately minimal, and uses the MUSL C library for s
 
 ## Known Issues
 
-1. The Makefile dependencies could use some fixing. After a full and complete build, re-running `make iso`, or even `make run` will still see certain targets re-run. Probably a case of touching a few files here and there.
-2. The Makefile has some copy/pasted boilerplate code for copying files that could probably be replaced with some GNU Makefile magic I'm too lazy to look up.
+1. The Makefile dependencies could use some fixing. After a full and complete build, re-running `make iso`, or even `make run` will still see certain targets re-run.
+2. The Makefile has some copy/pasted boilerplate code for copying files that could probably be replaced
 
