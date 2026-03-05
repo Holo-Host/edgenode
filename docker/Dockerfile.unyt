@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-custom
+ARG BASE_IMAGE=ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion
 FROM ${BASE_IMAGE}
 
 RUN wget https://github.com/unytco/log-sender/releases/download/v0.1.4/log-sender && \
