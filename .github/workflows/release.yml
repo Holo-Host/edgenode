@@ -197,8 +197,8 @@ jobs:
       contents: write
       packages: write
     env:
-      # Use the latest hc-0.6.0-go-pion image as base for unyt
-      EDGENODE_HC_0_6_0_IMAGE: "ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion"
+      # Use the latest hc-0.6.1-rc.1-dev image as base for unyt
+      EDGENODE_HC_0_6_0_IMAGE: "ghcr.io/holo-host/edgenode:latest-hc0.6.1-rc.1-dev"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -222,7 +222,7 @@ jobs:
           # Build unyt image using the hc-0.6.0-go-pion base
           docker build -f Dockerfile.unyt \
             --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" \
-            --build-arg BASE_IMAGE="ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion" .
+            --build-arg BASE_IMAGE="ghcr.io/holo-host/edgenode:latest-hc0.6.1-rc.1-dev" .
 
       - name: Push UNYT Docker image
         if: success()
