@@ -1,0 +1,22 @@
+---
+# Conductor configuration
+admin_interfaces:
+- driver:
+    type: websocket
+    port: 4444
+    danger_bind_addr: null
+    allowed_origins: '*'
+
+network:
+  bootstrap_url: "https://dev-test-bootstrap2.holochain.org"
+  relay_url: "https://use1-1.relay.n0.iroh-canary.iroh.link./"
+
+  report: !json_lines
+    days_retained: 30
+    fetched_op_interval_s: 300
+
+data_root_path: "/var/local/lib/holochain"
+
+keystore:
+  type: lair_server_in_proc
+  lair_root: "/var/local/lib/holochain/ks"

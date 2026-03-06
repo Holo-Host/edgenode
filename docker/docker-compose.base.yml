@@ -1,0 +1,19 @@
+# Base Docker Compose configuration for Holochain testing
+# This file contains common network and volume definitions
+
+networks:
+  test-net:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-edgenode}-test-net
+
+# Volume definitions for persistent data
+volumes:
+  edgenode-data:
+    driver: local
+    name: ${COMPOSE_PROJECT_NAME:-edgenode}-data
+  edgenode-logs:
+    driver: local
+    name: ${COMPOSE_PROJECT_NAME:-edgenode}-logs
+  holo-data-test:
+    driver: local
+    name: ${COMPOSE_PROJECT_NAME:-edgenode}-holo-data-test

@@ -35,9 +35,11 @@ A [specialized OS builder](holos/README.md) for creating custom ISO images using
 - Custom init scripts for automatic network configuration.
 - Generates ready-to-burn disk images for deployment.
 
+
 ### Tools
 
 - A CLI utility for creating and validating [hApp config files](tools/happ_config_file/README.md).
+
 
 ## Quick Start
 

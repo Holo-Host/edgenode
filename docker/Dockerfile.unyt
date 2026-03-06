@@ -1,0 +1,14 @@
+ARG BASE_IMAGE=ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion
+FROM ${BASE_IMAGE}
+
+RUN wget https://github.com/unytco/log-sender/releases/download/v0.1.4/log-sender && \
+    mv log-sender /usr/local/bin/log-sender && \
+    chmod +x /usr/local/bin/log-sender && \
+    mkdir -p /etc/log-sender && \
+    chown nonroot:nonroot /etc/log-sender
+
+COPY log_tool /usr/local/bin/log_tool
+RUN chmod +x /usr/local/bin/log_tool
+
+SHELL ["/bin/sh", "-c"]
+EXPOSE 4444

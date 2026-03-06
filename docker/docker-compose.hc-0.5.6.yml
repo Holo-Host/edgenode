@@ -1,0 +1,19 @@
+# Docker Compose configuration for Holochain 0.5.6 testing
+# This image does NOT require log-collector
+
+services:
+  edgenode-hc-0.5.6:
+    image: ${EDGENODE_IMAGE:-local-edgenode-hc-0.5.6}
+    environment:
+      - IMAGE_NAME=local-edgenode-hc-0.5.6
+    volumes:
+      - edgenode-data:/data
+      - edgenode-logs:/data/logs
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "pgrep", "holochain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
