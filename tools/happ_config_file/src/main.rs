@@ -58,8 +58,15 @@ struct Holochain {
     version: String,
     flags: Vec<String>,
     bootstrap_url: String,
-    signal_server_url: String,
-    stun_server_urls: Vec<String>,
+    /// WebRTC/go-pion backends (HC ≤ 0.6.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    signal_server_url: Option<String>,
+    /// WebRTC/go-pion backends (HC ≤ 0.6.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stun_server_urls: Option<Vec<String>>,
+    /// iroh backend (HC ≥ 0.6.1 default)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relay_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -102,13 +109,24 @@ impl ConfigFile {
             Url::parse(&self.env.holochain.bootstrap_url)
                 .context("env.holochain.bootstrapUrl must be a valid URL")?;
         }
-        if !self.env.holochain.signal_server_url.is_empty() {
-            Url::parse(&self.env.holochain.signal_server_url)
-                .context("env.holochain.signalServerUrl must be a valid URL")?;
+        if let Some(signal_url) = &self.env.holochain.signal_server_url {
+            if !signal_url.is_empty() {
+                Url::parse(signal_url)
+                    .context("env.holochain.signalServerUrl must be a valid URL")?;
+            }
         }
-        for s in &self.env.holochain.stun_server_urls {
-            if !s.is_empty() {
-                Url::parse(s).context("env.holochain.stunServerUrls must contain valid URLs")?;
+        if let Some(stun_urls) = &self.env.holochain.stun_server_urls {
+            for s in stun_urls {
+                if !s.is_empty() {
+                    Url::parse(s)
+                        .context("env.holochain.stunServerUrls must contain valid URLs")?;
+                }
+            }
+        }
+        if let Some(relay_url) = &self.env.holochain.relay_url {
+            if !relay_url.is_empty() {
+                Url::parse(relay_url)
+                    .context("env.holochain.relayUrl must be a valid URL")?;
             }
         }
         // Optional gw validation hook
@@ -165,6 +183,10 @@ enum Commands {
         /// Include an example init_zome_calls block in the created file
         #[arg(long = "init-zome-calls")]
         init_zome_calls: bool,
+        /// Generate iroh networking config (HC >= 0.6.1 default backend);
+        /// omits signalServerUrl/stunServerUrls and includes relayUrl instead
+        #[arg(long)]
+        iroh: bool,
     },
     /// Validate a configuration file
     Validate {
@@ -182,7 +204,8 @@ fn main() -> Result<()> {
             gateway,
             economics,
             init_zome_calls,
-        } => do_create(name, gateway, economics, init_zome_calls)?,
+            iroh,
+        } => do_create(name, gateway, economics, init_zome_calls, iroh)?,
         Commands::Validate { input } => do_validate(input)?,
     }
     Ok(())
@@ -193,6 +216,7 @@ fn do_create(
     include_gateway: bool,
     include_economics: bool,
     include_init_calls: bool,
+    iroh: bool,
 ) -> Result<()> {
     // Determine output file name and app.name based on optional name
     let (output, app_name): (PathBuf, String) = if let Some(provided_name) = name {
@@ -231,12 +255,24 @@ fn do_create(
             },
         },
         env: Env {
-            holochain: Holochain {
-                version: "".to_string(),
-                flags: vec!["".to_string()],
-                bootstrap_url: "".to_string(),
-                signal_server_url: "".to_string(),
-                stun_server_urls: vec!["".to_string()],
+            holochain: if iroh {
+                Holochain {
+                    version: "".to_string(),
+                    flags: vec!["".to_string()],
+                    bootstrap_url: "".to_string(),
+                    signal_server_url: None,
+                    stun_server_urls: None,
+                    relay_url: Some("".to_string()),
+                }
+            } else {
+                Holochain {
+                    version: "".to_string(),
+                    flags: vec!["".to_string()],
+                    bootstrap_url: "".to_string(),
+                    signal_server_url: Some("".to_string()),
+                    stun_server_urls: Some(vec!["".to_string()]),
+                    relay_url: None,
+                }
             },
             gw: if include_gateway {
                 Some(Gateway {
