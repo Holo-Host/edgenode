@@ -116,7 +116,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - dockerfile: "Dockerfile.hc-0.5.6"
+          - dockerfile: "docker/Dockerfile.hc-0.5.6"
             hc_version: "0.5.6"
             backend: "default"
             dev: false
@@ -154,7 +154,6 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          cd docker
           TAG_SUFFIX="hc${{ matrix.hc_version }}"
           if [[ "${{ matrix.backend }}" != "default" ]]; then
             TAG_SUFFIX="${TAG_SUFFIX}-${{ matrix.backend }}"
