@@ -3,6 +3,7 @@ test-data/
 holo-data-test/
 .roo/
 .gemini/
+docker/happ_config_file
 docker/log-collector/
 AGENTS.md
 log_fix.md

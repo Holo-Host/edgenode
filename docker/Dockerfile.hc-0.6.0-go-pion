@@ -29,9 +29,16 @@ RUN ln -sf /usr/local/bin/happ_tool /usr/local/bin/install_happ && \
     ln -sf /usr/local/bin/happ_tool /usr/local/bin/list_happs && \
     chmod +x /usr/local/bin/install_happ /usr/local/bin/list_happs /usr/local/bin/uninstall_happ /usr/local/bin/enable_happ /usr/local/bin/disable_happ
 
-# Copy and set up happ_config_file
-COPY happ_config_file /usr/local/bin/happ_config_file
-RUN chmod +x /usr/local/bin/happ_config_file
+ARG HAPP_CONFIG_FILE_VERSION=0.2.1
+
+RUN case "${TARGETARCH}" in \
+    amd64) HCF_ARCH="linux-x86_64" ;; \
+    arm64) HCF_ARCH="linux-aarch64" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget "https://github.com/Holo-Host/edgenode/releases/download/tools%2Fhapp_config_file-v${HAPP_CONFIG_FILE_VERSION}/happ_config_file-${HCF_ARCH}" && \
+    mv "happ_config_file-${HCF_ARCH}" /usr/local/bin/happ_config_file && \
+    chmod +x /usr/local/bin/happ_config_file
 
 # Copy and set up entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
