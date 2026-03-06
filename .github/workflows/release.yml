@@ -171,7 +171,7 @@ jobs:
             --load \
             --tag "${FULL_IMAGE}"
 
-          ./docker/run_tests_multi.sh "${FULL_IMAGE}"
+          CI_RELEASE_TEST=true ./docker/run_tests_multi.sh "${FULL_IMAGE}"
 
           # Build and push multi-platform image with all applicable tags
           TAGS="--tag ${FULL_IMAGE}"

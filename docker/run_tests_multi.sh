@@ -30,6 +30,11 @@ case "$IMAGE_NAME" in
         DOCKERFILE_SUFFIX="hc-0.6.0-dev-go-pion"
         SERVICE_NAME="edgenode-hc-0.6.0-dev-go-pion"
         ;;
+    *hc0.6.1*|*hc-0.6.1*|ghcr.io/*0.6.1*)
+        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.6.1.yml"
+        DOCKERFILE_SUFFIX="hc-0.6.1"
+        SERVICE_NAME="edgenode-hc-0.6.1"
+        ;;
     *hc-0.5.6*|ghcr.io/*hc-0.5.6*)
         COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.5.6.yml"
         DOCKERFILE_SUFFIX="hc-0.5.6"
