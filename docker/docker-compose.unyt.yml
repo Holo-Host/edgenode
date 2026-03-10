@@ -1,5 +1,5 @@
 # Docker Compose configuration for Holochain UNYT testing
-# This image depends on hc-0.6.0-dev-go-pion base image AND requires log-collector
+# This image depends on hc-0.6.1 base image AND requires log-collector
 
 services:
   # Log collector service (only needed for unyt)
@@ -26,7 +26,7 @@ services:
       context: .
       dockerfile: Dockerfile.unyt
       args:
-        BASE_IMAGE: ${EDGENODE_HC_0_6_0_IMAGE:-ghcr.io/holo-host/edgenode:latest-hc0.6.0-go-pion-dev}
+        BASE_IMAGE: ${EDGENODE_HC_0_6_1_IMAGE:-ghcr.io/holo-host/edgenode:latest-hc0.6.1-rc.1-dev}
     depends_on:
       log-collector:
         condition: service_healthy

@@ -1,6 +1,6 @@
 # Edge Node Container
 
-A docker container for running Holochain and installing hApps to host them as always-on-nodes. For a Unyt-compatible integration with Holo Edge nodes, read instructions [here](/LOG_SENDER_QUICKSTART.md)
+A docker container for running Holochain and installing hApps to host them as always-on-nodes. For a Unyt-compatible integration with Holo Edge nodes, read instructions [here](./LOG_SENDER_QUICKSTART.md)
 
 Besides `holochain` and `hc`, the following commands are available in the container to manage the hApp lifecycle:
 
@@ -92,11 +92,10 @@ To list installed hApps, use the `list_happs` script.
 
 ```sh
 su - nonroot
-export ADMIN_PORT=<admin_port>
-list_happs $ADMIN_PORT
+list_happs -p <admin_port>
 ```
 
-Or with default port:
+Or with default port (4444):
 
 ```sh
 list_happs

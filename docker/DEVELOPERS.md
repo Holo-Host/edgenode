@@ -139,8 +139,7 @@ You can use the `install_happ` script to install a hApp from a JSON configuratio
 
 ```sh
 su - nonroot
-export ADMIN_PORT=<admin_port>
-install_happ <config.json> $ADMIN_PORT
+install_happ -p <admin_port> <config.json>
 ```
 
 #### Listing Installed hApps
@@ -152,11 +151,10 @@ To list installed hApps, use the `list_happs` script.
 
 ```sh
 su - nonroot
-export ADMIN_PORT=<admin_port>
-list_happs $ADMIN_PORT
+list_happs -p <admin_port>
 ```
 
-Or with default port:
+Or with default port (4444):
 
 ```sh
 list_happs
