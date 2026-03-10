@@ -44,6 +44,24 @@ extract_dna_hash() {
 
 SCRIPT_NAME=$(basename "$0")
 
+# --- Usage ---
+usage() {
+  cat <<EOF
+Usage: happ_tool <command> [-p <admin_port>] [args...]
+
+Commands:
+  install <config.json> [node_name]   Install a hApp from a config file
+  uninstall <app_id>                  Uninstall a hApp
+  enable <app_id>                     Enable an installed hApp
+  disable <app_id>                    Disable an installed hApp
+  list                                List installed hApps
+
+Options:
+  -p <port>    Admin port (default: 4444)
+  --help, -h   Show this help
+EOF
+}
+
 # --- Argument Parsing ---
 # This script uses `getopts` to parse flags.
 # The -p flag is used to specify the admin port.
@@ -67,9 +85,68 @@ done
 shift $((OPTIND -1))
 validate_port "$ADMIN_PORT"
 
-# --- Sub-commands ---
+# --- Subcommand dispatch (when called directly as happ_tool) ---
+if [ "$SCRIPT_NAME" = "happ_tool" ]; then
+  COMMAND="${1:-help}"
+  shift 2>/dev/null || true
+  case "$COMMAND" in
+    install)
+      # Fall through to main install logic below
+      ;;
+    uninstall)
+      APP_ID="${1:-}"
+      if [ -z "$APP_ID" ]; then
+        echo "Usage: happ_tool uninstall [-p <admin_port>] <app_id>"
+        exit 1
+      fi
+      validate_app_id "$APP_ID"
+      echo "[*] Uninstalling app $APP_ID..."
+      hc s call -r "$ADMIN_PORT" uninstall-app "$APP_ID"
+      echo "[✔] App $APP_ID uninstalled!"
+      exit 0
+      ;;
+    enable)
+      APP_ID="${1:-}"
+      if [ -z "$APP_ID" ]; then
+        echo "Usage: happ_tool enable [-p <admin_port>] <app_id>"
+        exit 1
+      fi
+      validate_app_id "$APP_ID"
+      echo "[*] Enabling app $APP_ID..."
+      hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
+      echo "[✔] App $APP_ID enabled!"
+      exit 0
+      ;;
+    disable)
+      APP_ID="${1:-}"
+      if [ -z "$APP_ID" ]; then
+        echo "Usage: happ_tool disable [-p <admin_port>] <app_id>"
+        exit 1
+      fi
+      validate_app_id "$APP_ID"
+      echo "[*] Disabling app $APP_ID..."
+      hc s call -r "$ADMIN_PORT" disable-app "$APP_ID"
+      echo "[✔] App $APP_ID disabled!"
+      exit 0
+      ;;
+    list)
+      hc s call -r "$ADMIN_PORT" list-apps
+      exit 0
+      ;;
+    help|--help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown command: $COMMAND"
+      usage
+      exit 1
+      ;;
+  esac
+fi
+
+# --- Legacy sub-commands (via symlinks, for backward compatibility) ---
 # The script behaves differently based on the name it's called with.
-# This allows for a single script to perform multiple related functions.
 if [ "$SCRIPT_NAME" = "list_happs" ]; then
   hc s call -r "$ADMIN_PORT" list-apps
   exit 0
@@ -111,6 +188,12 @@ if [ "$SCRIPT_NAME" = "disable_happ" ]; then
   echo "[*] Disabling app $APP_ID..."
   hc s call -r "$ADMIN_PORT" disable-app "$APP_ID"
   echo "[✔] App $APP_ID disabled!"
+  exit 0
+fi
+
+# Handle --help flag for any command
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
   exit 0
 fi
 
