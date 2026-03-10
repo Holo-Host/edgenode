@@ -63,7 +63,12 @@ EOF
 }
 
 # --- Argument Parsing ---
-# This script uses `getopts` to parse flags.
+# Handle --help/-h before getopts (which can't parse long options)
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  usage
+  exit 0
+fi
+
 # The -p flag is used to specify the admin port.
 # If -p is not provided, it defaults to 4444.
 ADMIN_PORT="4444"
@@ -199,7 +204,7 @@ fi
 
 # --- Main script: install_happ ---
 # This is the default command when the script is not called as one of the sub-commands.
-CONFIG_FILE="$1"
+CONFIG_FILE="${1:-}"
 if [ -z "$CONFIG_FILE" ] || [ ! -f "$CONFIG_FILE" ]; then
   echo "Usage: install_happ [-p <ADMIN_PORT>] <CONFIG_FILE> [<NODE_NAME>]"
   exit 1
