@@ -16,17 +16,41 @@ For the upstream log-sender docs, see the [Log-Sender User Guide](https://github
 
 ## 1. Run the unyt image
 
+Pass log-sender connection details as environment variables. When `install_happ` sees a config with an `economics` section, it uses these to automatically initialize log-sender, register the DNA, and start the service.
+
 ```bash
 docker run --name unytnode -dit \
   -v $(pwd)/holo-data:/data \
+  -e LOG_SENDER_ENDPOINT=http://log-collector.example.com:8787 \
+  -e LOG_SENDER_UNYT_PUB_KEY=uhCAk... \
   ghcr.io/holo-host/edgenode:latest-unyt
 ```
 
-## 2. Initialize log-sender
+## 2. Install a hApp with economics
+
+The hApp config file needs an `economics` section (generate with `happ_config_file create --economics`).
 
 ```bash
 docker exec -it unytnode su - nonroot
+install_happ my_app_config.json
+```
 
+`install_happ` automatically:
+1. Initializes log-sender if no config exists (using the `LOG_SENDER_*` env vars)
+2. Registers the DNA hash with the agreement
+3. Starts the log-sender service
+
+## 3. Verify
+
+```bash
+tail -f /data/logs/log-sender.log
+```
+
+## Manual alternative
+
+If you prefer to initialize log-sender manually instead of using env vars:
+
+```bash
 log-sender init \
   --config-file /etc/log-sender/config.json \
   --endpoint http://log-collector.example.com:8787 \
@@ -36,38 +60,7 @@ log-sender init \
   --conductor-config-path /etc/holochain/conductor-config.yaml
 ```
 
-This generates a drone keypair, registers with the log-collector, and writes the config.
-
-## 3. Install a hApp with economics
-
-The hApp config file needs an `economics` section. When `install_happ` detects this, it automatically initializes log-sender (if not already done) and registers the DNA.
-
-```bash
-install_happ my_app_config.json
-```
-
-To do the DNA registration manually:
-
-```bash
-log-sender register-dna \
-  --config-file /etc/log-sender/config.json \
-  --dna-hash "uhC0k..." \
-  --agreement-id "uhCkk..."
-```
-
-## 4. Start log-sender service
-
-The service polls for new JSONL report files and sends them to the log-collector.
-
-```bash
-log-sender service --config-file /etc/log-sender/config.json
-```
-
-In the container, the service is started automatically. Check status:
-
-```bash
-tail -f /data/logs/log-sender.log
-```
+Once the config exists, `install_happ` will skip initialization but still register the DNA and start the service.
 
 ## log-sender CLI Reference
 
