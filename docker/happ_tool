@@ -455,32 +455,35 @@ if [ -n "$AGREEMENT_ID" ]; then
   
   # Step 2: Register DNA with log-sender (if config exists)
   if [ -f "$CONFIG_PATH" ]; then
+    # log-sender takes an exclusive file lock on config.json. The entrypoint's
+    # monitor_log_sender loop (entrypoint.sh) auto-starts the service whenever
+    # the config file exists, so by the time we get here the service is likely
+    # already running and holding that lock. We must stop it before register-dna
+    # can acquire the lock. The monitor will restart the service within ~10s.
+    if pgrep -f "log-sender service" > /dev/null 2>&1; then
+      echo "[*] Stopping log-sender service for DNA registration..."
+      pkill -f "log-sender service" || true
+      sleep 1
+    fi
+
     echo "[*] Registering DNA with log-sender..."
     echo "[*]   DNA Hash: $DNA_HASH"
     echo "[*]   Agreement ID: $AGREEMENT_ID"
-    
+
     # Build the command with required args
     REGISTER_CMD="log-sender register-dna --config-file $CONFIG_PATH --dna-hash \"$DNA_HASH\" --agreement-id \"$AGREEMENT_ID\""
-    
+
     # Add optional price-sheet-hash if provided
     if [ -n "$PRICE_SHEET_HASH" ]; then
       echo "[*]   Price Sheet Hash: $PRICE_SHEET_HASH"
       REGISTER_CMD="$REGISTER_CMD --price-sheet-hash \"$PRICE_SHEET_HASH\""
     fi
-    
+
     # Execute the registration
     eval $REGISTER_CMD
     echo "[✔] DNA registered with log-sender"
-    
-    # Step 3: Start log-sender service if not already running
-    if ! pgrep -f "log-sender service" > /dev/null 2>&1; then
-      echo "[*] Starting log-sender service..."
-      nohup log-sender service --config-file "$CONFIG_PATH" \
-        >> /data/logs/log-sender.log 2>&1 &
-      echo "[✔] Log-sender service started (PID: $!)"
-    else
-      echo "[*] Log-sender service already running"
-    fi
+    # The entrypoint's monitor_log_sender loop will restart the service
+    # automatically — no need to start it here.
   fi
 else
   echo "[*] No economics.agreementHash in config, skipping log-sender setup"
