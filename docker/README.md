@@ -1,35 +1,19 @@
 # Edge Node Container
 
-A docker container for running Holochain and installing hApps to host them as always-on-nodes. For a Unyt-compatible integration with Holo Edge nodes, read instructions [here](./LOG_SENDER_QUICKSTART.md)
+A docker container for running Holochain and installing hApps as always-on nodes. For Unyt log-sender integration, see [LOG_SENDER_QUICKSTART.md](./LOG_SENDER_QUICKSTART.md).
 
-Besides `holochain` and `hc`, the following commands are available in the container to manage the hApp lifecycle:
+## Container Commands
 
-- `list_happs`
-- `happ_config_file`
-- `install_happ`
-- `enable_happ`
-- `disable_happ`
-- `uninstall_happ`
+These are available inside the container:
 
-## Table of Contents
+- `install_happ [-p <port>] <config.json> [node_name]` -- Install a hApp from a config file
+- `uninstall_happ [-p <port>] <app_id>` -- Uninstall a hApp
+- `enable_happ [-p <port>] <app_id>` -- Enable an installed hApp
+- `disable_happ [-p <port>] <app_id>` -- Disable an installed hApp
+- `list_happs [-p <port>]` -- List installed hApps
+- `happ_config_file` -- Create/validate hApp config files (run with `--help` for usage)
 
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-
-   - [Obtaining the Container Image](#obtaining-the-container-image)
-   - [Running the Container](#running-the-container)
-
-- [Usage](#usage)
-
-   - [Interactive Shell Access](#interactive-shell-access)
-   - [Scripted Install](#scripted-install)
-   - [Troubleshooting Logs](#troubleshooting-logs)
-
-- [Production Deployment with Conductor](#production-deployment-with-conductor)
-- [Process Management and Logging](#process-management-and-logging)
-- [Persistent Storage](#persistent-storage)
-
-   - [Overview](#overview)
+The default admin port is `4444`.
 
 ## Prerequisites
 
@@ -37,87 +21,16 @@ Besides `holochain` and `hc`, the following commands are available in the contai
 
 ## Getting Started
 
-### Obtaining the Container Image
-
-The container images are available from [GitHub Packages](https://github.com/Holo-Host/edgenode/pkgs/container/edgenode).
+### Pull the image
 
 ```sh
-# Log in to GitHub Container Registry
 docker login ghcr.io
-
-# Pull the latest image
 docker pull ghcr.io/holo-host/edgenode
 ```
 
-### Running the Container
+Images are available from [GitHub Packages](https://github.com/Holo-Host/edgenode/pkgs/container/edgenode).
 
-To run the container with persistent storage, you need to map a local directory on your host machine to the `/data` volume in the container.
-
-1. Create the directory for persistent storage:
-2. Run the container in the background:
-
-```sh
-docker run --name edgenode -dit \
-  -v $(pwd)/holo-data:/data \
-  ghcr.io/holo-host/edgenode 
-```
-
-### Interactive Shell Access
-
-To access an interactive shell in the running container:
-
-```sh
-docker exec -it edgenode su - nonroot
-```
-
-#### Scripted Install
-
-You can use the `install_happ` script to install a hApp from a JSON configuration file.  URLs for both `.happ` and `.webhapp` files are supported.
-
-1. **Get another interactive shell to the container.**
-2. **Run the script:**
-
-```sh
-su - nonroot
-install_happ <config.json>
-enable_happ <APP_ID>
-```
-
-#### Listing Installed hApps
-
-To list installed hApps, use the `list_happs` script.
-
-1. **Get another interactive shell to the container.**
-2. **Run the script:**
-
-```sh
-su - nonroot
-list_happs -p <admin_port>
-```
-
-Or with default port (4444):
-
-```sh
-list_happs
-```
-
-### Troubleshooting Logs
-
-Holochain logs are redirected to `/data/logs/holochain.log` inside the container for persistence.
-
-- If using a volume mount (e.g., `-v $(pwd)/holo-data:/data`), access logs directly from the host at `./holo-data/logs/holochain.log`.
-- To copy logs from a running container: `docker cp edgenode:/data/logs/holochain.log .`
-- View live logs: `docker exec -it edgenode tail -f /data/logs/holochain.log`
-
-Logs are rotated daily (see [Process Management and Logging](#process-management-and-logging)) with 7 days retention.
-
-## Production Deployment with Conductor
-
-To deploy in production using the Holochain conductor:
-
-0. Remove any prior containers if you need to: `docker stop edgenode && docker rm edgenode`
-1. __Run the Container__
-   The Holochain conductor will start up automatically with the container:
+### Run the container
 
 ```sh
 docker run --name edgenode -dit \
@@ -126,93 +39,118 @@ docker run --name edgenode -dit \
   ghcr.io/holo-host/edgenode
 ```
 
-2. **Conductor Configuration**
+The Holochain conductor starts automatically. Data persists in `./holo-data/`.
 
-   The Conductor configuration in this container operates on certain conventions:
+### Shell access
 
-   - Admin port must be `4444`
-   - `lair_root` must be empty
-   - Configuration must use LSB-compliant paths
-
-3. **Persistent Configuration**
-   The conductor configuration is persisted through the same volume mount structure as sandbox mode:
-
-   - `/etc/holochain` → `/data/holochain/etc`
-   - `/var/local/lib/holochain` → `/data/holochain/var`
-
-4. **Install hApp(s)**
-
-`install_happ <config.json>`
-5. __Enable hApp(s)__
-
-`enable_happ <APP_ID>`
-
-### Process Management and Logging
-
-The container uses advanced process management and logging for reliability in production.
-
-#### Process Management
-
-- **tini as PID 1**: The init system `tini` is used as the container's PID 1. It handles process supervision, reaps zombie processes, and can restart the Holochain conductor if it crashes (configured via entrypoint.sh).
-- **Non-root User**: All processes run as user ID 65532 (nonroot) for security.
-- __Supervisor Behavior__:  entrypoint.sh execs `tini -- holochain run ...`, ensuring proper signal handling and restarts. Manual `hc run` commands inside the container are also supervised.
-
-#### Logging
-
-- **Redirection**: Holochain output is redirected to `/data/logs/holochain.log` using `> /data/logs/holochain.log 2>&1` in entrypoint.sh. This captures stdout/stderr for persistence.
-- **Persistence**: Logs are stored in the `/data` volume, ensuring they survive container restarts.
-- **Directory Setup**: entrypoint.sh creates `/data/logs` if it doesn't exist.
-
-#### Log Rotation
-
-- **Configuration**: Defined in `/etc/logrotate.d/holochain.conf` for daily rotation, keeping 7 days of logs, with compression (gzip).
-- **Background Loop**: entrypoint.sh starts a background loop (`while true; do logrotate /etc/logrotate.d/holochain.conf; sleep 86400; done`) to run rotation daily.
-
-This setup ensures robust logging and process reliability without manual intervention.
-
-## Persistent Storage
-
-### Overview
-
-The container is configured to store all persistent data in the `/data` directory. This directory is then symlinked to the appropriate locations for Holochain to use.
-
-The following diagram illustrates the volume mapping and symlinks:
-
-```mermaid
-graph TD
-    subgraph Host
-        direction LR
-        host_dir["./holo-data"]
-    end
-
-    subgraph Container
-        direction LR
-        subgraph "Volume Mount"
-            direction LR
-            data_vol["/data"]
-        end
-
-        subgraph "Persistent Storage"
-            direction LR
-            etc_holochain["/etc/holochain"]
-            var_holochain["/var/local/lib/holochain"]
-        end
-
-        subgraph "Symlinks"
-            direction LR
-            data_etc["/data/holochain/etc"]
-            data_var["/data/holochain/var"]
-        end
-    end
-
-    host_dir -- "-v" --> data_vol
-    data_etc -.-> etc_holochain
-    data_var -.-> var_holochain
+```sh
+docker exec -it edgenode su - nonroot
 ```
 
-- The `holo-data` directory on the host is mounted to `/data` in the container.
-- `/data/holochain/etc` is symlinked to `/etc/holochain`.
-- `/data/holochain/var` is symlinked to `/var/local/lib/holochain`.
+### Install a hApp
 
-This means that any data written to `/etc/holochain` or `/var/local/lib/holochain` inside the container will be persisted in the `holo-data` directory on your host machine.
+```sh
+install_happ <config.json>
+```
 
+Both `.happ` and `.webhapp` URLs are supported in the config file. The app is automatically enabled after install.
+
+To use a non-default admin port:
+
+```sh
+install_happ -p 5555 <config.json>
+```
+
+### List / manage hApps
+
+```sh
+list_happs
+enable_happ <APP_ID>
+disable_happ <APP_ID>
+uninstall_happ <APP_ID>
+```
+
+## Troubleshooting
+
+Holochain logs are at `/data/logs/holochain.log` inside the container.
+
+```sh
+# From the host (with volume mount)
+cat ./holo-data/logs/holochain.log
+
+# Live tail
+docker exec -it edgenode tail -f /data/logs/holochain.log
+
+# Copy from container
+docker cp edgenode:/data/logs/holochain.log .
+```
+
+Logs rotate daily with 7-day retention.
+
+## Conductor Configuration
+
+- Admin port: `4444`
+- Config path: `/etc/holochain/conductor-config.yaml`
+- Data path: `/var/local/lib/holochain`
+- `lair_root` must be empty
+
+Paths are symlinked into the `/data` volume for persistence:
+
+- `/etc/holochain` -> `/data/holochain/etc`
+- `/var/local/lib/holochain` -> `/data/holochain/var`
+
+## Process Management
+
+- `tini` runs as PID 1, supervising the Holochain conductor
+- All processes run as nonroot (UID 65532)
+- Log rotation via logrotate (daily, 7-day retention, gzip compression)
+
+## Development
+
+### Sandbox mode
+
+For development, you can create a sandbox instead of using the conductor:
+
+```sh
+docker exec -it edgenode su - nonroot
+
+hc sandbox create --root /home/nonroot/ \
+  --conductor-config /etc/holochain/conductor-config.yaml \
+  --data-root-path /var/local/lib/holochain
+
+hc sandbox run 0
+```
+
+Note the `admin_port` displayed. Use `-p <port>` with the hApp management commands.
+
+For verbose output:
+
+```sh
+RUST_LOG=debug hc sandbox run 0
+```
+
+### Manual hApp install (Kando example)
+
+```sh
+export ADMIN_PORT=<port_from_sandbox>
+export AGENT_KEY=$(hc s -f $ADMIN_PORT call new-agent | awk '{print $NF}')
+export APP_ID="kando::v0.13.0::$AGENT_KEY"
+wget https://github.com/holochain-apps/kando/releases/download/v0.13.0/kando.happ
+hc s -f $ADMIN_PORT call install-app ./kando.happ "<network_seed>" --agent-key "$AGENT_KEY" --app-id "$APP_ID"
+hc s -f $ADMIN_PORT call list-apps
+```
+
+### Verifying binaries
+
+```sh
+docker run --name edgenode -dit ghcr.io/holo-host/edgenode
+docker exec -it edgenode /bin/sh
+holochain --version
+hc --version
+```
+
+### Persistence testing
+
+```sh
+docker/test_persistence.sh
+```
