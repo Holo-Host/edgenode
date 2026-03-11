@@ -30,7 +30,7 @@ RUN ln -sf /usr/local/bin/happ_tool /usr/local/bin/install_happ && \
     ln -sf /usr/local/bin/happ_tool /usr/local/bin/list_happs && \
     chmod +x /usr/local/bin/install_happ /usr/local/bin/list_happs /usr/local/bin/uninstall_happ /usr/local/bin/enable_happ /usr/local/bin/disable_happ
 
-ARG HAPP_CONFIG_FILE_VERSION=0.2.1
+ARG HAPP_CONFIG_FILE_VERSION=0.3.0
 
 RUN case "${TARGETARCH}" in \
     amd64) HCF_ARCH="linux-x86_64" ;; \
