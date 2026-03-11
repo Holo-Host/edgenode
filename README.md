@@ -66,7 +66,7 @@ ps -ef
 
 ### For HolOS Users
 
-1. Download a release of the iso from our releases page: https://github.com/Holo-Host/edgenode/releases/download/v0.0.7ga.5/holos-v0.0.7ga.5.iso
+1. Download a release of the iso from our [releases page](https://github.com/Holo-Host/edgenode/releases)
 2. Burn the iso to a USB stick to install on your own physical hardware or install it in a virtualized environment of your choosing. For a more detailed step-by-step on this, please follow the instructions in the Support [How To Guide](https://docs.google.com/document/d/1f3_5Ddff50pFIuzRJAmqGwT9nE873TKQC182LKyJJ4k/edit?tab=t.0#heading=h.ik0z3qmvpegt).
 3. Choose live-mode or install from the Grub boot menu
 

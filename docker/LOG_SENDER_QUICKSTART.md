@@ -8,14 +8,14 @@ An Edge Node container featuring:
 
 ## Quick Start
 
-See the [Docker README.md](/README.md) for the basics on Edge Node Container Setup and you will need to be using [Dockerfile.unyt](/Dockerfile.unyt) as the template for your Unyt-based Edge Node container image.
+See the [Docker README.md](./README.md) for the basics on Edge Node Container Setup and you will need to be using [Dockerfile.unyt](./Dockerfile.unyt) as the template for your Unyt-based Edge Node container image.
 
 For detailed user guide see the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md) .
 
 
 **Prerequisites:**
 
-- Holochain 0.6.0 conductor with reporting enabled.
+- Holochain 0.6.1 conductor with reporting enabled.
 - Access to your Unyt agent public key.
 - Log-collector service endpoint.
 - Log directories where Holochain conductor writes JSONL files (var/local/lib/holochain/reports by default).
@@ -27,7 +27,7 @@ For detailed user guide see the [Log-sender](https://github.com/unytco/log-sende
 ```bash
 docker run --name unytnode -dit \
   -v $(pwd)/holo-data:/data \
-  ghcr.io/holo-host/edgenode:v0.0.8-alpha29-unyt
+  ghcr.io/holo-host/edgenode:latest-unyt
 ```
 
 ### 2. Basic Setup
@@ -54,7 +54,7 @@ log-sender register-dna \
 # Start the service
 log-sender service --config-file /etc/log-sender/config.json
 ```
-See [here](/log-sender-CLI.md) for more details.
+See [here](./log-sender-CLI.md) for more details.
 ### 3. Running as a Service
 
 The `log-sender` is automatically started as a service by `supervisord` when the container starts. You can check the status of the service by running the following command:
