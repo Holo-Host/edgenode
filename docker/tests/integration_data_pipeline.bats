@@ -9,13 +9,7 @@ LOCAL_LOG_COLLECTOR_URL="http://localhost:8787"
 ADMIN_SECRET="test_admin_secret"
 UNYT_PUB_KEY="uhCAkjC1PlxEz1LTEPytaNL10L9oy2kixwAABEjRWeKvN7xIAAAAB"
 
-is_hc_0_6_0() {
-  [[ "$IMAGE_NAME" =~ hc.*0\.6\.0 ]] || [[ "$IMAGE_NAME" =~ unyt ]]
-}
 
-is_unyt() {
-  [[ "$IMAGE_NAME" =~ unyt ]]
-}
 
 # Helper function to clear database before tests
 clear_test_data() {
@@ -98,11 +92,6 @@ wait_for_database_data() {
 }
 
 @setup() {
-    # Only run these tests on unyt image
-    if ! is_hc_0_6_0; then
-        skip "Not running on unyt image - integration tests skipped"
-    fi
-    
     # Verify prerequisites
     if ! curl -s "http://localhost:8787/" 2>/dev/null | grep -q "log-collector\|ok"; then
         skip "Log-collector service not responding"
@@ -125,7 +114,6 @@ wait_for_database_data() {
 }
 
 @test "integration: log-sender populates database with single metric" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Single Metric Database Population ==="
     
     local test_config="/etc/log-sender/integration_single.json"
@@ -182,13 +170,9 @@ wait_for_database_data() {
         echo "❌ FAILURE: Single metric not found in database"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: log-sender populates database with multiple metrics" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Multiple Metrics Database Population ==="
     
     local test_config="/etc/log-sender/integration_multi.json"
@@ -251,13 +235,9 @@ wait_for_database_data() {
         echo "❌ FAILURE: Expected >= 4 metrics, found only $db_count"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: database persistence across multiple log-sender runs" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Database Persistence Across Runs ==="
     
     local test_config="/etc/log-sender/integration_persistence.json"
@@ -329,13 +309,9 @@ wait_for_database_data() {
         echo "❌ FAILURE: Database persistence failed (expected > $after_first, got $after_second)"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: real-time metric processing and storage" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Real-time Processing ==="
     
     local test_config="/etc/log-sender/integration_realtime.json"
@@ -421,13 +397,9 @@ wait_for_database_data() {
         tail -20 /tmp/realtime_service.log
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: data integrity and validation" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Data Integrity and Validation ==="
     
     local test_config="/etc/log-sender/integration_integrity.json"
@@ -503,13 +475,9 @@ wait_for_database_data() {
         echo "❌ FAILURE: Timestamp integrity issues"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: complete cleanup and reset verification" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Complete Cleanup and Reset ==="
     
     # First, populate database with test data
@@ -622,7 +590,4 @@ wait_for_database_data() {
         echo "❌ FAILURE: System not functioning properly after cleanup"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }

@@ -1,47 +1,44 @@
 # Testing Strategy
 
-This document outlines the testing strategy for the `edgenode` Docker images.
+This document outlines the testing strategy for the `edgenode` Docker image.
 
 ## Framework
 
-The testing framework is built using [Bats](https://github.com/bats-core/bats-core), a TAP-compliant testing framework for Bash. It provides a simple way to write tests for shell scripts and command-line applications.
+The testing framework is built using [Bats](https://github.com/bats-core/bats-core), a TAP-compliant testing framework for Bash.
 
-## Test Matrix
+## Running Tests
 
-The testing strategy is designed to be able to test multiple Docker images. The `run_tests_multi.sh` script accepts a Docker image name as an argument. If no argument is provided, it will default to building and testing a local image named `local-edgenode`.
-
-To run the tests against a specific image, use the following command:
+To run tests against the local build:
 
 ```bash
-./run_tests_multi.sh <image-name>
+./run_tests_multi.sh
 ```
 
-For example, to test the `holochain/holochain-go-pion` image, you would run:
+To run tests against a specific image:
 
 ```bash
-./run_tests_multi.sh holochain/holochain-go-pion
+./run_tests_multi.sh ghcr.io/holo-host/edgenode:v1.2.3
 ```
 
 ## Test Cases
 
-The test cases are located in the `tests` directory. Each file in this directory represents a test suite. The following test suites are currently implemented:
+The test cases are in the `tests/` directory:
 
-- `startup.bats`: Verifies that the Holochain conductor starts successfully.
-- `process.bats`: Verifies that the `holochain` process runs as the `nonroot` user.
-- `persistence.bats`: Verifies that data written to the `/data` volume persists across container restarts.
-- `happ.bats`: Verifies that a sample hApp can be installed successfully.
-- `webhapp.bats`: Verifies that a sample webhApp can be downloaded, extracted, and installed successfully.
+- `startup.bats`: Verifies the Holochain conductor starts successfully.
+- `process.bats`: Verifies `holochain` runs as the `nonroot` user.
+- `persistence.bats`: Verifies data written to `/data` persists across container restarts.
+- `happ.bats`: Verifies a hApp can be installed via `install_happ`.
+- `webhapp.bats`: Verifies a `.webhapp` file can be downloaded, extracted, and installed.
+- `multi_install.bats`: Multi-happ installation tests.
+- `log_tool.bats`: Verifies `log-sender` init, service, and config behaviour.
+- `log_sender_e2e.bats`: End-to-end log-sender → log-collector pipeline tests.
+- `log_sender_debug.bats`: Debug log-sender service with test JSONL data.
+- `integration_data_pipeline.bats`: Integration tests for the full data pipeline.
 
 ## Adding New Tests
 
-To add a new test, create a new `.bats` file in the `tests` directory. The `run_tests_multi.sh` script will automatically run any `.bats` files in this directory.
+Create a new `.bats` file in the `tests/` directory. It will be picked up automatically by `run_tests_multi.sh`.
 
 ## CI Integration
 
-The `run_tests_multi.sh` script is designed to be easily integrated into a CI/CD pipeline. It will exit with a non-zero status code if any of the tests fail. The structured output from Bats will make it easy to diagnose failures in the CI logs.
-
-## Incompatible Happs and Skipping Tests
-
-Some hApps and webhApps may not be compatible with all versions of Holochain, especially with development or pre-release versions. To prevent test failures due to these incompatibilities, certain tests are conditionally skipped.
-
-The `is_hc_0_6_0()` function (or similar version-checking logic) is used within test suites to detect specific Holochain versions (e.g., `hc-0.6.0` and newer development builds). If an incompatible version is detected, tests that rely on specific hApps (like `kando` or `rhymez`) will be skipped, and a message indicating the reason for skipping will be displayed. This ensures that the test suite remains robust and provides accurate results without false negatives caused by version mismatches.
+`run_tests_multi.sh` exits with a non-zero status if any test fails. Tests run against the amd64 build before the multi-platform push in the release workflow.
