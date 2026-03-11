@@ -1,70 +1,97 @@
-# Log-Sender integration
-An Edge Node container featuring:
-- `log-sender` binary that can deliver standard holochain reports to a specific location , 
-- Unyt specific configuration.
-- Scripts for initializing and configuring your version of `log-sender`.
-- Scripts for registering the dna of Unyt based happs (e.g. Circulo).
-- A CLI utility for initializing log-sender and registering your happ DNA (with Unyt based happs).
+# Log-Sender Quickstart (Unyt Integration)
 
-## Quick Start
+Connect an Edge Node to a Unyt log-collector for resource accounting.
 
-See the [Docker README.md](./README.md) for the basics on Edge Node Container Setup and you will need to be using [Dockerfile.unyt](./Dockerfile.unyt) as the template for your Unyt-based Edge Node container image.
+See the [Docker README.md](./README.md) for basic Edge Node setup. The unyt image is built from [Dockerfile.unyt](./Dockerfile.unyt).
 
-For detailed user guide see the [Log-sender](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md) .
+For the upstream log-sender docs, see the [Log-Sender User Guide](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md).
 
+## Prerequisites
 
-**Prerequisites:**
+- Holochain 0.6.1 conductor with reporting enabled
+- Your Unyt agent public key
+- A log-collector service endpoint
+- A hApp with an agreement set up in Unyt
+- A happ config file with an `economics` section (generate with `happ_config_file create --economics`)
 
-- Holochain 0.6.1 conductor with reporting enabled.
-- Access to your Unyt agent public key.
-- Log-collector service endpoint.
-- Log directories where Holochain conductor writes JSONL files (var/local/lib/holochain/reports by default).
-- An installed happ which has an agreemnt setup in Unyt.
-- happ_config file with 'economics' section (You can generate by using command happ_config_filre with --economics as an argument).
+## 1. Run the unyt image
 
-### 1. Pull log-sender enabled image
+Pass log-sender connection details as environment variables. When `install_happ` sees a config with an `economics` section, it uses these to automatically initialize log-sender, register the DNA, and start the service.
 
 ```bash
 docker run --name unytnode -dit \
   -v $(pwd)/holo-data:/data \
+  -e LOG_SENDER_ENDPOINT=http://log-collector.example.com:8787 \
+  -e LOG_SENDER_UNYT_PUB_KEY=uhCAk... \
   ghcr.io/holo-host/edgenode:latest-unyt
 ```
 
-### 2. Basic Setup
+## 2. Install a hApp with economics
 
-Note that if you have a pre-existing log-sender config file (at /etc/log-sender/config.json by default), then the container will use these values as default when starting and call register_dna endpoint automatically as well.
+The hApp config file needs an `economics` section (generate with `happ_config_file create --economics`).
 
 ```bash
-# Initialize configuration with your log-collector endpoint
-# Use your Holochain agent's unyt public key
+docker exec -it unytnode su - nonroot
+install_happ my_app_config.json
+```
+
+`install_happ` automatically:
+1. Initializes log-sender if no config exists (using the `LOG_SENDER_*` env vars)
+2. Registers the DNA hash with the agreement
+3. Starts the log-sender service
+
+## 3. Verify
+
+```bash
+tail -f /data/logs/log-sender.log
+```
+
+## Manual alternative
+
+If you prefer to initialize log-sender manually instead of using env vars:
+
+```bash
 log-sender init \
   --config-file /etc/log-sender/config.json \
   --endpoint http://log-collector.example.com:8787 \
   --unyt-pub-key uhCAk... \
   --report-interval-seconds 60 \
-  --report-path /var/log/holochain \
-  --conductor-config-path /etc/holochain/conductor-config.toml
-
-# Register a DNA confirm the DNA hash and agreement id
-log-sender register-dna \
---config-file /etc/log-sender/config.json \
---dna-hash "uhC0kFLU..." \
---agreement-id "uhCkk9zj..."
-
-# Start the service
-log-sender service --config-file /etc/log-sender/config.json
-```
-See [here](./log-sender-CLI.md) for more details.
-### 3. Running as a Service
-
-The `log-sender` is automatically started as a service by `supervisord` when the container starts. You can check the status of the service by running the following command:
-
-```bash
-supervisorctl status
+  --report-path /var/local/lib/holochain/reports/ \
+  --conductor-config-path /etc/holochain/conductor-config.yaml
 ```
 
-You can also view the logs for the `log-sender` service with the following command:
+Once the config exists, `install_happ` will skip initialization but still register the DNA and start the service.
 
-```bash
-tail -f /data/logs/log-sender.log
-```
+## log-sender CLI Reference
+
+### `log-sender init`
+
+Generates a drone keypair, registers with the log-collector, and writes a config file.
+
+| Flag | Env var | Description |
+|------|---------|-------------|
+| `--config-file` | `LOG_SENDER_CONFIG_FILE` | Path to write config (e.g. `/etc/log-sender/config.json`) |
+| `--endpoint` | `LOG_SENDER_ENDPOINT` | Log-collector URL |
+| `--unyt-pub-key` | `LOG_SENDER_UNYT_PUB_KEY` | Base64 Unyt public key |
+| `--report-interval-seconds` | `LOG_SENDER_REPORT_INTERVAL_SECONDS` | Reporting frequency |
+| `--report-path` | `LOG_SENDER_REPORT_PATHS` | Directory with `.jsonl` report files (repeatable, comma-separated in env) |
+| `--conductor-config-path` | `LOG_SENDER_CONDUCTOR_CONFIG_PATHS` | Conductor config for DB size reporting (repeatable) |
+
+### `log-sender register-dna`
+
+Registers a DNA hash with an agreement for accounting.
+
+| Flag | Env var | Description |
+|------|---------|-------------|
+| `--config-file` | `LOG_SENDER_CONFIG_FILE` | Path to config file |
+| `--dna-hash` | | DNA hash to register |
+| `--agreement-id` | | Unyt agreement action hash |
+| `--price-sheet-hash` | | Optional price sheet hash |
+
+### `log-sender service`
+
+Runs the reporting loop.
+
+| Flag | Env var | Description |
+|------|---------|-------------|
+| `--config-file` | `LOG_SENDER_CONFIG_FILE` | Path to config file |
