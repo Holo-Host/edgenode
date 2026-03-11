@@ -20,10 +20,15 @@ RUN case "${TARGETARCH}" in \
     chmod +x /bin/holochain && \
     chmod +x /bin/hc
 
-ARG LOG_SENDER_VERSION=0.1.4
+ARG LOG_SENDER_VERSION=0.1.5
 
-RUN wget https://github.com/unytco/log-sender/releases/download/v${LOG_SENDER_VERSION}/log-sender && \
-    mv log-sender /usr/local/bin/log-sender && \
+RUN case "${TARGETARCH}" in \
+    amd64) LS_ARCH="x86_64" ;; \
+    arm64) LS_ARCH="aarch64" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget https://github.com/unytco/log-sender/releases/download/v${LOG_SENDER_VERSION}/log-sender-${LS_ARCH} && \
+    mv log-sender-${LS_ARCH} /usr/local/bin/log-sender && \
     chmod +x /usr/local/bin/log-sender && \
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender
