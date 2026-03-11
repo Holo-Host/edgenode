@@ -27,6 +27,7 @@ RUN case "${TARGETARCH}" in \
     arm64) LS_ARCH="aarch64" ;; \
     *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
     esac && \
+    mkdir -p /usr/local/bin && \
     wget https://github.com/unytco/log-sender/releases/download/v${LOG_SENDER_VERSION}/log-sender-${LS_ARCH} && \
     mv log-sender-${LS_ARCH} /usr/local/bin/log-sender && \
     chmod +x /usr/local/bin/log-sender && \

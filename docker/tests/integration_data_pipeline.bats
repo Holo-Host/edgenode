@@ -99,7 +99,6 @@ wait_for_database_data() {
     
     # Clear database before each test
     clear_test_data
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" touch /tmp/dummy_conductor_config.yaml
 }
 
 @teardown() {
@@ -135,7 +134,7 @@ wait_for_database_data() {
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir/" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
@@ -199,7 +198,7 @@ wait_for_database_data() {
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
@@ -258,7 +257,7 @@ wait_for_database_data() {
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
@@ -329,7 +328,7 @@ wait_for_database_data() {
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 3  # 3 second intervals for real-time testing
     assert_success
 
@@ -424,7 +423,7 @@ wait_for_database_data() {
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
@@ -499,7 +498,7 @@ wait_for_database_data() {
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$populate_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
@@ -565,7 +564,7 @@ wait_for_database_data() {
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$verification_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 

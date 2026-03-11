@@ -11,5 +11,6 @@ load 'libs/bats-assert/load'
   run docker compose exec -T -u nonroot "$SERVICE_NAME" cat /etc/log-sender/debug.json
   assert_success
   run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" timeout 5 log-sender service --config-file /etc/log-sender/debug.json
-  assert_success
+  # exit 0 = clean exit, exit 124 = timeout (expected), both are success
+  [[ "$status" -eq 0 || "$status" -eq 124 ]] || fail "Expected exit 0 or 124 (timeout), got $status"
 }
