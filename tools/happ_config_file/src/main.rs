@@ -82,7 +82,7 @@ struct Gateway {
 struct Economics {
     payor_unyt_agent_pub_key: String,
     agreement_hash: String,
-    price_sheet: String,
+    price_sheet_hash: String,
 }
 
 impl ConfigFile {
@@ -183,10 +183,10 @@ enum Commands {
         /// Include an example init_zome_calls block in the created file
         #[arg(long = "init-zome-calls")]
         init_zome_calls: bool,
-        /// Generate iroh networking config (HC >= 0.6.1 default backend);
-        /// omits signalServerUrl/stunServerUrls and includes relayUrl instead
+        /// Generate legacy WebRTC/go-pion networking config (HC <= 0.6.0);
+        /// includes signalServerUrl/stunServerUrls instead of relayUrl
         #[arg(long)]
-        iroh: bool,
+        webrtc: bool,
     },
     /// Validate a configuration file
     Validate {
@@ -204,8 +204,8 @@ fn main() -> Result<()> {
             gateway,
             economics,
             init_zome_calls,
-            iroh,
-        } => do_create(name, gateway, economics, init_zome_calls, iroh)?,
+            webrtc,
+        } => do_create(name, gateway, economics, init_zome_calls, webrtc)?,
         Commands::Validate { input } => do_validate(input)?,
     }
     Ok(())
@@ -216,7 +216,7 @@ fn do_create(
     include_gateway: bool,
     include_economics: bool,
     include_init_calls: bool,
-    iroh: bool,
+    webrtc: bool,
 ) -> Result<()> {
     // Determine output file name and app.name based on optional name
     let (output, app_name): (PathBuf, String) = if let Some(provided_name) = name {
@@ -255,16 +255,7 @@ fn do_create(
             },
         },
         env: Env {
-            holochain: if iroh {
-                Holochain {
-                    version: "".to_string(),
-                    flags: vec!["".to_string()],
-                    bootstrap_url: "".to_string(),
-                    signal_server_url: None,
-                    stun_server_urls: None,
-                    relay_url: Some("".to_string()),
-                }
-            } else {
+            holochain: if webrtc {
                 Holochain {
                     version: "".to_string(),
                     flags: vec!["".to_string()],
@@ -272,6 +263,15 @@ fn do_create(
                     signal_server_url: Some("".to_string()),
                     stun_server_urls: Some(vec!["".to_string()]),
                     relay_url: None,
+                }
+            } else {
+                Holochain {
+                    version: "".to_string(),
+                    flags: vec!["".to_string()],
+                    bootstrap_url: "".to_string(),
+                    signal_server_url: None,
+                    stun_server_urls: None,
+                    relay_url: Some("".to_string()),
                 }
             },
             gw: if include_gateway {
@@ -296,7 +296,7 @@ fn do_create(
             Some(Economics {
                 payor_unyt_agent_pub_key: agent_hash.to_string(),
                 agreement_hash: agreement_hash.to_string(),
-                price_sheet: "".to_string(),
+                price_sheet_hash: "".to_string(),
             })
         } else {
             None
