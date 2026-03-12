@@ -12,6 +12,7 @@ These are available inside the container:
 - `disable_happ [-p <port>] <app_id>` -- Disable an installed hApp
 - `list_happs [-p <port>]` -- List installed hApps
 - `happ_config_file` -- Create/validate hApp config files (run with `--help` for usage)
+- `log_tool <init|service|help>` -- Manage the Unyt log-sender service (see [LOG_SENDER_QUICKSTART.md](./LOG_SENDER_QUICKSTART.md))
 
 The default admin port is `4444`.
 
@@ -92,7 +93,7 @@ Logs rotate daily with 7-day retention.
 - Admin port: `4444`
 - Config path: `/etc/holochain/conductor-config.yaml`
 - Data path: `/var/local/lib/holochain`
-- `lair_root` must be empty
+- Keystore path: `/var/local/lib/holochain/ks`
 
 Paths are symlinked into the `/data` volume for persistence:
 
@@ -134,8 +135,8 @@ RUST_LOG=debug hc sandbox run 0
 ```sh
 export ADMIN_PORT=<port_from_sandbox>
 export AGENT_KEY=$(hc s -f $ADMIN_PORT call new-agent | awk '{print $NF}')
-export APP_ID="kando::v0.13.0::$AGENT_KEY"
-wget https://github.com/holochain-apps/kando/releases/download/v0.13.0/kando.happ
+export APP_ID="kando::v0.17.1::$AGENT_KEY"
+wget https://github.com/holochain-apps/kando/releases/download/v0.17.1/kando.happ
 hc s -f $ADMIN_PORT call install-app ./kando.happ "<network_seed>" --agent-key "$AGENT_KEY" --app-id "$APP_ID"
 hc s -f $ADMIN_PORT call list-apps
 ```
