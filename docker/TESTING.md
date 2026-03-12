@@ -28,8 +28,8 @@ The test cases are in the `tests/` directory:
 - `process.bats`: Verifies `holochain` runs as the `nonroot` user.
 - `persistence.bats`: Verifies data written to `/data` persists across container restarts.
 - `happ.bats`: Verifies a hApp can be installed via `install_happ`.
-- `webhapp.bats`: Verifies a `.webhapp` file can be downloaded, extracted, and installed.
-- `multi_install.bats`: Multi-happ installation tests.
+- `webhapp.bats`: Verifies a `.webhapp` file (kando v0.17.1) can be downloaded, extracted, and installed, including SHA256 validation.
+- `multi_install.bats`: Multi-happ installation tests (currently skipped — needs a HC 0.6.1-compatible hApp with `initZomeCalls`).
 - `log_tool.bats`: Verifies `log-sender` init, service, and config behaviour.
 - `log_sender_e2e.bats`: End-to-end log-sender → log-collector pipeline tests.
 - `log_sender_debug.bats`: Debug log-sender service with test JSONL data.
