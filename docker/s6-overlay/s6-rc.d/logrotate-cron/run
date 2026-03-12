@@ -1,0 +1,5 @@
+#!/bin/sh
+while true; do
+  logrotate /etc/logrotate.d/holochain.conf
+  sleep 86400
+done
