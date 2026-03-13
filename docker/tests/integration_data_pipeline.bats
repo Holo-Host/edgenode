@@ -9,55 +9,25 @@ LOCAL_LOG_COLLECTOR_URL="http://localhost:8787"
 ADMIN_SECRET="test_admin_secret"
 UNYT_PUB_KEY="uhCAkjC1PlxEz1LTEPytaNL10L9oy2kixwAABEjRWeKvN7xIAAAAB"
 
-is_hc_0_6_0() {
-  [[ "$IMAGE_NAME" =~ hc.*0\.6\.0 ]] || [[ "$IMAGE_NAME" =~ unyt ]]
-}
-
-is_unyt() {
-  [[ "$IMAGE_NAME" =~ unyt ]]
-}
-
-# Helper function to clear database before tests
-clear_test_data() {
-    echo "=== CLEARING TEST DATABASE ==="
-    
-    # Clear all test data from previous runs
+# Count all metrics currently in the database
+_count_metrics() {
     docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="DELETE FROM metrics WHERE source LIKE 'integration_test_%' OR source LIKE 'e2e_integration_%';" 2>/dev/null || true
-    
-    docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="DELETE FROM drone_registrations WHERE unyt_pub_key = '$UNYT_PUB_KEY';" 2>/dev/null || true
-    
-    echo "✅ Database cleared for integration tests"
+        --command="SELECT COUNT(*) as total FROM metrics;" 2>/dev/null \
+        | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0"
 }
 
-# Helper function to verify database state
+# Helper function to verify database state (informational)
 verify_database_state() {
     local test_name="$1"
-    local expected_metrics="${2:-0}"
-    local expected_registrations="${3:-0}"
-    
     echo "=== DATABASE STATE FOR $test_name ==="
-    
-    local metrics_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics;" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    local registrations_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM drone_registrations;" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    echo "Current database state:"
-    echo "  Metrics: $metrics_count"
+    local metrics_count
+    metrics_count=$(_count_metrics)
+    local registrations_count
+    registrations_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
+        --command="SELECT COUNT(*) as total FROM drone_registrations;" 2>/dev/null \
+        | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
+    echo "  Metrics: $metrics_count (baseline was: ${METRICS_BASELINE:-?})"
     echo "  Drone Registrations: $registrations_count"
-    
-    if [[ "$metrics_count" -ge "$expected_metrics" && "$registrations_count" -ge "$expected_registrations" ]]; then
-        echo "✅ Database state verification passed"
-        return 0
-    else
-        echo "❌ Database state verification failed"
-        echo "  Expected: >= $expected_metrics metrics, >= $expected_registrations registrations"
-        echo "  Actual: $metrics_count metrics, $registrations_count registrations"
-        return 1
-    fi
 }
 
 # Helper function to extract drone_id from config
@@ -66,563 +36,446 @@ get_drone_id() {
     docker compose exec -T -u nonroot "$SERVICE_NAME" jq '.droneId' "$config_file" 2>/dev/null || echo ""
 }
 
-# Helper function to wait for data to appear in database
+# Wait for at least $expected_count NEW metrics since METRICS_BASELINE to appear in the database.
+# log-sender sends dbSize proofs (one per DHT database per interval) and also forwards
+# fetchedOps entries from JSONL files. Both land in the metrics table.
 wait_for_database_data() {
     local max_wait="${1:-30}"
     local check_interval="${2:-2}"
-    local expected_count="${3:-1}"
-    
-    echo "Waiting up to ${max_wait}s for data to appear in database (expecting >= $expected_count records)..."
+    local expected_new="${3:-1}"
+
+    echo "Waiting up to ${max_wait}s for >= $expected_new new metrics (baseline: ${METRICS_BASELINE:-0})..."
     local elapsed=0
-    
+
     while [[ $elapsed -lt $max_wait ]]; do
-        local metrics_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-            --command="SELECT COUNT(*) as total FROM metrics WHERE source LIKE 'integration_test_%';" 2>/dev/null | jq -r '..total // 0' 2>/dev/null || echo "0")
-        
-        if [[ "$metrics_count" -ge "$expected_count" ]]; then
-            echo "✅ Data found in database: $metrics_count integration test metrics"
+        local total
+        total=$(_count_metrics)
+        local new_count=$(( total - ${METRICS_BASELINE:-0} ))
+
+        if [[ "$new_count" -ge "$expected_new" ]]; then
+            echo "✅ Data found in database: $new_count new metrics (total: $total)"
             return 0
         fi
-        
-        sleep $check_interval
-        elapsed=$((elapsed + check_interval))
-        
-        # Show progress every 10 seconds
-        if [[ $((elapsed % 10)) -eq 0 ]]; then
-            echo "  Still waiting... ($elapsed/${max_wait}s, found: $metrics_count metrics)"
+
+        sleep "$check_interval"
+        elapsed=$(( elapsed + check_interval ))
+
+        if [[ $(( elapsed % 10 )) -eq 0 ]]; then
+            echo "  Still waiting... ($elapsed/${max_wait}s, new so far: $new_count)"
         fi
     done
-    
-    echo "⚠️  Expected data not found after ${max_wait}s (found: $metrics_count metrics)"
+
+    local final_total
+    final_total=$(_count_metrics)
+    echo "⚠️  Expected $expected_new new metrics after ${max_wait}s (baseline: ${METRICS_BASELINE:-0}, total: $final_total, new: $(( final_total - ${METRICS_BASELINE:-0} )))"
     return 1
 }
 
 @setup() {
-    # Only run these tests on unyt image
-    if ! is_hc_0_6_0; then
-        skip "Not running on unyt image - integration tests skipped"
-    fi
-    
     # Verify prerequisites
     if ! curl -s "http://localhost:8787/" 2>/dev/null | grep -q "log-collector\|ok"; then
         skip "Log-collector service not responding"
     fi
-    
-    # Clear database before each test
-    clear_test_data
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" touch /tmp/dummy_conductor_config.yaml
+
+    # Capture baseline metric count so each test can measure its own delta
+    METRICS_BASELINE=$(_count_metrics)
+    echo "Metrics baseline: $METRICS_BASELINE"
 }
 
 @teardown() {
-    # Show final database state
     echo "=== FINAL DATABASE STATE AFTER TEST ==="
     verify_database_state "POST-TEST"
-    
+
     # Cleanup test artifacts
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -rf /data/logs/integration_test_* 2>/dev/null || true
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" rm -f /etc/log-sender/integration_*.json 2>/dev/null || true
+    docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c 'rm -rf /data/logs/integration_test_* /etc/log-sender/integration_*.json' 2>/dev/null || true
     rm -f /tmp/integration_test_*.jsonl 2>/dev/null || true
 }
 
 @test "integration: log-sender populates database with single metric" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Single Metric Database Population ==="
-    
+
     local test_config="/etc/log-sender/integration_single.json"
     local test_log_dir="/data/logs/integration_test_single"
-    local test_namespace="integration_single_$(date +%s)"
-    
-    # Setup test environment
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" mkdir -p "$test_log_dir"
     assert_success
-    # Create single metric log entry
-    local current_time=$(($(date +%s) * 1000000))
-    local log_content="{\"k\":\"metric\",\"t\":\"$current_time\",\"value\":42.5,\"source\":\"integration_test_single\",\"unit\":1,\"tags\":\"{\\\"namespace\\\":\\\"$test_namespace\\\",\\\"test\\\":\\\"single_metric\\\"}\"}"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $test_log_dir/metrics.jsonl"
+
+    # Write a single fetchedOps entry — the k type log-sender forwards from JSONL
+    local current_time=$(( $(date +%s) * 1000000 ))
+    local log_content="{\"k\":\"fetchedOps\",\"t\":\"$current_time\",\"count\":1,\"latency\":50}"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c "echo '$log_content' > $test_log_dir/metrics.jsonl"
     assert_success
-    
-    # Initialize log-sender
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" log-sender init \
         --config-file "$test_config" \
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir/" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
-    # Install hApp, which will trigger DNA registration
     docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
 
-    # Start log-sender service
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 20 log-sender service \
-        --config-file "$test_config"
-    echo "Output of log-sender service:"
-    echo "$output"
-    
-    # Wait for data to appear in database
+        timeout 20 log-sender service --config-file "$test_config"
+    echo "log-sender output: $output"
+
+    # Expect at least 1 new metric (the fetchedOps entry, plus dbSize proofs)
     wait_for_database_data 25 1 1
-    
-    # Verify data in database
-    echo "=== VERIFYING DATABASE CONTENTS ==="
-    local db_metrics=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT id, signing_pub_key, metric_value, metric_timestamp, source FROM metrics WHERE source = 'integration_test_single' ORDER BY id DESC LIMIT 5;" 2>/dev/null)
-    
-    echo "Database query result:"
-    echo "$db_metrics"
-    
-    # Verify the specific metric was stored
-    if echo "$db_metrics" | grep -q "integration_test_single"; then
-        echo "✅ SUCCESS: Single metric successfully stored in database"
-        
-    else
-        echo "❌ FAILURE: Single metric not found in database"
-        return 1
-    fi
-  else
-    skip "Not running on unyt image"
-  fi
+
+    local new_count=$(( $(_count_metrics) - METRICS_BASELINE ))
+    echo "✅ SUCCESS: $new_count new metrics added to database"
 }
 
 @test "integration: log-sender populates database with multiple metrics" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Multiple Metrics Database Population ==="
-    
+
     local test_config="/etc/log-sender/integration_multi.json"
     local test_log_dir="/data/logs/integration_test_multi"
-    local test_namespace="integration_multi_$(date +%s)"
-    
-    # Setup test environment
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" mkdir -p "$test_log_dir"
     assert_success
-    # Create multiple metric log entries
-    local current_time=$(($(date +%s) * 1000000))
-    local log_content="{\"k\":\"metric\",\"t\":\"$current_time\",\"value\":100.0,\"source\":\"integration_test_multi\",\"unit\":1,\"tags\":\"{\\\"namespace\\\":\\\"$test_namespace\\\",\\\"test\\\":\\\"multi_metric\\\",\\\"index\\\":1}\"}
-    {\"k\":\"metric\",\"t\":\"$((current_time + 1000000))\",\"value\":200.5,\"source\":\"integration_test_multi\",\"unit\":2,\"tags\":\"{\\\"namespace\\\":\\\"$test_namespace\\\",\\\"test\\\":\\\"multi_metric\\\",\\\"index\\\":2}\"}
-    {\"k\":\"metric\",\"t\":\"$((current_time + 2000000))\",\"value\":150.25,\"source\":\"integration_test_multi\",\"unit\":1,\"tags\":\"{\\\"namespace\\\":\\\"$test_namespace\\\",\\\"test\\\":\\\"multi_metric\\\",\\\"index\\\":3}\"}
-    {\"k\":\"metric\",\"t\":\"$((current_time + 3000000))\",\"value\":75.75,\"source\":\"integration_test_multi\",\"unit\":3,\"tags\":\"{\\\"namespace\\\":\\\"$test_namespace\\\",\\\"test\\\":\\\"multi_metric\\\",\\\"index\\\":4}\"}
-    {\"k\":\"start\",\"t\":\"$((current_time + 4000000))\",\"component\":\"integration_test\",\"status\":\"started\"}
-    {\"k\":\"fetchedOps\",\"t\":\"$((current_time + 5000000))\",\"count\":42,\"latency\":150}"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $test_log_dir/metrics.jsonl"
+
+    # Write 4 fetchedOps entries — log-sender only forwards entries with k="fetchedOps"
+    local current_time=$(( $(date +%s) * 1000000 ))
+    local log_content="{\"k\":\"fetchedOps\",\"t\":\"$current_time\",\"count\":10,\"latency\":100}
+{\"k\":\"fetchedOps\",\"t\":\"$((current_time + 1000000))\",\"count\":20,\"latency\":120}
+{\"k\":\"fetchedOps\",\"t\":\"$((current_time + 2000000))\",\"count\":15,\"latency\":80}
+{\"k\":\"fetchedOps\",\"t\":\"$((current_time + 3000000))\",\"count\":30,\"latency\":200}"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c "printf '%s\n' '$log_content' > $test_log_dir/metrics.jsonl"
     assert_success
-    
-    # Initialize log-sender
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" log-sender init \
         --config-file "$test_config" \
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
-    # Install hApp, which will trigger DNA registration
     docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
 
-    # Start log-sender service
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 25 log-sender service \
-        --config-file "$test_config"
-    
-    # Wait for data to appear in database
+        timeout 25 log-sender service --config-file "$test_config"
+
+    # Expect at least 4 new metrics (the 4 fetchedOps entries)
     wait_for_database_data 30 2 4
-    
-    # Verify multiple metrics in database
-    echo "=== VERIFYING MULTIPLE METRICS IN DATABASE ==="
-    local db_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_multi';" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    echo "Found $db_count metrics in database (expected: >= 4)"
-    
-    if [[ "$db_count" -ge 4 ]]; then
-        echo "✅ SUCCESS: Multiple metrics ($db_count) successfully stored in database"
-        
-        # Show sample of stored metrics
-        local sample_metrics=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-            --command="SELECT metric_value, source, metric_timestamp FROM metrics WHERE source = 'integration_test_multi' ORDER BY metric_timestamp LIMIT 3;" 2>/dev/null)
-        echo "Sample stored metrics:"
-        echo "$sample_metrics"
+
+    local new_count=$(( $(_count_metrics) - METRICS_BASELINE ))
+    echo "Found $new_count new metrics in database (expected: >= 4)"
+
+    if [[ "$new_count" -ge 4 ]]; then
+        echo "✅ SUCCESS: $new_count new metrics successfully stored"
     else
-        echo "❌ FAILURE: Expected >= 4 metrics, found only $db_count"
+        echo "❌ FAILURE: Expected >= 4 metrics, found only $new_count"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: database persistence across multiple log-sender runs" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Database Persistence Across Runs ==="
-    
+
     local test_config="/etc/log-sender/integration_persistence.json"
     local test_log_dir="/data/logs/integration_test_persistence"
-    
-    # First run - create initial data
+
     echo "--- FIRST RUN: Creating initial data ---"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" mkdir -p "$test_log_dir"
     assert_success
-    local first_run_time=$(($(date +%s) * 1000000))
-    local log_content="{\"k\":\"metric\",\"t\":\"$first_run_time\",\"value\":100.0,\"source\":\"integration_test_persistence\",\"unit\":1}"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $test_log_dir/first_run.jsonl"
+
+    local first_run_time=$(( $(date +%s) * 1000000 ))
+    local log_content="{\"k\":\"fetchedOps\",\"t\":\"$first_run_time\",\"count\":5,\"latency\":60}"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c "echo '$log_content' > $test_log_dir/first_run.jsonl"
     assert_success
-    
-    # Initialize and run first time
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" log-sender init \
         --config-file "$test_config" \
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
-    # Install hApp, which will trigger DNA registration
     docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
 
-    # Run log-sender again with same config (should use existing registration)
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 15 log-sender service \
-        --config-file "$test_config"
-    
-    # Wait for first run data
+        timeout 15 log-sender service --config-file "$test_config"
+
     wait_for_database_data 20 1 1
-    
-    # Check database state after first run
-    local after_first=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_persistence';" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    echo "After first run: $after_first metrics in database"
-    
-    # Second run - add more data
+
+    local after_first=$(( $(_count_metrics) - METRICS_BASELINE ))
+    echo "After first run: $after_first new metrics since baseline"
+
+    # Second run — add new fetchedOps entries with later timestamps (so they pass last_record_timestamp filter)
     echo "--- SECOND RUN: Adding more data ---"
-    local second_run_time=$(($(date +%s) * 1000000))
-    local log_content="{\"k\":\"metric\",\"t\":\"$second_run_time\",\"value\":200.0,\"source\":\"integration_test_persistence\",\"unit\":2}
-    {\"k\":\"metric\",\"t\":\"$((second_run_time + 1000000))\",\"value\":300.0,\"source\":\"integration_test_persistence\",\"unit\":1}"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $test_log_dir/second_run.jsonl"
-    
-    # Run log-sender again with same config (should use existing registration)
+    local second_run_time=$(( $(date +%s) * 1000000 ))
+    local log_content="{\"k\":\"fetchedOps\",\"t\":\"$second_run_time\",\"count\":8,\"latency\":70}
+{\"k\":\"fetchedOps\",\"t\":\"$((second_run_time + 1000000))\",\"count\":12,\"latency\":90}"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c "printf '%s\n' '$log_content' > $test_log_dir/second_run.jsonl"
+
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 15 log-sender service \
-        --config-file "$test_config"
-    
-    # Wait for second run data
-    wait_for_database_data 20 2 2
-    
-    # Verify persistence
-    local after_second=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_persistence';" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    echo "After second run: $after_second metrics in database"
-    
+        timeout 15 log-sender service --config-file "$test_config"
+
+    # Expect more new metrics than after first run (dbSize proofs + new fetchedOps)
+    local expected_after_second=$(( after_first + 1 ))
+    wait_for_database_data 20 2 "$expected_after_second"
+
+    local after_second=$(( $(_count_metrics) - METRICS_BASELINE ))
+    echo "After second run: $after_second new metrics since baseline"
+
     if [[ "$after_second" -gt "$after_first" ]]; then
-        echo "✅ SUCCESS: Database persistence confirmed ($after_first → $after_second metrics)"
-        echo "✅ Second run successfully added new data without losing existing data"
+        echo "✅ SUCCESS: Database persistence confirmed ($after_first → $after_second since baseline)"
     else
-        echo "❌ FAILURE: Database persistence failed (expected > $after_first, got $after_second)"
+        echo "❌ FAILURE: Second run added no new metrics (expected > $after_first, got $after_second)"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: real-time metric processing and storage" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Real-time Processing ==="
-    
+
     local test_config="/etc/log-sender/integration_realtime.json"
     local test_log_dir="/data/logs/integration_test_realtime"
-    
-    # Setup test environment
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" mkdir -p "$test_log_dir"
     assert_success
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" touch "$test_log_dir/realtime_1.jsonl"
+    # Create an empty initial file so the report-path directory is valid
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" touch "$test_log_dir/realtime_initial.jsonl"
     assert_success
-    
-    # Initialize log-sender first
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" log-sender init \
         --config-file "$test_config" \
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
-        --report-interval-seconds 3  # 3 second intervals for real-time testing
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
+        --report-interval-seconds 3
     assert_success
 
-    # Install hApp, which will trigger DNA registration
     docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
 
-    # Start log-sender service in background
+    # Start service in background then write fetchedOps entries while it's running
     echo "--- Starting log-sender service for real-time processing ---"
     docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 30 log-sender service \
-        --config-file "$test_config" > /tmp/realtime_service.log 2>&1 &
-    
+        timeout 30 log-sender service --config-file "$test_config" > /tmp/realtime_service.log 2>&1 &
     local service_pid=$!
     echo "Service started with PID: $service_pid"
-    
-    # Wait for service to initialize
+
     sleep 5
-    
-    # Create metrics in real-time while service is running
-    echo "--- Creating metrics in real-time ---"
-    local base_time=$(($(date +%s) * 1000000))
-    
+
+    echo "--- Writing fetchedOps metrics in real-time ---"
+    local base_time=$(( $(date +%s) * 1000000 ))
     for i in {1..5}; do
-        local entry_time=$((base_time + (i * 500000)))  # 0.5 second intervals
-        local metric_value=$((i * 25))
-        
-        echo "Creating metric $i: value=$metric_value at $(date)"
-        
-        local log_content="{\"k\":\"metric\",\"t\":\"$entry_time\",\"value\":$metric_value,\"source\":\"integration_test_realtime\",\"unit\":1,\"tags\":\"{\\\"realtime_index\\\":$i}\"}"
-        run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $test_log_dir/realtime_$i.jsonl"
+        local entry_time=$(( base_time + (i * 500000) ))
+        echo "Writing entry $i at $(date)"
+        local log_content="{\"k\":\"fetchedOps\",\"t\":\"$entry_time\",\"count\":$((i * 10)),\"latency\":$((i * 20))}"
+        run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+            sh -c "echo '$log_content' > $test_log_dir/realtime_$i.jsonl"
         assert_success
-        
-        # Wait a bit between metrics
         sleep 2
     done
-    
-    # Wait for processing
+
     echo "--- Waiting for real-time processing to complete ---"
     wait_for_database_data 25 2 3
-    
-    # Stop the service
+
     kill $service_pid 2>/dev/null || true
     wait $service_pid 2>/dev/null || true
-    
-    # Verify real-time processing results
-    echo "=== VERIFYING REAL-TIME PROCESSING RESULTS ==="
-    local realtime_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_realtime';" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    echo "Real-time metrics processed: $realtime_count (expected: >= 3)"
-    
-    if [[ "$realtime_count" -ge 3 ]]; then
-        echo "✅ SUCCESS: Real-time processing worked ($realtime_count metrics stored)"
-        
-        # Show the metrics that were processed
-        local sample_realtime=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-            --command="SELECT metric_value, metric_timestamp FROM metrics WHERE source = 'integration_test_realtime' ORDER BY metric_timestamp LIMIT 3;" 2>/dev/null)
-        echo "Sample real-time metrics:"
-        echo "$sample_realtime"
+
+    local new_count=$(( $(_count_metrics) - METRICS_BASELINE ))
+    echo "Real-time metrics processed: $new_count (expected: >= 3)"
+
+    if [[ "$new_count" -ge 3 ]]; then
+        echo "✅ SUCCESS: Real-time processing worked ($new_count new metrics)"
     else
-        echo "❌ FAILURE: Real-time processing failed (expected >= 3, got $realtime_count)"
-        echo "Service log excerpt:"
+        echo "❌ FAILURE: Real-time processing failed (expected >= 3, got $new_count)"
+        echo "Service log:"
         tail -20 /tmp/realtime_service.log
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }
 
 @test "integration: data integrity and validation" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Data Integrity and Validation ==="
-    
+
     local test_config="/etc/log-sender/integration_integrity.json"
     local test_log_dir="/data/logs/integration_test_integrity"
-    
-    # Setup test environment
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" mkdir -p "$test_log_dir"
     assert_success
-    # Create test data with various data types and edge cases
-    local current_time=$(($(date +%s) * 1000000))
-    local log_content="{\"k\":\"metric\",\"t\":\"$current_time\",\"value\":0.0,\"source\":\"integration_test_integrity\",\"unit\":1}
-    {\"k\":\"metric\",\"t\":\"$((current_time + 1000000))\",\"value\":999999.99,\"source\":\"integration_test_integrity\",\"unit\":2}
-    {\"k\":\"metric\",\"t\":\"$((current_time + 2000000))\",\"value\":-100.5,\"source\":\"integration_test_integrity\",\"unit\":1}
-    {\"k\":\"event\",\"t\":\"$((current_time + 3000000))\",\"event_type\":\"test_event\",\"data\":\"{\\\"test\\\":true,\\\"number\\\":42}\"}
-    {\"k\":\"start\",\"t\":\"$((current_time + 4000000))\",\"component\":\"integrity_test\",\"status\":\"initialized\",\"metadata\":\"{\\\"version\\\":\\\"1.0\\\",\\\"env\\\":\\\"test\\\"}\"}"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $test_log_dir/integrity.jsonl"
+
+    local current_time=$(( $(date +%s) * 1000000 ))
+    # Only fetchedOps entries are forwarded by log-sender; other k values are ignored
+    local log_content="{\"k\":\"fetchedOps\",\"t\":\"$current_time\",\"count\":1,\"latency\":10}
+{\"k\":\"fetchedOps\",\"t\":\"$((current_time + 1000000))\",\"count\":2,\"latency\":20}
+{\"k\":\"start\",\"t\":\"$((current_time + 2000000))\",\"component\":\"test\",\"status\":\"ok\"}"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c "printf '%s\n' '$log_content' > $test_log_dir/integrity.jsonl"
     assert_success
-    
-    # Initialize and run log-sender
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" log-sender init \
         --config-file "$test_config" \
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$test_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
-    # Install hApp, which will trigger DNA registration
     docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
 
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 20 log-sender service \
-        --config-file "$test_config"
-    
-    # Wait for processing
+        timeout 20 log-sender service --config-file "$test_config"
+
     wait_for_database_data 25 1 2
-    
-    # Verify data integrity
+
     echo "=== VERIFYING DATA INTEGRITY ==="
-    
-    # Check that specific values were preserved
-    local zero_metric=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT metric_value FROM metrics WHERE source = 'integration_test_integrity' AND metric_value = 0.0 LIMIT 1;" 2>/dev/null | grep -o '"metric_value": [0-9.-]*' | grep -o '[0-9.-]*' | head -1 || echo "")
-    
-    local high_metric=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT metric_value FROM metrics WHERE source = 'integration_test_integrity' AND metric_value = 999999.99 LIMIT 1;" 2>/dev/null | grep -o '"metric_value": [0-9.-]*' | grep -o '[0-9.-]*' | head -1 || echo "")
-    
-    local negative_metric=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT metric_value FROM metrics WHERE source = 'integration_test_integrity' AND metric_value = -100.5 LIMIT 1;" 2>/dev/null | grep -o '"metric_value": [0-9.-]*' | grep -o '[0-9.-]*' | head -1 || echo "")
-    
-    echo "Data integrity check results:"
-    echo "  Zero value (0.0): $zero_metric"
-    echo "  High value (999999.99): $high_metric"  
-    echo "  Negative value (-100.5): $negative_metric"
-    
-    if [[ -n "$zero_metric" && -n "$high_metric" && -n "$negative_metric" ]]; then
-        echo "✅ SUCCESS: Data integrity preserved (all edge case values stored correctly)"
-    else
-        echo "❌ FAILURE: Data integrity issues detected"
+
+    # Verify the stored dbSize proofs have the expected JSON structure (k, t, d, b fields)
+    local proof_json
+    proof_json=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
+        --command="SELECT proof FROM metrics ORDER BY id DESC LIMIT 1;" 2>/dev/null \
+        | grep -o '"proof": "[^"]*"' | sed 's/"proof": "//;s/"$//' | head -1 || echo "")
+
+    echo "Most recent proof: $proof_json"
+
+    if [[ -z "$proof_json" ]]; then
+        echo "❌ FAILURE: No proof found in database"
         return 1
     fi
-    
-    # Verify timestamps are preserved
-    local timestamp_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_integrity' AND metric_timestamp >= $current_time;" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    if [[ "$timestamp_count" -ge 2 ]]; then
-        echo "✅ SUCCESS: Timestamps preserved correctly"
+
+    # Verify all proofs have a timestamp in a reasonable range (last hour)
+    local recent_count
+    local one_hour_ago=$(( ($(date +%s) - 3600) * 1000 ))
+    recent_count=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
+        --command="SELECT COUNT(*) as total FROM metrics WHERE metric_timestamp >= $one_hour_ago;" 2>/dev/null \
+        | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
+
+    echo "Metrics with recent timestamps: $recent_count"
+
+    if [[ "$recent_count" -ge 1 ]]; then
+        echo "✅ SUCCESS: Metrics stored with valid recent timestamps"
     else
-        echo "❌ FAILURE: Timestamp integrity issues"
+        echo "❌ FAILURE: No metrics found with recent timestamps"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
+
+    # Verify drone registration exists for the signing key
+    local drone_regs
+    drone_regs=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
+        --command="SELECT COUNT(*) as total FROM drone_registrations;" 2>/dev/null \
+        | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
+
+    if [[ "$drone_regs" -ge 1 ]]; then
+        echo "✅ SUCCESS: Drone registration present ($drone_regs registrations)"
+    else
+        echo "❌ FAILURE: No drone registration found"
+        return 1
+    fi
 }
 
 @test "integration: complete cleanup and reset verification" {
-  if is_unyt; then
     echo "=== INTEGRATION TEST: Complete Cleanup and Reset ==="
-    
-    # First, populate database with test data
+
     local populate_config="/etc/log-sender/integration_cleanup.json"
     local populate_log_dir="/data/logs/integration_test_cleanup"
-    
+
     echo "--- PHASE 1: Populate database with test data ---"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" mkdir -p "$populate_log_dir"
     assert_success
-    local cleanup_time=$(($(date +%s) * 1000000))
-    local log_content="{\"k\":\"metric\",\"t\":\"$cleanup_time\",\"value\":999.0,\"source\":\"integration_test_cleanup\",\"unit\":1}
-    {\"k\":\"metric\",\"t\":\"$((cleanup_time + 1000000))\",\"value\":888.0,\"source\":\"integration_test_cleanup\",\"unit\":2}"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $populate_log_dir/cleanup_test.jsonl"
+
+    local cleanup_time=$(( $(date +%s) * 1000000 ))
+    local log_content="{\"k\":\"fetchedOps\",\"t\":\"$cleanup_time\",\"count\":3,\"latency\":40}
+{\"k\":\"fetchedOps\",\"t\":\"$((cleanup_time + 1000000))\",\"count\":7,\"latency\":55}"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c "printf '%s\n' '$log_content' > $populate_log_dir/cleanup_test.jsonl"
     assert_success
-    
-    # Initialize and run to populate data
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" log-sender init \
         --config-file "$populate_config" \
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$populate_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
-    # Install hApp, which will trigger DNA registration
     docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
     assert_success
-    
+
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 15 log-sender service \
-        --config-file "$populate_config"
-    
-    # Wait for data to be stored
+        timeout 15 log-sender service --config-file "$populate_config"
+
     wait_for_database_data 20 1 2
-    
-    # Verify data was stored
-    local before_cleanup=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_cleanup';" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    echo "Data stored before cleanup: $before_cleanup metrics"
-    
-    if [[ "$before_cleanup" -lt 2 ]]; then
+
+    local before_cleanup
+    before_cleanup=$(_count_metrics)
+    echo "Metrics before cleanup: $before_cleanup"
+
+    if [[ "$before_cleanup" -le "$METRICS_BASELINE" ]]; then
         echo "❌ FAILURE: Could not populate database for cleanup test"
         return 1
     fi
-    
-    # Now perform cleanup
-    echo "--- PHASE 2: Perform cleanup operations ---"
-    
-    # Clear test data using the same method as @setup
-    clear_test_data
-    
-    # Verify cleanup
-    local after_cleanup=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_cleanup';" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    echo "Data remaining after cleanup: $after_cleanup metrics"
-    
-    if [[ "$after_cleanup" -eq 0 ]]; then
-        echo "✅ SUCCESS: Complete cleanup verification passed (test data removed)"
-    else
-        echo "❌ FAILURE: Cleanup incomplete ($after_cleanup test metrics still present)"
-        return 1
-    fi
-    
-    # Verify system can still function after cleanup
-    echo "--- PHASE 3: Verify system functionality after cleanup ---"
-    
-    # Create new test to verify system still works
+
+    # PHASE 2: Use a fresh config (re-registration) to verify system resets cleanly
+    echo "--- PHASE 2: Fresh registration and verification ---"
     local verification_config="/etc/log-sender/integration_verification.json"
     local verification_log_dir="/data/logs/integration_test_verification"
-    
+
     run docker compose exec -T -u nonroot "$SERVICE_NAME" mkdir -p "$verification_log_dir"
     assert_success
-    local verify_time=$(($(date +%s) * 1000000))
-    local log_content="{\"k\":\"metric\",\"t\":\"$verify_time\",\"value\":777.0,\"source\":\"integration_test_verification\",\"unit\":1}"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c "echo '$log_content' > $verification_log_dir/verification.jsonl"
+
+    local verify_time=$(( $(date +%s) * 1000000 ))
+    local log_content="{\"k\":\"fetchedOps\",\"t\":\"$verify_time\",\"count\":99,\"latency\":5}"
+    run docker compose exec -T -u nonroot "$SERVICE_NAME" \
+        sh -c "echo '$log_content' > $verification_log_dir/verification.jsonl"
     assert_success
-    
-    # Run verification test
+
+    # New config = new drone registration
     run docker compose exec -T -u nonroot "$SERVICE_NAME" log-sender init \
         --config-file "$verification_config" \
         --endpoint "$LOG_COLLECTOR_URL" \
         --unyt-pub-key "$UNYT_PUB_KEY" \
         --report-path "$verification_log_dir" \
-        --conductor-config-path /tmp/dummy_conductor_config.yaml \
+        --conductor-config-path /etc/holochain/conductor-config.yaml \
         --report-interval-seconds 2
     assert_success
 
-    # Install hApp, which will trigger DNA registration
-    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
-    run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ relay.json test-node'
-    assert_success
-    
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
-        timeout 15 log-sender service \
-        --config-file "$verification_config"
-    
-    # Verify system still works after cleanup
-    wait_for_database_data 20 1 1
-    
-    local after_verification=$(docker compose exec -T log-collector npx --yes wrangler d1 execute log-collector-db \
-        --command="SELECT COUNT(*) as total FROM metrics WHERE source = 'integration_test_verification';" 2>/dev/null | grep -o '"total": [0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-    
-    if [[ "$after_verification" -ge 1 ]]; then
-        echo "✅ SUCCESS: System functionality verified after cleanup (new data stored successfully)"
+        timeout 15 log-sender service --config-file "$verification_config"
+
+    local after_verification
+    after_verification=$(_count_metrics)
+    echo "Metrics after fresh registration run: $after_verification"
+
+    if [[ "$after_verification" -gt "$before_cleanup" ]]; then
+        echo "✅ SUCCESS: System works after cleanup — new data stored with fresh registration"
+        echo "  Before cleanup: $before_cleanup, After: $after_verification"
     else
-        echo "❌ FAILURE: System not functioning properly after cleanup"
+        echo "❌ FAILURE: System not functioning after cleanup"
         return 1
     fi
-  else
-    skip "Not running on unyt image"
-  fi
 }

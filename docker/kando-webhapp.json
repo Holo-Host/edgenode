@@ -1,0 +1,8 @@
+{
+  "app": {
+    "name": "kando",
+    "version": "0.17.1",
+    "happUrl": "https://github.com/holochain-apps/kando/releases/download/v0.17.1/kando.webhapp",
+    "happSha256": "a4cdee64fe32720077e0aade94630f24d0da5e91da33ccbe5bfd894d9d359f28"
+  }
+}

@@ -1,173 +1,77 @@
 #!/bin/bash
 
-# Multi-Image Test Runner Script
-# Supports testing multiple Docker images with proper dependency management
-
 set -ex
 
-# Script directory and repository root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
-# Change to docker directory
 cd "$SCRIPT_DIR"
 
-# Parse command line arguments
-IMAGE_NAME="${1:-local-edgenode-hc0.5.6}"
-COMPOSE_FILES="-f docker-compose.base.yml"
-DOCKERFILE_SUFFIX=""
+IMAGE_NAME="${1:-local-edgenode}"
+SERVICE_NAME="edgenode"
 CLEANUP="${CLEANUP:-true}"
 
-# Determine compose file and service name based on image
-case "$IMAGE_NAME" in
-    *unyt*|ghcr.io/*unyt*)
-        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.unyt.yml"
-        DOCKERFILE_SUFFIX="unyt"
-        SERVICE_NAME="edgenode-unyt"
-        ;;
-    *go-pion*|*hc0.6.0*|*hc-0.6.0*)
-        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.6.0-dev-go-pion.yml"
-        DOCKERFILE_SUFFIX="hc-0.6.0-dev-go-pion"
-        SERVICE_NAME="edgenode-hc-0.6.0-dev-go-pion"
-        ;;
-    *hc0.6.1*|*hc-0.6.1*|ghcr.io/*0.6.1*)
-        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.6.1.yml"
-        DOCKERFILE_SUFFIX="hc-0.6.1"
-        SERVICE_NAME="edgenode-hc-0.6.1"
-        ;;
-    *hc0.5.6*|*hc-0.5.6*)
-        COMPOSE_FILES="$COMPOSE_FILES -f docker-compose.hc-0.5.6.yml"
-        DOCKERFILE_SUFFIX="hc-0.5.6"
-        SERVICE_NAME="edgenode-hc-0.5.6"
-        ;;
-    *)
-        echo "Unknown image: $IMAGE_NAME"
-        echo "Supported images:"
-        echo "  - local-edgenode-hc-0.5.6"
-        echo "  - local-edgenode-hc-0.6.0-dev-go-pion"
-        echo "  - local-edgenode-unyt"
-        exit 1
-        ;;
-esac
-
 echo "Testing image: $IMAGE_NAME"
-echo "Service name: $SERVICE_NAME"
-echo "Compose files: $COMPOSE_FILES"
 
-# Cleanup function
 cleanup() {
     if [[ "$CLEANUP" == "true" ]]; then
         echo "Cleaning up..."
-        docker compose $COMPOSE_FILES down -v --remove-orphans
+        docker compose down -v --remove-orphans
     fi
 }
-
-# Set trap for cleanup
 trap cleanup EXIT
 
-# Build local images if needed
-# Note: For UNYT images, we skip the initial build here because docker compose up --build
-# will build it with the correct base image context. Building twice causes the second build
-# to overwrite the first with potentially different layers.
-if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode-* ]] && [[ "$IMAGE_NAME" != *unyt* ]]; then
+# Build local image unless running in CI release test mode
+if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode* ]]; then
     echo "Building local image: $IMAGE_NAME"
-    DOCKERFILE_NAME="Dockerfile.$(echo "$IMAGE_NAME" | sed 's/^local-edgenode-//')"
-    ./build-images.sh "$DOCKERFILE_NAME"
-elif [[ "$CI_RELEASE_TEST" == "true" ]]; then
-    echo "CI release workflow detected. Skipping local build for $IMAGE_NAME."
+    docker build -t "$IMAGE_NAME" -f Dockerfile .
 fi
 
-# Export environment variables
 export EDGENODE_IMAGE="$IMAGE_NAME"
 export IMAGE_NAME
+export SERVICE_NAME
 export SCRIPT_DIR
-export COMPOSE_FILES
-# Set explicit project name to ensure consistent network/volume naming
 export COMPOSE_PROJECT_NAME="edgenode"
 
-# For UNYT images, ensure we use the locally built base image
-if [[ "$IMAGE_NAME" == *unyt* ]]; then
-    export EDGENODE_HC_0_6_0_IMAGE="local-edgenode-hc-0.6.0-dev-go-pion"
-    echo "Using local base image: $EDGENODE_HC_0_6_0_IMAGE"
-fi
+# Start services (--build needed for log-collector)
+echo "Starting services..."
+docker compose up --build -d
 
-# Wait for containers to be created
-sleep 5
+# Wait for log-collector
+echo "Waiting for log-collector to be healthy..."
+MAX_WAIT=60
+WAIT_TIME=0
+while [ $WAIT_TIME -lt $MAX_WAIT ]; do
+    if docker compose ps log-collector | grep -q "healthy"; then
+        echo "Log-collector is healthy"
+        break
+    fi
+    echo "Waiting for log-collector... ($WAIT_TIME/$MAX_WAIT seconds)"
+    sleep 5
+    WAIT_TIME=$((WAIT_TIME + 5))
+done
 
-# Docker Compose creates containers with project prefix + service name
-# The service in compose file is "edgenode-hc-0.5.6"
-# But the container becomes "docker-edgenode-hc-0.5.6-1"
-# Tests expect SERVICE_NAME to be the service name, not container name
-export SERVICE_NAME="$SERVICE_NAME"  # Keep as service name for BATS tests
+echo "Waiting for edgenode to start..."
+sleep 15
 
-# Set the actual container name for docker cp operations that don't work with docker compose cp
-# Wait a moment for containers to be created
-sleep 2
-ACTUAL_CONTAINER=$(docker compose $COMPOSE_FILES ps -q "$SERVICE_NAME" 2>/dev/null | head -n 1)
+# Resolve actual container name for operations that require it
+ACTUAL_CONTAINER=$(docker compose ps -q "$SERVICE_NAME" 2>/dev/null | head -n 1)
 if [ -n "$ACTUAL_CONTAINER" ]; then
     export CONTAINER_NAME="$ACTUAL_CONTAINER"
     echo "Found container: $CONTAINER_NAME for service: $SERVICE_NAME"
 else
-    echo "Warning: Could not find container for service $SERVICE_NAME"
-    echo "Available containers:"
-    docker ps --format "table {{.Names}}\t{{.Status}}"
-    # Fallback: use project prefix + service name + instance number
-    export CONTAINER_NAME="docker-${SERVICE_NAME}-1"
-    echo "Using fallback container name: $CONTAINER_NAME"
+    export CONTAINER_NAME="edgenode-${SERVICE_NAME}-1"
+    echo "Warning: container not found, using fallback: $CONTAINER_NAME"
 fi
-
-# Start services
-echo "Starting services..."
-# Use --build for UNYT images (needs to build log-collector + unyt with base image args)
-# For HC images, we pre-built them so no --build needed
-if [[ "$IMAGE_NAME" == *unyt* ]]; then
-    echo "UNYT image detected - using --build for log-collector and UNYT image"
-    docker compose $COMPOSE_FILES up --build -d
-else
-    echo "HC image detected - using pre-built images"
-    docker compose $COMPOSE_FILES up -d
-fi
-
-# Wait for services to be healthy
-echo "Waiting for services to be ready..."
-sleep 10
-
-# Only wait for log-collector if it's included in the compose files
-if echo "$COMPOSE_FILES" | grep -q "unyt"; then
-    echo "UNYT image detected, waiting for log-collector..."
-    MAX_WAIT=60
-    WAIT_TIME=0
-    while [ $WAIT_TIME -lt $MAX_WAIT ]; do
-        if docker compose $COMPOSE_FILES ps log-collector | grep -q "healthy"; then
-            echo "Log-collector is healthy"
-            break
-        fi
-        echo "Waiting for log-collector to be healthy... ($WAIT_TIME/$MAX_WAIT seconds)"
-        sleep 5
-        WAIT_TIME=$((WAIT_TIME + 5))
-    done
-else
-    echo "Non-UNYT image detected, skipping log-collector wait..."
-fi
-
-# Wait for edgenode service to start
-echo "Waiting for edgenode service to start..."
-sleep 15
 
 # Run tests
 echo "Running tests..."
-set +e # Disable exit on error
-
+set +e
 ./tests/libs/bats/bin/bats tests
 TEST_EXIT_CODE=$?
-set -e # Re-enable exit on error
+set -e
 
-# Print logs on failure
 if [ $TEST_EXIT_CODE -ne 0 ]; then
     echo "Tests failed. Printing container logs..."
-    docker compose $COMPOSE_FILES logs
-    echo "Service status:"
-    docker compose $COMPOSE_FILES ps
+    docker compose logs
 fi
 
 echo "Test execution completed with exit code: $TEST_EXIT_CODE"

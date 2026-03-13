@@ -87,7 +87,6 @@ jobs:
         run: |
           cd holos
           make iso
-          # Dynamically find the built ISO
           ISO_NAME=$(find tmp -name "holos-*.iso" -type f -printf "%f\n" | head -n 1)
           if [ -z "$ISO_NAME" ]; then
             echo "Error: No ISO file found in holos/tmp/"
@@ -106,41 +105,19 @@ jobs:
           asset_name: holos-${{ github.ref_name }}.iso
           asset_content_type: application/octet-stream
 
-  build-and-push-docker-images:
+  build-and-push-docker-image:
     runs-on: ubuntu-latest
     needs: create-release
     if: github.ref_type == 'tag'
     permissions:
       contents: write
       packages: write
-    strategy:
-      matrix:
-        include:
-          - dockerfile: "docker/Dockerfile.hc-0.5.6"
-            hc_version: "0.5.6"
-            backend: "default"
-            dev: false
-            is_default: false
-            platforms: "linux/amd64,linux/arm64"
-          - dockerfile: "docker/Dockerfile.hc-0.6.0-go-pion"
-            hc_version: "0.6.0"
-            backend: "go-pion"
-            dev: false
-            is_default: true
-            platforms: "linux/amd64"
-          - dockerfile: "docker/Dockerfile.hc-0.6.1-rc.1"
-            hc_version: "0.6.1-rc.1"
-            backend: "default"
-            dev: true
-            is_default: false
-            platforms: "linux/amd64,linux/arm64"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -154,88 +131,20 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          TAG_SUFFIX="hc${{ matrix.hc_version }}"
-          if [[ "${{ matrix.backend }}" != "default" ]]; then
-            TAG_SUFFIX="${TAG_SUFFIX}-${{ matrix.backend }}"
-          fi
-          if [[ "${{ matrix.dev }}" == "true" ]]; then
-            TAG_SUFFIX="${TAG_SUFFIX}-dev"
-          fi
-          IMAGE_TAG="${{ github.ref_name }}-${TAG_SUFFIX}"
-          LATEST_VERSIONED_TAG="latest-${TAG_SUFFIX}"
-          FULL_IMAGE="ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
+          VERSION_TAG="ghcr.io/holo-host/edgenode:${{ github.ref_name }}"
+          LATEST_TAG="ghcr.io/holo-host/edgenode:latest"
 
           # Build amd64 image and load locally for testing
-          docker buildx build docker/ --file ${{ matrix.dockerfile }} \
+          docker buildx build docker/ --file docker/Dockerfile \
             --platform linux/amd64 \
             --load \
-            --tag "${FULL_IMAGE}"
+            --tag "${VERSION_TAG}"
 
-          CI_RELEASE_TEST=true ./docker/run_tests_multi.sh "${FULL_IMAGE}"
+          CI_RELEASE_TEST=true ./docker/run_tests_multi.sh "${VERSION_TAG}"
 
-          # Build and push multi-platform image with all applicable tags
-          TAGS="--tag ${FULL_IMAGE}"
-          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* ]]; then
-            TAGS="${TAGS} --tag ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
-            if [[ "${{ matrix.is_default }}" == "true" ]]; then
-              TAGS="${TAGS} --tag ghcr.io/holo-host/edgenode:latest"
-            fi
-          fi
-
-          docker buildx build docker/ --file ${{ matrix.dockerfile }} \
-            --platform ${{ matrix.platforms }} \
+          # Build and push multi-platform image tagged as both version and latest
+          docker buildx build docker/ --file docker/Dockerfile \
+            --platform linux/amd64,linux/arm64 \
             --push \
-            ${TAGS}
-
-  # New job for building and pushing UNYT image (depends on hc-0.6.0 base)
-  build-and-push-unyt:
-    runs-on: ubuntu-latest
-    needs: [create-release, build-and-push-docker-images]
-    if: github.ref_type == 'tag'
-    permissions:
-      contents: write
-      packages: write
-    env:
-      # Use the latest hc-0.6.1-rc.1-dev image as base for unyt
-      EDGENODE_HC_0_6_0_IMAGE: "ghcr.io/holo-host/edgenode:latest-hc0.6.1-rc.1-dev"
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build UNYT Docker image
-        run: |
-          cd docker
-          TAG_SUFFIX="unyt"
-          IMAGE_TAG="${{ github.ref_name }}-${TAG_SUFFIX}"
-          LATEST_VERSIONED_TAG="latest-${TAG_SUFFIX}"
-          # Build unyt image using the hc-0.6.0-go-pion base
-          docker build -f Dockerfile.unyt \
-            --tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" \
-            --build-arg BASE_IMAGE="ghcr.io/holo-host/edgenode:latest-hc0.6.1-rc.1-dev" .
-
-      - name: Push UNYT Docker image
-        if: success()
-        run: |
-          cd docker
-          TAG_SUFFIX="unyt"
-          IMAGE_TAG="${{ github.ref_name }}-${TAG_SUFFIX}"
-          LATEST_VERSIONED_TAG="latest-${TAG_SUFFIX}"
-
-          # Push the UNYT image
-          docker push "ghcr.io/holo-host/edgenode:${IMAGE_TAG}"
-
-          # Push the versioned latest tag, but only for non-pre-releases
-          if [[ "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" == "v"* && "${{ needs.create-release.outputs.is_prerelease }}" == "false" ]]; then
-            docker tag "ghcr.io/holo-host/edgenode:${IMAGE_TAG}" "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
-            docker push "ghcr.io/holo-host/edgenode:${LATEST_VERSIONED_TAG}"
-          fi
+            --tag "${VERSION_TAG}" \
+            --tag "${LATEST_TAG}"

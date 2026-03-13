@@ -1,25 +1,18 @@
 {
   "app": {
     "name": "kando",
-    "version": "0.14.0",
-    "happUrl": "https://github.com/holochain-apps/kando/releases/download/v0.14.0/kando.happ",
+    "version": "0.17.1",
+    "happUrl": "https://github.com/holochain-apps/kando/releases/download/v0.17.1/kando.happ",
     "modifiers": {
       "networkSeed": "",
       "properties": ""
-    },
-    "initZomeCalls": [
-      {
-        "zome": "profiles",
-        "fn_name": "create_profile",
-        "payload": {"nickname": "<NODE_NAME>-aon", "fields":{}}
-      }
-    ]
+    }
   },
   "env": {
     "holochain": {
       "version": "",
       "flags": [
-        ""                 
+        ""
       ],
       "bootstrapUrl": "",
       "signalServerUrl": "",
