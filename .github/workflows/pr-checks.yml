@@ -1,0 +1,35 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docker/**'
+
+jobs:
+  test-docker-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image for testing
+        run: |
+          docker buildx build docker/ --file docker/Dockerfile \
+            --platform linux/amd64 \
+            --load \
+            --tag local-edgenode
+
+      - name: Run tests
+        run: |
+          CI_RELEASE_TEST=true ./docker/run_tests_multi.sh local-edgenode

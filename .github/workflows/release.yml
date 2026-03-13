@@ -151,15 +151,6 @@ jobs:
           VERSION_TAG="ghcr.io/holo-host/edgenode:${{ needs.create-release.outputs.tag }}"
           LATEST_TAG="ghcr.io/holo-host/edgenode:latest"
 
-          # Build amd64 image and load locally for testing
-          docker buildx build docker/ --file docker/Dockerfile \
-            --platform linux/amd64 \
-            --load \
-            --tag "${VERSION_TAG}"
-
-          CI_RELEASE_TEST=true ./docker/run_tests_multi.sh "${VERSION_TAG}"
-
-          # Build and push multi-platform image tagged as both version and latest
           docker buildx build docker/ --file docker/Dockerfile \
             --platform linux/amd64,linux/arm64 \
             --push \
