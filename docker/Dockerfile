@@ -1,3 +1,13 @@
+FROM cgr.dev/chainguard/wolfi-base AS wdocker-builder
+
+ARG WDOCKER_VERSION=0.15.3
+RUN apk add --no-cache nodejs npm jq python3 make gcc g++ && \
+    npm install -g @theweave/wdocker@${WDOCKER_VERSION} && \
+    cd /usr/local/lib/node_modules/@theweave/wdocker && \
+    jq '.dependencies["@theweave/utils"] = "latest" | .dependencies["@theweave/group-client"] = "latest" | .dependencies["@theweave/api"] = "latest"' package.json > /tmp/pkg.json && \
+    mv /tmp/pkg.json package.json && \
+    npm install
+
 FROM cgr.dev/chainguard/wolfi-base
 
 VOLUME ["/data"]
@@ -47,12 +57,8 @@ RUN case "${TARGETARCH}" in \
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender
 
-ARG WDOCKER_VERSION=0.15.3
-RUN npm install -g @theweave/wdocker@${WDOCKER_VERSION} && \
-    cd /usr/local/lib/node_modules/@theweave/wdocker && \
-    jq '.dependencies["@theweave/utils"] = "latest" | .dependencies["@theweave/group-client"] = "latest" | .dependencies["@theweave/api"] = "latest"' package.json > /tmp/pkg.json && \
-    mv /tmp/pkg.json package.json && \
-    npm install
+COPY --from=wdocker-builder /usr/local/lib/node_modules/@theweave/wdocker /usr/local/lib/node_modules/@theweave/wdocker
+COPY --from=wdocker-builder /usr/local/bin/wdocker /usr/local/bin/wdocker
 
 COPY happ_tool /usr/local/bin/happ_tool
 RUN chmod +x /usr/local/bin/happ_tool
