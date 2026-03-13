@@ -13,6 +13,8 @@ These are available inside the container:
 - `list_happs [-p <port>]` -- List installed hApps
 - `happ_config_file` -- Create/validate hApp config files (run with `--help` for usage)
 - `log_tool <init|service|help>` -- Manage the Unyt log-sender service (see [LOG_SENDER_QUICKSTART.md](./LOG_SENDER_QUICKSTART.md))
+- `wdocker <command>` -- Manage always-on Moss group nodes (see [EdgeNode Moss Guide](https://holo.host/files/EdgeNodeMossGuide.pdf))
+- `wdaemon` -- wdocker background daemon
 
 The default admin port is `4444`.
 
@@ -102,7 +104,8 @@ Paths are symlinked into the `/data` volume for persistence:
 
 ## Process Management
 
-- `tini` runs as PID 1, supervising the Holochain conductor
+- **s6-overlay** runs as PID 1, supervising all services with automatic restart on crash
+- Services: `conductor`, `log-sender`, `logrotate-cron` (all longruns), plus `setup` oneshot on startup
 - All processes run as nonroot (UID 65532)
 - Log rotation via logrotate (daily, 7-day retention, gzip compression)
 

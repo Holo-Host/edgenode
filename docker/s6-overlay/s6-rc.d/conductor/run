@@ -1,0 +1,6 @@
+#!/bin/sh
+if [ "${CONDUCTOR_MODE:-}" = "false" ]; then
+  exec tail -f /dev/null
+fi
+echo "Starting holochain conductor..." >> /data/logs/startup.log
+gosu nonroot sh -c 'yes | holochain --piped --config-path /etc/holochain/conductor-config.yaml' 2>&1 | tee -a /data/logs/holochain.log
