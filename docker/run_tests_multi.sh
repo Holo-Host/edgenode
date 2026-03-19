@@ -66,10 +66,10 @@ else
     echo "Warning: container not found, using fallback: $CONTAINER_NAME"
 fi
 
-# Run tests
+# Run edgenode tests — exclude harvester-specific files (those run via run_harvester_tests.sh)
 echo "Running tests..."
 set +e
-./tests/libs/bats/bin/bats tests
+./tests/libs/bats/bin/bats $(find tests -maxdepth 1 -name '*.bats' ! -name 'harvester_*' | sort)
 TEST_EXIT_CODE=$?
 set -e
 

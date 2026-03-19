@@ -5,6 +5,12 @@ load 'libs/bats-assert/load'
 
 HARVESTER_SERVICE="${SERVICE_NAME:-edgenode-harvester}"
 
+setup() {
+  if ! docker compose ps "$HARVESTER_SERVICE" 2>/dev/null | grep -q "running\|Up"; then
+    skip "edgenode-harvester service is not running"
+  fi
+}
+
 @test "Conductor starts successfully" {
   run docker compose logs "$HARVESTER_SERVICE"
   assert_output --partial "Conductor ready."
