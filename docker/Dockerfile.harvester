@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 # Dockerfile for the edge node harvester variant.
 # Replaces log-sender with log-harvester (unytco/log-harvester).
-# Requires GITHUB_TOKEN build secret to clone the private log-harvester repo:
+# In CI, provide a GITHUB_TOKEN secret to clone the private repo:
 #   docker buildx build --secret id=github_token,env=GITHUB_TOKEN ...
+# Locally, omit the secret if your git credentials already grant access.
 
 FROM cgr.dev/chainguard/wolfi-base
 
@@ -43,8 +44,13 @@ ARG LOG_HARVESTER_VERSION=main
 
 RUN --mount=type=secret,id=github_token \
     mkdir -p /app && \
-    git clone --depth 1 --branch ${LOG_HARVESTER_VERSION} \
-        https://$(cat /run/secrets/github_token)@github.com/unytco/log-harvester.git /app/src && \
+    TOKEN="$(cat /run/secrets/github_token 2>/dev/null || true)" && \
+    if [ -n "$TOKEN" ]; then \
+        REPO_URL="https://${TOKEN}@github.com/unytco/log-harvester.git"; \
+    else \
+        REPO_URL="https://github.com/unytco/log-harvester.git"; \
+    fi && \
+    git clone --depth 1 --branch ${LOG_HARVESTER_VERSION} "${REPO_URL}" /app/src && \
     cd /app/src && \
     npm ci && \
     npm run build && \
@@ -98,7 +104,7 @@ RUN chmod +x \
 ENV HC_ADMIN_PORT=4444
 ENV HC_APP_PORT=4445
 ENV HAPP_PATH=/app/unyt.happ
-ENV CONFIG_PATH=/etc/log-harvester/config.json
+ENV CONFIG_PATH=/data/log-harvester/config.json
 
 SHELL ["/bin/sh", "-c"]
 EXPOSE 4444 4445

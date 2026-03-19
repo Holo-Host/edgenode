@@ -62,7 +62,6 @@ services:
       - RUST_LOG=${RUST_LOG:-info}
     volumes:
       - holo-data-harvester:/data
-      - holo-config-harvester:/etc/log-harvester
     networks:
       - test-net
     healthcheck:
@@ -83,6 +82,4 @@ volumes:
   holo-data-test:
     driver: local
   holo-data-harvester:
-    driver: local
-  holo-config-harvester:
     driver: local

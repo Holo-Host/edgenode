@@ -31,9 +31,13 @@ export SERVICE_NAME
 export SCRIPT_DIR
 export COMPOSE_PROJECT_NAME="edgenode"
 
-# Start services (--build needed for log-collector)
+# Build log-collector separately so Docker layer cache is used on subsequent runs
+echo "Building log-collector..."
+docker compose build log-collector
+
+# Start services without rebuilding (log-collector already built above)
 echo "Starting services..."
-docker compose up --build -d
+docker compose up -d
 
 # Wait for log-collector
 echo "Waiting for log-collector to be healthy..."

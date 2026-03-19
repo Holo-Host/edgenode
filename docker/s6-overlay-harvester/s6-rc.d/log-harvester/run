@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/command/with-contenv /bin/sh
 set -e
 
 APP_ID="${HC_APP_ID:-unyt}"
@@ -23,10 +23,6 @@ else
   echo "WARNING: ${HAPP_PATH} not found — skipping happ install" >> /data/logs/startup.log
 fi
 
-# Attach app websocket on HC_APP_PORT (idempotent)
-hc sandbox call --running "${HC_ADMIN_PORT}" add-app-ws "${HC_APP_PORT}" \
-  --allowed-origins "log-harvester" >> /data/logs/startup.log 2>&1 || true
-
 # Wait a moment for keystore to be fully ready before touching credentials
 sleep 3
 
@@ -40,6 +36,7 @@ if [ ! -f "${CONFIG_PATH}" ]; then
     --hc-admin "${HC_ADMIN_PORT}" \
     --hc-app "${HC_APP_PORT}" \
     --app-id "${APP_ID}" >> /data/logs/startup.log 2>&1
+  chown nonroot:nonroot "${CONFIG_PATH}" 2>/dev/null || true
 else
   echo "Refreshing harvester credentials..." >> /data/logs/startup.log
   cp "${CONFIG_PATH}" "${CONFIG_PATH}.backup"
@@ -61,6 +58,7 @@ else
     jq ".lastInvoice = ${LAST_INVOICE}" "${CONFIG_PATH}" > "${CONFIG_PATH}.tmp" && \
       mv "${CONFIG_PATH}.tmp" "${CONFIG_PATH}" || true
   fi
+  chown nonroot:nonroot "${CONFIG_PATH}" 2>/dev/null || true
 fi
 
 echo "Starting log-harvester service..." >> /data/logs/startup.log

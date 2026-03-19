@@ -23,12 +23,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build log-collector (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/log-collector
+          load: true
+          tags: edgenode-log-collector:latest
+          cache-from: type=gha,scope=log-collector
+          cache-to: type=gha,mode=max,scope=log-collector
+
       - name: Build image for testing
-        run: |
-          docker buildx build docker/ --file docker/Dockerfile \
-            --platform linux/amd64 \
-            --load \
-            --tag local-edgenode
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/
+          file: docker/Dockerfile
+          load: true
+          tags: local-edgenode
+          cache-from: type=gha,scope=edgenode
+          cache-to: type=gha,mode=max,scope=edgenode
 
       - name: Run tests
         run: |
@@ -46,18 +58,28 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Build log-collector (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/log-collector
+          load: true
+          tags: edgenode-log-collector:latest
+          cache-from: type=gha,scope=log-collector
+          cache-to: type=gha,mode=max,scope=log-collector
+
       - name: Build harvester image for testing
+        uses: docker/build-push-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.HARVESTER_REPO_TOKEN }}
-        run: |
-          docker buildx build docker/ --file docker/Dockerfile.harvester \
-            --platform linux/amd64 \
-            --secret id=github_token,env=GITHUB_TOKEN \
-            --load \
-            --tag local-edgenode-harvester
+        with:
+          context: docker/
+          file: docker/Dockerfile.harvester
+          load: true
+          tags: local-edgenode-harvester
+          secret-envs: github_token=GITHUB_TOKEN
+          cache-from: type=gha,scope=edgenode-harvester
+          cache-to: type=gha,mode=max,scope=edgenode-harvester
 
       - name: Run harvester tests
-        env:
-          GITHUB_TOKEN: ${{ secrets.HARVESTER_REPO_TOKEN }}
         run: |
           CI_RELEASE_TEST=true ./docker/run_harvester_tests.sh local-edgenode-harvester

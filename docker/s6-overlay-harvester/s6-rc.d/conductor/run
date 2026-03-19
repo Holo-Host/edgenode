@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/command/with-contenv /bin/sh
 if [ "${CONDUCTOR_MODE:-}" = "false" ]; then
   exec tail -f /dev/null
 fi

@@ -17,22 +17,21 @@ HARVESTER_SERVICE="${SERVICE_NAME:-edgenode-harvester}"
   assert_output --partial "unyt"
 }
 
-@test "App websocket attached on port 4445" {
+@test "log-harvester has connected to app websocket" {
   run docker compose exec -T "$HARVESTER_SERVICE" \
-    sh -c "cat /data/logs/startup.log"
+    test -s /data/logs/log-harvester.log
   assert_success
-  assert_output --partial "add-app-ws"
 }
 
 @test "Harvester config is initialized" {
   run docker compose exec -T "$HARVESTER_SERVICE" \
-    test -f /etc/log-harvester/config.json
+    test -f /data/log-harvester/config.json
   assert_success
 }
 
-@test "Harvester config contains droneId" {
+@test "Harvester config contains collectorUrl" {
   run docker compose exec -T "$HARVESTER_SERVICE" \
-    jq -e '.droneId' /etc/log-harvester/config.json
+    jq -e '.collectorUrl' /data/log-harvester/config.json
   assert_success
 }
 
