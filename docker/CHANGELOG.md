@@ -12,8 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `s6-overlay-harvester/` service tree: self-contained s6 services for the harvester variant (`conductor`, `log-harvester`, `logrotate-cron`, `setup`)
 - `log-harvester` s6 longrun service: waits for conductor, installs `unyt.happ`, attaches app websocket on port 4445, initializes/refreshes harvester config, runs harvester loop
 - `unyt.happ` baked into the harvester image from latest `unytco/unyt-sandbox` release; pinnable via `UNYT_HAPP_VERSION` build arg
+- `Dockerfile.log-collector` — Dockerfile for the `unytco/log-collector` Cloudflare Worker service; applies D1 schema on startup and passes `ADMIN_SECRET` via wrangler `--var`
+- `run_harvester_tests.sh` — dedicated test runner for the harvester variant; auto-clones `log-harvester-src` if not present, starts all three services, waits for readiness
+- Harvester BATS test suite: `harvester_startup.bats`, `harvester_process.bats`, `harvester_integration.bats`, `harvester_e2e.bats`
 - `LOG_HARVESTER_QUICKSTART.md` quickstart guide for the harvester variant
 - CI `build-and-push-harvester-image` job in release workflow publishing `ghcr.io/holo-host/edgenode-harvester`
+- CI PR checks now build and test both `edgenode` and `edgenode-harvester` images with GHA layer caching
+
+### Changed
+- `run_tests_multi.sh` runs each `.bats` file individually with a log-collector health-check between files, preventing wrangler crash cascades from affecting subsequent test files
+- `docker-compose.yml`: log-collector service gets `restart: unless-stopped` so Docker auto-recovers after wrangler dev crashes under concurrent D1 load
 
 ## [0.1.0-alpha1] - 2026-03-13
 

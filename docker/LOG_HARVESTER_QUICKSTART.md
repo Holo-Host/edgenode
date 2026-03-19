@@ -46,9 +46,11 @@ Images are available from [GitHub Packages](https://github.com/Holo-Host/edgenod
 The `unyt.happ` is baked in from the latest [unytco/unyt-sandbox](https://github.com/unytco/unyt-sandbox) release. To pin a specific version, build locally:
 
 ```bash
+# Clone log-harvester source first (required for the COPY step)
+git clone --depth 1 https://github.com/unytco/log-harvester.git docker/log-harvester-src
+
 docker buildx build docker/ --file docker/Dockerfile.harvester \
   --build-arg UNYT_HAPP_VERSION=v0.62.0 \
-  --secret id=github_token,env=GITHUB_TOKEN \
   --tag my-edgenode-harvester \
   --load
 ```

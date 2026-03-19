@@ -37,7 +37,9 @@ The test cases are in the `tests/` directory:
 
 ## Adding New Tests
 
-Create a new `.bats` file in the `tests/` directory. It will be picked up automatically by `run_tests_multi.sh`.
+Create a new `.bats` file in the `tests/` directory. It will be picked up automatically by `run_tests_multi.sh`, which runs each file individually with a log-collector health-check between files (so a crash in one file doesn't cascade to the next).
+
+**Naming convention:** harvester-specific tests must be named `harvester_*.bats`. These are excluded from the edgenode test run and are instead run by `run_harvester_tests.sh`.
 
 ## CI Integration
 
