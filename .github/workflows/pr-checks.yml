@@ -85,14 +85,13 @@ jobs:
 
       - name: Build harvester image for testing
         uses: docker/build-push-action@v5
-        env:
-          GITHUB_TOKEN: ${{ secrets.HARVESTER_REPO_TOKEN }}
         with:
           context: docker/
           file: docker/Dockerfile.harvester
           load: true
           tags: local-edgenode-harvester
-          secret-envs: github_token=GITHUB_TOKEN
+          secrets: |
+            github_token=${{ secrets.HARVESTER_REPO_TOKEN }}
           cache-from: type=gha,scope=edgenode-harvester
           cache-to: type=gha,mode=max,scope=edgenode-harvester
 
