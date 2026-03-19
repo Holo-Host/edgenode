@@ -28,6 +28,7 @@ jobs:
         with:
           repository: unytco/log-collector
           path: docker/log-collector
+          token: ${{ secrets.HARVESTER_REPO_TOKEN }}
 
       - name: Build log-collector (cached)
         uses: docker/build-push-action@v5
@@ -69,6 +70,7 @@ jobs:
         with:
           repository: unytco/log-collector
           path: docker/log-collector
+          token: ${{ secrets.HARVESTER_REPO_TOKEN }}
 
       - name: Build log-collector (cached)
         uses: docker/build-push-action@v5
