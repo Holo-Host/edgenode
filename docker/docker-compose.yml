@@ -28,7 +28,7 @@ services:
   log-collector:
     build:
       context: ./log-collector
-      dockerfile: Dockerfile
+      dockerfile: ../Dockerfile.log-collector
     ports:
       - "8787:8787"
     environment:

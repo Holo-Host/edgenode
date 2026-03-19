@@ -34,6 +34,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: docker/log-collector
+          file: docker/Dockerfile.log-collector
           load: true
           tags: edgenode-log-collector:latest
           cache-from: type=gha,scope=log-collector
@@ -76,6 +77,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: docker/log-collector
+          file: docker/Dockerfile.log-collector
           load: true
           tags: edgenode-log-collector:latest
           cache-from: type=gha,scope=log-collector
