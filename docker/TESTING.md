@@ -42,3 +42,24 @@ Create a new `.bats` file in the `tests/` directory. It will be picked up automa
 ## CI Integration
 
 `run_tests_multi.sh` exits with a non-zero status if any test fails. Tests run against the amd64 build before the multi-platform push in the release workflow.
+
+## Harvester Tests
+
+The `edgenode-harvester` variant has its own test runner:
+
+```bash
+./run_harvester_tests.sh
+```
+
+This builds the harvester image, starts `log-collector`, `edgenode`, and `edgenode-harvester`, waits for all three to be ready, then runs:
+
+- `harvester_startup.bats`: Conductor ready, hApp installed, config initialized, service started.
+- `harvester_process.bats`: Holochain and Node.js processes run as `nonroot`.
+- `harvester_integration.bats`: Connectivity checks — harvester can reach log-collector and query `/logs`.
+- `harvester_e2e.bats`: Full pipeline — log-sender submits signed metrics to log-collector, harvester fetches and invoices them (`--today --dry-run`), asserts `"Successfully invoiced logs."`.
+
+To test against a pre-built image instead of building locally:
+
+```bash
+CI_RELEASE_TEST=true ./run_harvester_tests.sh ghcr.io/holo-host/edgenode-harvester:v1.2.3
+```

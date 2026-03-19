@@ -95,7 +95,7 @@ docker exec -it harvester hc sandbox call --running 4444 list-apps
 Check the harvester config was initialized:
 
 ```bash
-docker exec -it harvester cat /etc/log-harvester/config.json
+docker exec -it harvester cat /data/log-harvester/config.json
 ```
 
 Check the harvester is running and reporting:
@@ -115,7 +115,7 @@ docker exec -it harvester tail -f /data/logs/log-harvester.log
 | `HC_NETWORK_SEED` | Network seed for hApp installation | `network-seed` |
 | `HC_ADMIN_PORT` | Holochain admin websocket port | `4444` |
 | `HC_APP_PORT` | Holochain app websocket port | `4445` |
-| `LOG_FOR_TODAY` | Invoice today instead of yesterday (testing only) | `false` |
+| `LOG_FOR_TODAY` | Query today's UTC range instead of yesterday's (useful when testing same-day submissions) | `false` |
 | `RUST_LOG` | Holochain log level | `info` |
 
 ## Persistent data
@@ -142,6 +142,14 @@ Map `/data` to a named volume or host path to persist across container restarts:
 |------|---------|
 | `4444` | Holochain admin websocket |
 | `4445` | Holochain app websocket (used by log-harvester) |
+
+## Running the test suite
+
+```bash
+./run_harvester_tests.sh
+```
+
+Builds the image, starts all required services, and runs startup, process, connectivity, and end-to-end pipeline tests. See [TESTING.md](./TESTING.md) for details.
 
 ## Troubleshooting
 
