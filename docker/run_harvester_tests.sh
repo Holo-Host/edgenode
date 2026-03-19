@@ -19,14 +19,24 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Build local image unless running in CI release test mode
+# Build local image unless running in CI release test mode.
+# Set FORCE_REBUILD=true to rebuild even if the image already exists locally.
 if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode-harvester* ]]; then
-    echo "Building local harvester image: $IMAGE_NAME"
-    docker build \
-        --secret id=github_token,env=GITHUB_TOKEN \
-        -t "$IMAGE_NAME" \
-        -f Dockerfile.harvester \
-        .
+    if [[ "$FORCE_REBUILD" != "true" ]] && docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+        echo "Using existing local image: $IMAGE_NAME (set FORCE_REBUILD=true to rebuild)"
+    else
+        echo "Building local harvester image: $IMAGE_NAME"
+        SECRET_ARGS=""
+        if [ -n "$GITHUB_TOKEN" ]; then
+            SECRET_ARGS="--secret id=github_token,env=GITHUB_TOKEN"
+        fi
+        # shellcheck disable=SC2086
+        docker build \
+            $SECRET_ARGS \
+            -t "$IMAGE_NAME" \
+            -f Dockerfile.harvester \
+            .
+    fi
 fi
 
 export HARVESTER_IMAGE="$IMAGE_NAME"
@@ -35,9 +45,13 @@ export SERVICE_NAME
 export SCRIPT_DIR
 export COMPOSE_PROJECT_NAME="edgenode"
 
-# Start services
+# Build log-collector separately so Docker layer cache is used on subsequent runs
+echo "Building log-collector..."
+docker compose build log-collector
+
+# Start services without rebuilding (log-collector already built above)
 echo "Starting services..."
-docker compose up --build -d log-collector "$SERVICE_NAME"
+docker compose up -d log-collector edgenode "$SERVICE_NAME"
 
 # Wait for log-collector
 echo "Waiting for log-collector to be healthy..."
@@ -53,9 +67,23 @@ while [ $WAIT_TIME -lt $MAX_WAIT ]; do
     WAIT_TIME=$((WAIT_TIME + 5))
 done
 
-# Harvester has a longer startup — conductor init + happ install
-echo "Waiting for harvester to start (up to 120s)..."
+# Wait for edgenode Holochain conductor (needed for log-sender e2e test)
+echo "Waiting for edgenode to start (up to 120s)..."
 MAX_WAIT=120
+WAIT_TIME=0
+while [ $WAIT_TIME -lt $MAX_WAIT ]; do
+    if docker compose exec -T edgenode pgrep holochain > /dev/null 2>&1; then
+        echo "Edgenode is ready"
+        break
+    fi
+    echo "Waiting for edgenode... ($WAIT_TIME/$MAX_WAIT seconds)"
+    sleep 5
+    WAIT_TIME=$((WAIT_TIME + 5))
+done
+
+# Harvester has a longer startup — conductor keystore init + happ install + config init
+echo "Waiting for harvester to start (up to 300s)..."
+MAX_WAIT=300
 WAIT_TIME=0
 while [ $WAIT_TIME -lt $MAX_WAIT ]; do
     if docker compose exec -T "$SERVICE_NAME" test -f /data/logs/startup.log 2>/dev/null && \
@@ -81,7 +109,7 @@ fi
 # Run harvester-specific tests only
 echo "Running harvester tests..."
 set +e
-./tests/libs/bats/bin/bats tests/harvester_startup.bats tests/harvester_process.bats
+./tests/libs/bats/bin/bats tests/harvester_startup.bats tests/harvester_process.bats tests/harvester_integration.bats tests/harvester_e2e.bats
 TEST_EXIT_CODE=$?
 set -e
 
