@@ -20,9 +20,8 @@ RUN npm install
 
 EXPOSE 8787
 
-RUN printf '#!/bin/bash\nset -e\necho "[log-collector] Applying D1 schema..."\nnpx wrangler d1 execute log-collector-db --local --file=schema.sql 2>&1 || true\necho "[log-collector] Starting wrangler dev server..."\nexec "$@"\n' \
+RUN printf '#!/bin/bash\nset -e\necho "[log-collector] Applying D1 schema..."\nnpx wrangler d1 execute log-collector-db --local --file=schema.sql 2>&1 || true\necho "[log-collector] Starting wrangler dev server..."\nexec wrangler dev --env development --ip 0.0.0.0 --port 8787 \\\n  --var ADMIN_SECRET:"${ADMIN_SECRET:-test_admin_secret}"\n' \
     > /usr/local/bin/docker-entrypoint.sh && \
     chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["wrangler", "dev", "--env", "development", "--ip", "0.0.0.0", "--port", "8787"]
