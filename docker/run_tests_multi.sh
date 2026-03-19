@@ -66,11 +66,37 @@ else
     echo "Warning: container not found, using fallback: $CONTAINER_NAME"
 fi
 
+# Wait for log-collector to be healthy (with restart support)
+wait_for_log_collector() {
+    local max_wait="${1:-60}"
+    local elapsed=0
+    while [ $elapsed -lt $max_wait ]; do
+        if curl -sf http://localhost:8787/ >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 3
+        elapsed=$((elapsed + 3))
+    done
+    echo "Warning: log-collector not healthy after ${max_wait}s, proceeding anyway"
+    return 0
+}
+
 # Run edgenode tests — exclude harvester-specific files (those run via run_harvester_tests.sh)
+# Run each file separately so a wrangler crash in one file doesn't cascade to subsequent files.
 echo "Running tests..."
+TEST_EXIT_CODE=0
 set +e
-./tests/libs/bats/bin/bats $(find tests -maxdepth 1 -name '*.bats' ! -name 'harvester_*' | sort)
-TEST_EXIT_CODE=$?
+for BATS_FILE in $(find tests -maxdepth 1 -name '*.bats' ! -name 'harvester_*' | sort); do
+    echo "--- Waiting for log-collector before: $BATS_FILE ---"
+    wait_for_log_collector 60
+    echo "--- Running: $BATS_FILE ---"
+    ./tests/libs/bats/bin/bats "$BATS_FILE"
+    FILE_EXIT=$?
+    if [ $FILE_EXIT -ne 0 ]; then
+        echo "FAILED: $BATS_FILE (exit $FILE_EXIT)"
+        TEST_EXIT_CODE=$FILE_EXIT
+    fi
+done
 set -e
 
 if [ $TEST_EXIT_CODE -ne 0 ]; then

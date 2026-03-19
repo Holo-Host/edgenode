@@ -36,11 +36,13 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
     networks:
       - test-net
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8787"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 30s
 
   edgenode-harvester:
     image: ${HARVESTER_IMAGE:-local-edgenode-harvester}
