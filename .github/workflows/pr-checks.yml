@@ -23,6 +23,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Checkout log-collector
+        uses: actions/checkout@v4
+        with:
+          repository: unytco/log-collector
+          path: docker/log-collector
+
       - name: Build log-collector (cached)
         uses: docker/build-push-action@v5
         with:
@@ -57,6 +63,12 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Checkout log-collector
+        uses: actions/checkout@v4
+        with:
+          repository: unytco/log-collector
+          path: docker/log-collector
 
       - name: Build log-collector (cached)
         uses: docker/build-push-action@v5
