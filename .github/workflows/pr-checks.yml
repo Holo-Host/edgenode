@@ -83,17 +83,22 @@ jobs:
           cache-from: type=gha,scope=log-collector
           cache-to: type=gha,mode=max,scope=log-collector
 
+      - name: Checkout log-harvester
+        uses: actions/checkout@v4
+        with:
+          repository: unytco/log-harvester
+          path: docker/log-harvester-src
+          token: ${{ secrets.HARVESTER_REPO_TOKEN }}
+
       - name: Build harvester image for testing
-        env:
-          GITHUB_TOKEN: ${{ secrets.HARVESTER_REPO_TOKEN }}
-        run: |
-          docker buildx build docker/ \
-            --file docker/Dockerfile.harvester \
-            --secret id=github_token,env=GITHUB_TOKEN \
-            --cache-from type=gha,scope=edgenode-harvester \
-            --cache-to type=gha,mode=max,scope=edgenode-harvester \
-            --load \
-            --tag local-edgenode-harvester
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/
+          file: docker/Dockerfile.harvester
+          load: true
+          tags: local-edgenode-harvester
+          cache-from: type=gha,scope=edgenode-harvester
+          cache-to: type=gha,mode=max,scope=edgenode-harvester
 
       - name: Run harvester tests
         run: |

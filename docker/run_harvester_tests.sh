@@ -25,14 +25,15 @@ if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode-harv
     if [[ "$FORCE_REBUILD" != "true" ]] && docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
         echo "Using existing local image: $IMAGE_NAME (set FORCE_REBUILD=true to rebuild)"
     else
-        echo "Building local harvester image: $IMAGE_NAME"
-        SECRET_ARGS=""
-        if [ -n "$GITHUB_TOKEN" ]; then
-            SECRET_ARGS="--secret id=github_token,env=GITHUB_TOKEN"
+        # Ensure log-harvester source is present in the build context
+        if [ ! -d "$SCRIPT_DIR/log-harvester-src/.git" ]; then
+            echo "Cloning log-harvester source..."
+            git clone --depth 1 \
+                https://github.com/unytco/log-harvester.git \
+                "$SCRIPT_DIR/log-harvester-src"
         fi
-        # shellcheck disable=SC2086
+        echo "Building local harvester image: $IMAGE_NAME"
         docker build \
-            $SECRET_ARGS \
             -t "$IMAGE_NAME" \
             -f Dockerfile.harvester \
             .

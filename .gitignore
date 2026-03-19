@@ -5,6 +5,7 @@ holo-data-test/
 .gemini/
 docker/happ_config_file
 docker/log-collector/
+docker/log-harvester-src/
 AGENTS.md
 log_fix.md
 UNYT_TEST_ANALYSIS.md
