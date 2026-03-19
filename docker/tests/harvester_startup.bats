@@ -1,0 +1,44 @@
+#!/usr/bin/env bats
+
+load 'libs/bats-support/load'
+load 'libs/bats-assert/load'
+
+HARVESTER_SERVICE="${SERVICE_NAME:-edgenode-harvester}"
+
+@test "Conductor starts successfully" {
+  run docker compose logs "$HARVESTER_SERVICE"
+  assert_output --partial "Conductor ready."
+}
+
+@test "unyt.happ is installed" {
+  run docker compose exec -T "$HARVESTER_SERVICE" \
+    hc sandbox call --running 4444 list-apps
+  assert_success
+  assert_output --partial "unyt"
+}
+
+@test "App websocket attached on port 4445" {
+  run docker compose exec -T "$HARVESTER_SERVICE" \
+    sh -c "cat /data/logs/startup.log"
+  assert_success
+  assert_output --partial "add-app-ws"
+}
+
+@test "Harvester config is initialized" {
+  run docker compose exec -T "$HARVESTER_SERVICE" \
+    test -f /etc/log-harvester/config.json
+  assert_success
+}
+
+@test "Harvester config contains droneId" {
+  run docker compose exec -T "$HARVESTER_SERVICE" \
+    jq -e '.droneId' /etc/log-harvester/config.json
+  assert_success
+}
+
+@test "log-harvester service starts" {
+  run docker compose exec -T "$HARVESTER_SERVICE" \
+    sh -c "cat /data/logs/startup.log"
+  assert_success
+  assert_output --partial "Starting log-harvester service..."
+}
