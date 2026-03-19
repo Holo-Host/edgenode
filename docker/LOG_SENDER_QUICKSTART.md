@@ -2,7 +2,7 @@
 
 Connect an Edge Node to a Unyt log-collector for resource accounting.
 
-See the [Docker README.md](./README.md) for basic Edge Node setup. The unyt image is built from [Dockerfile.unyt](./Dockerfile.unyt).
+See the [Docker README.md](./README.md) for basic Edge Node setup. The edge node image is built from [Dockerfile](./Dockerfile).
 
 For the upstream log-sender docs, see the [Log-Sender User Guide](https://github.com/unytco/log-sender/blob/main/LOG_SENDER_USER_GUIDE.md).
 
@@ -25,7 +25,7 @@ docker run --name unytnode -dit \
   -p 4444:4444 \
   -e LOG_SENDER_ENDPOINT=http://your-log-collector:8787 \
   -e LOG_SENDER_UNYT_PUB_KEY=uhCAk... \
-  ghcr.io/holo-host/edgenode:latest-unyt
+  ghcr.io/holo-host/edgenode
 ```
 
 Wait for the conductor to start:
