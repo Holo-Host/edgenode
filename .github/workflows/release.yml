@@ -156,3 +156,43 @@ jobs:
             --push \
             --tag "${VERSION_TAG}" \
             --tag "${LATEST_TAG}"
+
+  build-and-push-harvester-image:
+    runs-on: ubuntu-latest
+    needs: create-release
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.create-release.outputs.tag }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push harvester image
+        run: |
+          VERSION_TAG="ghcr.io/holo-host/edgenode-harvester:${{ needs.create-release.outputs.tag }}"
+          LATEST_TAG="ghcr.io/holo-host/edgenode-harvester:latest"
+
+          docker buildx build docker/ --file docker/Dockerfile.harvester \
+            --platform linux/amd64,linux/arm64 \
+            --push \
+            --tag "${VERSION_TAG}" \
+            --tag "${LATEST_TAG}" \
+            --secret id=github_token,env=GITHUB_TOKEN
+        env:
+          GITHUB_TOKEN: ${{ secrets.HARVESTER_REPO_TOKEN }}

@@ -42,9 +42,47 @@ services:
       timeout: 10s
       retries: 3
 
+  edgenode-harvester:
+    image: ${HARVESTER_IMAGE:-local-edgenode-harvester}
+    build:
+      context: .
+      dockerfile: Dockerfile.harvester
+      secrets:
+        - github_token
+    depends_on:
+      log-collector:
+        condition: service_healthy
+    environment:
+      - COLLECTOR_URL=${COLLECTOR_URL:-http://log-collector:8787}
+      - ADMIN_SECRET=${ADMIN_SECRET:-test_admin_secret}
+      - LAIR_PASSWORD=${LAIR_PASSWORD:-password}
+      - HC_APP_ID=${HC_APP_ID:-unyt}
+      - HC_NETWORK_SEED=${HC_NETWORK_SEED:-network-seed}
+      - LOG_FOR_TODAY=${LOG_FOR_TODAY:-false}
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - holo-data-harvester:/data
+      - holo-config-harvester:/etc/log-harvester
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "pgrep", "holochain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 networks:
   test-net:
 
+secrets:
+  github_token:
+    environment: GITHUB_TOKEN
+
 volumes:
   holo-data-test:
+    driver: local
+  holo-data-harvester:
+    driver: local
+  holo-config-harvester:
     driver: local

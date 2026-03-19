@@ -4,7 +4,7 @@ This repo contains the tooling needed to deploy and operate always-on nodes for 
 
 The tooling consists of:
 
-1. Edge Node - A Docker container specification for running Holochain with hApps in an OCI-compliant containerized environment.
+1. Edge Node - Docker container specifications for running Holochain with hApps in an OCI-compliant containerized environment. Two variants: `edgenode` (standard, with log-sender) and `edgenode-harvester` (with log-harvester for Unyt invoice aggregation).
 2. HolOS - A streamlined Linux ISO that enables the deployment of this container on physical or virtual hardware (especially HoloPorts).
 
 For a detailed overview and usage instructions [see here](/USAGE.md).
@@ -23,8 +23,9 @@ For a detailed overview and usage instructions [see here](/USAGE.md).
 
 A [Docker-based container](docker/README.md) that delivers Edge Node, ready to run hApps:
 
-- Holochain conductor configured to automatically run via `tini`.
+- Holochain conductor managed by s6-overlay, starting automatically on container launch.
 - Tools for installing and managing hApps from configuration files.
+- Two variants: standard (`edgenode`) and harvester (`edgenode-harvester`).
 
 ### HolOS Build System
 
@@ -43,9 +44,9 @@ A [specialized OS builder](holos/README.md) for creating custom ISO images using
 
 ## Quick Start
 
-### To test the Edge Node container:
+### Standard Edge Node
 
-1. Pull the Docker image:
+1. Pull the image:
 
 ```sh
 docker pull ghcr.io/holo-host/edgenode
@@ -64,6 +65,29 @@ docker exec -it edgenode su - nonroot
 ps -ef
 ```
 
+### Harvester Edge Node
+
+1. Pull the image:
+
+```sh
+docker pull ghcr.io/holo-host/edgenode-harvester
+```
+
+2. Launch with your log-collector credentials:
+
+```sh
+docker run --name harvester -dit \
+  -v $(pwd)/holo-data:/data \
+  -p 4444:4444 \
+  -p 4445:4445 \
+  -e COLLECTOR_URL=https://your-log-collector.unyt.dev \
+  -e ADMIN_SECRET=your-admin-secret \
+  -e LAIR_PASSWORD=your-lair-password \
+  ghcr.io/holo-host/edgenode-harvester
+```
+
+See [docker/LOG_HARVESTER_QUICKSTART.md](docker/LOG_HARVESTER_QUICKSTART.md) for full setup instructions.
+
 ### For HolOS Users
 
 1. Download a release of the iso from our [releases page](https://github.com/Holo-Host/edgenode/releases)
@@ -74,5 +98,7 @@ ps -ef
 
 - [Detailed overview and usage instructions](/USAGE.md)
 - [Edge Node Container Instructions](docker/README.md)
+- [Log-Sender Quickstart (Unyt resource accounting)](docker/LOG_SENDER_QUICKSTART.md)
+- [Log-Harvester Quickstart (Unyt invoice aggregation)](docker/LOG_HARVESTER_QUICKSTART.md)
 - [HolOS Build System Guide](holos/README.md)
 - [Tools for working with Edge Nodes](tools/README.md)

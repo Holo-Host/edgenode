@@ -1,10 +1,17 @@
 # Edge Node Container
 
-A docker container for running Holochain and installing hApps as always-on nodes. For Unyt log-sender integration, see [LOG_SENDER_QUICKSTART.md](./LOG_SENDER_QUICKSTART.md).
+Docker containers for running Holochain and installing hApps as always-on nodes.
+
+Two variants are available:
+
+| Image | Description |
+|-------|-------------|
+| `ghcr.io/holo-host/edgenode` | Standard edge node with `log-sender` for Unyt resource accounting. See [LOG_SENDER_QUICKSTART.md](./LOG_SENDER_QUICKSTART.md). |
+| `ghcr.io/holo-host/edgenode-harvester` | Harvester variant with `log-harvester` for Unyt invoice aggregation. See [LOG_HARVESTER_QUICKSTART.md](./LOG_HARVESTER_QUICKSTART.md). |
 
 ## Container Commands
 
-These are available inside the container:
+These commands are available inside both container variants:
 
 - `install_happ [-p <port>] <config.json> [node_name]` -- Install a hApp from a config file
 - `uninstall_happ [-p <port>] <app_id>` -- Uninstall a hApp
@@ -12,6 +19,8 @@ These are available inside the container:
 - `disable_happ [-p <port>] <app_id>` -- Disable an installed hApp
 - `list_happs [-p <port>]` -- List installed hApps
 - `happ_config_file` -- Create/validate hApp config files (run with `--help` for usage)
+
+Standard variant (`edgenode`) only:
 - `log_tool <init|service|help>` -- Manage the Unyt log-sender service (see [LOG_SENDER_QUICKSTART.md](./LOG_SENDER_QUICKSTART.md))
 - `wdocker <command>` -- Manage always-on Moss group nodes (see [EdgeNode Moss Guide](https://holo.host/files/EdgeNodeMossGuide.pdf))
 - `wdaemon` -- wdocker background daemon
@@ -105,9 +114,18 @@ Paths are symlinked into the `/data` volume for persistence:
 ## Process Management
 
 - **s6-overlay** runs as PID 1, supervising all services with automatic restart on crash
-- Services: `conductor`, `log-sender`, `logrotate-cron` (all longruns), plus `setup` oneshot on startup
 - All processes run as nonroot (UID 65532)
 - Log rotation via logrotate (daily, 7-day retention, gzip compression)
+
+Services by variant:
+
+| Service | `edgenode` | `edgenode-harvester` |
+|---------|-----------|---------------------|
+| `setup` (oneshot) | ✓ | ✓ |
+| `conductor` (longrun) | ✓ | ✓ |
+| `logrotate-cron` (longrun) | ✓ | ✓ |
+| `log-sender` (longrun) | ✓ | — |
+| `log-harvester` (longrun) | — | ✓ |
 
 ## Development
 

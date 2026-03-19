@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `edgenode-harvester` container variant (`Dockerfile.harvester`) — bundles `log-harvester` (unytco/log-harvester) instead of `log-sender` for Unyt invoice aggregation
+- `s6-overlay-harvester/` service tree: self-contained s6 services for the harvester variant (`conductor`, `log-harvester`, `logrotate-cron`, `setup`)
+- `log-harvester` s6 longrun service: waits for conductor, installs `unyt.happ`, attaches app websocket on port 4445, initializes/refreshes harvester config, runs harvester loop
+- `unyt.happ` baked into the harvester image from latest `unytco/unyt-sandbox` release; pinnable via `UNYT_HAPP_VERSION` build arg
+- `LOG_HARVESTER_QUICKSTART.md` quickstart guide for the harvester variant
+- CI `build-and-push-harvester-image` job in release workflow publishing `ghcr.io/holo-host/edgenode-harvester`
+
 ## [0.1.0-alpha1] - 2026-03-13
 
 ### Added
