@@ -35,9 +35,9 @@ export COMPOSE_PROJECT_NAME="edgenode"
 echo "Building log-collector..."
 docker compose build log-collector
 
-# Start services without rebuilding (log-collector already built above)
+# Start only the services needed for edgenode tests (not edgenode-harvester)
 echo "Starting services..."
-docker compose up -d
+docker compose up -d log-collector "$SERVICE_NAME"
 
 # Wait for log-collector
 echo "Waiting for log-collector to be healthy..."
