@@ -84,16 +84,16 @@ jobs:
           cache-to: type=gha,mode=max,scope=log-collector
 
       - name: Build harvester image for testing
-        uses: docker/build-push-action@v5
-        with:
-          context: docker/
-          file: docker/Dockerfile.harvester
-          load: true
-          tags: local-edgenode-harvester
-          secrets: |
-            github_token=${{ secrets.HARVESTER_REPO_TOKEN }}
-          cache-from: type=gha,scope=edgenode-harvester
-          cache-to: type=gha,mode=max,scope=edgenode-harvester
+        env:
+          GITHUB_TOKEN: ${{ secrets.HARVESTER_REPO_TOKEN }}
+        run: |
+          docker buildx build docker/ \
+            --file docker/Dockerfile.harvester \
+            --secret id=github_token,env=GITHUB_TOKEN \
+            --cache-from type=gha,scope=edgenode-harvester \
+            --cache-to type=gha,mode=max,scope=edgenode-harvester \
+            --load \
+            --tag local-edgenode-harvester
 
       - name: Run harvester tests
         run: |
