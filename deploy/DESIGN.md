@@ -231,7 +231,7 @@ make production
 
 2. **log-collector deployment**: The log-collector is a Cloudflare Worker (see `docker/log-collector/wrangler.toml`). It can be deployed via the Cloudflare Terraform provider (`cloudflare_worker_script`) alongside the joining service Worker, or kept as a separate `wrangler deploy` step. The former is cleaner for IaC but the `cloudflare_worker_script` resource has some rough edges around bundled Workers — worth evaluating.
 
-3. **OpenTofu state backend**: For a single operator, local state is acceptable. For team use, a remote state backend (e.g. Cloudflare R2 or Hetzner Object Storage) should be configured.
+3. **OpenTofu state backend**: For a single operator, local state is acceptable. For team use, Hetzner Object Storage is the preferred remote state backend — it is S3-compatible, so the standard OpenTofu S3 backend works with an endpoint override (`https://fsn1.your-objectstorage.com`), and it keeps all infrastructure costs on Hetzner.
 
 4. **Harvester VM sizing**: The harvester has lighter Holochain requirements than the standard edgenode. A `cx11` (2 vCPU, 2 GB) may be sufficient; this should be confirmed under load.
 
