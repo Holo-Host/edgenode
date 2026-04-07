@@ -34,6 +34,22 @@ if [ -z "$JOINING_SERVICE_DIR" ] || [ ! -d "$JOINING_SERVICE_DIR" ]; then
     exit 1
 fi
 
+# @holo-host/lair is a file: dependency with no pre-built dist/.
+# Resolve it to holo-web-conductor/packages/lair and build if needed.
+HOLO_WEB_CONDUCTOR_DIR="${HOLO_WEB_CONDUCTOR_DIR:-$(cd "$PIONEER_DIR/../src/holo-web-conductor" && pwd 2>/dev/null || echo "")}"
+LAIR_PACKAGE_DIR="$HOLO_WEB_CONDUCTOR_DIR/packages/lair"
+
+if [ -z "$HOLO_WEB_CONDUCTOR_DIR" ] || [ ! -d "$LAIR_PACKAGE_DIR" ]; then
+    echo "ERROR: holo-web-conductor repo not found. Set HOLO_WEB_CONDUCTOR_DIR to its path."
+    echo "  e.g. HOLO_WEB_CONDUCTOR_DIR=/path/to/holo-web-conductor ./build.sh"
+    exit 1
+fi
+
+if [ ! -d "$LAIR_PACKAGE_DIR/dist" ]; then
+    echo "Building @holo-host/lair (from $LAIR_PACKAGE_DIR)..."
+    (cd "$HOLO_WEB_CONDUCTOR_DIR" && npm install && node_modules/.bin/tsc --build packages/lair/tsconfig.json)
+fi
+
 mkdir -p "$DIST_DIR"
 
 # ── Joining service Worker ──────────────────────────────────────────────────
@@ -52,7 +68,6 @@ NODE_PATH="$JOINING_SERVICE_DIR/node_modules" npx esbuild \
     --outfile="$DIST_DIR/joining.js" \
     --external:__STATIC_CONTENT_MANIFEST \
     --external:"node:*" \
-    --external:"@holo-host/lair" \
     --log-level=info
 
 echo "  → $DIST_DIR/joining.js ($(wc -c < "$DIST_DIR/joining.js") bytes)"

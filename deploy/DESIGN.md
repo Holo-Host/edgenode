@@ -229,7 +229,7 @@ make production
 
 1. **Number of edgenode VMs**: The design supports N edgenode VMs. For staging, 2 is the minimum for meaningful DHT arc coverage. Production may warrant more. Each VM gets its own `linker.<n>.<domain>` DNS record and is registered separately in Cloudflare KV.
 
-2. **log-collector deployment**: The log-collector is a Cloudflare Worker (see `docker/log-collector/wrangler.toml`). It can be deployed via the Cloudflare Terraform provider (`cloudflare_worker_script`) alongside the joining service Worker, or kept as a separate `wrangler deploy` step. The former is cleaner for IaC but the `cloudflare_worker_script` resource has some rough edges around bundled Workers — worth evaluating.
+2. **log-collector deployment**: ✓ Resolved — see [Appendix A](#appendix-a-cloudflare-worker-deployment-spike). The log-collector deploys cleanly via OpenTofu. The joining service Worker must continue to use `wrangler deploy` until `@holo-host/lair`'s libsodium WASM dependency is resolved.
 
 3. **OpenTofu state backend**: For a single operator, local state is acceptable. For team use, Hetzner Object Storage is the preferred remote state backend — it is S3-compatible, so the standard OpenTofu S3 backend works with an endpoint override (`https://fsn1.your-objectstorage.com`), and it keeps all infrastructure costs on Hetzner.
 
@@ -247,3 +247,62 @@ Operators who want to run their own edgenode deployment for a different hApp can
 4. Supply secrets via their own `.env.*` files
 
 The Ansible roles are hApp-agnostic — `install_happ` reads from the config file, so no role changes are needed to switch hApps.
+
+---
+
+## Appendix A: Cloudflare Worker Deployment Spike
+
+**Branch:** `feat/cloud-deployment-iac`
+**Spike code:** `deploy/spike/`
+**Date:** 2026-04-07
+
+### Questions
+
+1. Can `cloudflare_worker_script` handle a TypeScript Worker that requires a wrangler/esbuild build step?
+2. Can esbuild resolve the joining service's cross-directory imports (`../../../joining-service/src/...`)?
+3. Do KV namespace and D1 database bindings wire up correctly via the provider?
+
+### Setup notes
+
+- The Cloudflare Terraform provider **v4.x does not have** `cloudflare_worker`, `cloudflare_worker_version`, or `cloudflare_workers_deployment`. These resources exist in **v5.x** (tested against v5.18.0). Use `version = "~> 5.0"` in the provider block.
+- The joining service Worker requires the `nodejs_compat` compatibility flag (for `node:crypto`).
+- The `cloudflare_worker` resource has `subdomain = { enabled = false }` by default. Set `enabled = true` to route `<name>.<account>.workers.dev` traffic.
+- The `cloudflare_d1_database` resource in v5 requires `read_replication = { mode = "disabled" }` to be set explicitly to avoid a provider drift error on subsequent applies.
+- Required API token permissions: **Workers Scripts: Edit**, **Workers KV Storage: Edit**, **D1: Edit**, **Account Settings: Read**.
+
+### Findings
+
+**Question 2 — Cross-directory imports: YES**
+
+esbuild resolves the joining service's cross-directory imports at bundle time with no issues. Running esbuild from the repo root with `NODE_PATH` pointing at the joining-service `node_modules` is sufficient.
+
+**Question 3 — KV and D1 bindings: YES**
+
+Both binding types wire up correctly via the `bindings` array on `cloudflare_worker_version`. The log-collector Worker with its D1 binding deployed and responded to HTTP requests.
+
+**Question 1 — esbuild bundling: PARTIAL**
+
+The log-collector Worker (pure TypeScript, no WASM dependencies) deployed and runs correctly via OpenTofu.
+
+The joining service Worker fails to start (Cloudflare error 1042) due to its dependency on `@holo-host/lair`, which wraps `libsodium-wrappers`. The `libsodium` package is compiled by Emscripten and loads its `.wasm` binary at module initialisation time using `new URL(...)` path resolution. This fails in the Cloudflare Workers runtime, where there is no filesystem.
+
+This is **not a new problem with the joining service** — it has always existed. `wrangler deploy` handles it transparently: Wrangler scans for `.wasm` files during bundling, extracts them, and uploads them as named Workers module bindings, rewriting the imports accordingly. Our esbuild-only approach bypasses this step.
+
+### Decision
+
+| Worker | Deployment method |
+|--------|------------------|
+| log-collector | OpenTofu (`cloudflare_worker` + `cloudflare_worker_version` + `cloudflare_workers_deployment`) |
+| joining service | `wrangler deploy` (unchanged from current practice) |
+
+OpenTofu manages the KV namespace and D1 database as infrastructure; the joining service Worker deployment remains a `wrangler` step.
+
+### Joining service WASM issue — options for `@holo-host/lair` developer
+
+The joining service Worker crashes at startup whenever `@holo-host/lair` is imported, regardless of whether membrane proofs are enabled. The underlying cause is `libsodium-wrappers`' WASM loading strategy. Three options:
+
+1. **Lazy-load `LairProofGenerator`** in `mewsfeed`'s `worker-entry.ts` — use a dynamic `import()` inside `buildProofGenerator()` so libsodium only initialises when membrane proofs are actually needed. Unblocks deployment for configs where `membrane_proof.enabled` is false; does not fix the root cause.
+
+2. **Upload `libsodium.wasm` as a named Workers module** — Cloudflare Workers supports WASM via ES module imports (`import wasm from './sodium.wasm'`). This would require a custom Emscripten build of libsodium that accepts a pre-compiled `WebAssembly.Module` rather than fetching by path. No maintained npm package does this today.
+
+3. **Replace libsodium with a pure-JS ed25519 library in `@holo-host/lair`** — `@noble/ed25519` or `@noble/curves` are well-audited, pure TypeScript, and bundle cleanly with esbuild. This removes the WASM dependency entirely and would make `@holo-host/lair` work in any JS environment (Workers, Deno, browsers) without bundler workarounds. This is the recommended long-term fix.

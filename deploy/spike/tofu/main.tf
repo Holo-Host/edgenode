@@ -2,7 +2,7 @@ terraform {
   required_providers {
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "~> 4.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -21,8 +21,9 @@ resource "cloudflare_workers_kv_namespace" "sessions" {
 # ── D1 database (log-collector) ────────────────────────────────────────────
 
 resource "cloudflare_d1_database" "log_collector" {
-  account_id = var.cloudflare_account_id
-  name       = "spike-log-collector-db"
+  account_id       = var.cloudflare_account_id
+  name             = "spike-log-collector-db"
+  read_replication = { mode = "disabled" }
 }
 
 # ── Joining service Worker ─────────────────────────────────────────────────
@@ -34,12 +35,14 @@ resource "cloudflare_d1_database" "log_collector" {
 resource "cloudflare_worker" "joining" {
   account_id = var.cloudflare_account_id
   name       = "spike-joining"
+  subdomain  = { enabled = true }
 }
 
 resource "cloudflare_worker_version" "joining" {
   account_id         = var.cloudflare_account_id
   worker_id          = cloudflare_worker.joining.id
-  compatibility_date = "2024-12-01"
+  compatibility_date  = "2024-12-01"
+  compatibility_flags = ["nodejs_compat"]
   main_module        = "joining.js"
 
   modules = [{
@@ -89,6 +92,7 @@ resource "cloudflare_workers_deployment" "joining" {
 resource "cloudflare_worker" "log_collector" {
   account_id = var.cloudflare_account_id
   name       = "spike-log-collector"
+  subdomain  = { enabled = true }
 }
 
 resource "cloudflare_worker_version" "log_collector" {
