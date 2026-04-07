@@ -19,7 +19,6 @@ resource "cloudflare_workers_kv_namespace" "sessions" {
 }
 
 # ── D1 database (log-collector) ────────────────────────────────────────────
-# Tests: does the provider support D1 bindings on cloudflare_worker_script?
 
 resource "cloudflare_d1_database" "log_collector" {
   account_id = var.cloudflare_account_id
@@ -28,54 +27,102 @@ resource "cloudflare_d1_database" "log_collector" {
 
 # ── Joining service Worker ─────────────────────────────────────────────────
 # Tests:
-#   - Does cloudflare_worker_script accept an esbuild-bundled ES module?
-#   - Do KV namespace bindings wire up correctly?
+#   - Does the current cloudflare_worker + cloudflare_worker_version model
+#     accept an esbuild-bundled ES module via content_file?
+#   - Do KV namespace bindings wire up via the unified bindings array?
 
-resource "cloudflare_worker_script" "joining" {
+resource "cloudflare_worker" "joining" {
   account_id = var.cloudflare_account_id
   name       = "spike-joining"
-  content    = file("${path.module}/../dist/joining.js")
-  module     = true
+}
 
-  kv_namespace_binding {
-    name         = "SESSIONS"
-    namespace_id = cloudflare_workers_kv_namespace.sessions.id
-  }
+resource "cloudflare_worker_version" "joining" {
+  account_id         = var.cloudflare_account_id
+  worker_id          = cloudflare_worker.joining.id
+  compatibility_date = "2024-12-01"
+  main_module        = "joining.js"
 
-  # Minimal CONFIG_JSON so the Worker initialises without erroring
-  plain_text_binding {
-    name = "CONFIG_JSON"
-    text = jsonencode({
-      happ = {
-        id              = "spike"
-        name            = "Spike"
-        happ_bundle_url = "https://example.com/spike.happ"
-      }
-      auth_methods = ["invite_code"]
-      invite_codes = ["spike-test"]
-      session      = { store = "cloudflare-kv" }
-    })
-  }
+  modules = [{
+    name         = "joining.js"
+    content_type = "application/javascript+module"
+    content_file = "${path.module}/../dist/joining.js"
+  }]
+
+  bindings = [
+    {
+      type         = "kv_namespace"
+      name         = "SESSIONS"
+      namespace_id = cloudflare_workers_kv_namespace.sessions.id
+    },
+    {
+      type = "plain_text"
+      name = "CONFIG_JSON"
+      text = jsonencode({
+        happ = {
+          id              = "spike"
+          name            = "Spike"
+          happ_bundle_url = "https://example.com/spike.happ"
+        }
+        auth_methods = ["invite_code"]
+        invite_codes = ["spike-test"]
+        session      = { store = "cloudflare-kv" }
+      })
+    }
+  ]
+}
+
+resource "cloudflare_workers_deployment" "joining" {
+  account_id  = var.cloudflare_account_id
+  script_name = cloudflare_worker.joining.name
+  strategy    = "percentage"
+  versions = [{
+    percentage = 100
+    version_id = cloudflare_worker_version.joining.id
+  }]
 }
 
 # ── Log-collector Worker ───────────────────────────────────────────────────
 # Tests:
-#   - Does cloudflare_worker_script accept an esbuild-bundled ES module?
-#   - Do D1 database bindings wire up correctly?
+#   - Does content_file work for a larger bundle (1.2mb uncompressed)?
+#   - Do D1 database bindings wire up via the unified bindings array?
 
-resource "cloudflare_worker_script" "log_collector" {
+resource "cloudflare_worker" "log_collector" {
   account_id = var.cloudflare_account_id
   name       = "spike-log-collector"
-  content    = file("${path.module}/../dist/log-collector.js")
-  module     = true
+}
 
-  d1_database_binding {
-    name        = "DB"
-    database_id = cloudflare_d1_database.log_collector.id
-  }
+resource "cloudflare_worker_version" "log_collector" {
+  account_id         = var.cloudflare_account_id
+  worker_id          = cloudflare_worker.log_collector.id
+  compatibility_date = "2024-10-01"
+  main_module        = "log-collector.js"
 
-  secret_text_binding {
-    name = "ADMIN_SECRET"
-    text = "spike-admin-secret"
-  }
+  modules = [{
+    name         = "log-collector.js"
+    content_type = "application/javascript+module"
+    content_file = "${path.module}/../dist/log-collector.js"
+  }]
+
+  bindings = [
+    {
+      type = "d1"
+      name = "DB"
+      id   = cloudflare_d1_database.log_collector.id
+    },
+    {
+      type = "secret_text"
+      name = "ADMIN_SECRET"
+      text = "spike-admin-secret"
+    }
+  ]
+}
+
+resource "cloudflare_workers_deployment" "log_collector" {
+  account_id  = var.cloudflare_account_id
+  script_name = cloudflare_worker.log_collector.name
+  strategy    = "percentage"
+  versions = [{
+    percentage = 100
+    version_id = cloudflare_worker_version.log_collector.id
+  }]
 }
