@@ -1,0 +1,5 @@
+dist/
+tofu/.terraform/
+tofu/.terraform.lock.hcl
+tofu/terraform.tfstate*
+tofu/terraform.tfvars
