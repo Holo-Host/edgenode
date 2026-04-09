@@ -369,7 +369,7 @@ This scenario is prevented by maintaining snapshots. There is no mitigation once
 
 6. **Ansible**: Deferred. Cloud-init covers the current scope. Ansible should be reconsidered if operational needs grow (rolling updates across many nodes, configuration drift correction, complex post-boot sequencing).
 
-7. **Platform: self-registering harvester**: The bootstrap container approach is sufficient for the staging PoC but does not scale to a multi-customer platform. At platform scale, the harvester conductor should register itself automatically: generate its agent key on first start, call a machine-to-machine admin endpoint on the joining service, and install the Unyt hApp — no operator intervention required. This needs a dedicated admin registration flow in the joining service that does not exist today. It should be scoped as a platform-track requirement.
+7. **Platform: self-registering harvester**: The bootstrap container approach is sufficient for the staging PoC but does not scale to a multi-customer platform. See [Appendix B](#appendix-b-platform-track--self-registering-harvester) for a full design. Requires a new machine-to-machine admin API on the joining service; should be scoped as a platform-track requirement.
 
 ---
 
@@ -442,3 +442,75 @@ The joining service Worker crashes at startup whenever `@holo-host/lair` is impo
 2. **Upload `libsodium.wasm` as a named Workers module** — Cloudflare Workers supports WASM via ES module imports (`import wasm from './sodium.wasm'`). This would require a custom Emscripten build of libsodium that accepts a pre-compiled `WebAssembly.Module` rather than fetching by path. No maintained npm package does this today.
 
 3. **Replace libsodium with a pure-JS ed25519 library in `@holo-host/lair`** — `@noble/ed25519` or `@noble/curves` are well-audited, pure TypeScript, and bundle cleanly with esbuild. This removes the WASM dependency entirely and would make `@holo-host/lair` work in any JS environment (Workers, Deno, browsers) without bundler workarounds. This is the recommended long-term fix.
+
+---
+
+## Appendix B: Platform-Track — Self-Registering Harvester
+
+### Problem
+
+The current harvester bootstrap process (Option A) requires an operator to run `bootstrap-harvester.sh` after each new deployment. The script:
+
+1. SSHs into the harvester VM to access the conductor admin port
+2. Generates an agent key via the admin API
+3. Edits the joining service config file to add the key to `allowed_agents`
+4. Redeploys the joining service via `wrangler deploy`
+5. Installs the Unyt hApp
+
+This is acceptable for a single managed deployment but does not scale to a platform offering multiple customer deployments. Each new customer deployment would require an operator to run this script manually, introducing a human bottleneck and an operational risk (forgotten bootstrap, config drift).
+
+### Proposed solution: joining service admin API
+
+The joining service should expose a machine-to-machine admin endpoint for agent registration. On first start, the harvester conductor:
+
+1. Generates its agent key (standard Holochain conductor behaviour)
+2. Calls the joining service admin API with the key and a shared `JOINING_SERVICE_ADMIN_SECRET`
+3. The joining service adds the key to its `allowed_agents` store in KV — no config file edit, no redeployment
+4. The harvester conductor proceeds to install the Unyt hApp
+
+The entire bootstrap becomes automatic with no operator involvement. New customer deployments provision and bootstrap themselves via `tofu apply` alone.
+
+### Design sketch
+
+**New joining service endpoint:**
+
+```
+POST /admin/agents
+Authorization: Bearer <JOINING_SERVICE_ADMIN_SECRET>
+Content-Type: application/json
+
+{ "agent_key": "<base64-agent-pubkey>" }
+```
+
+The joining service stores approved agents in the `SESSIONS` KV namespace under a dedicated key prefix (e.g. `approved_agent:<key>`). The existing `agent_allow_list` auth method checks KV at request time rather than reading from static config.
+
+**Harvester cloud-init change:**
+
+The `harvester.yml.tpl` cloud-init template would call the admin API after the conductor is ready, replacing the separate `bootstrap-harvester.sh` step entirely:
+
+```bash
+# Wait for conductor, generate key, register with joining service
+docker exec harvester register-with-joining-service \
+  --joining-service-url "$JOINING_SERVICE_URL" \
+  --admin-secret "$JOINING_SERVICE_ADMIN_SECRET"
+```
+
+**New secrets required:**
+
+| Variable | Used by | Description |
+|----------|---------|-------------|
+| `JOINING_SERVICE_ADMIN_SECRET` | joining service, harvester | Shared secret for machine-to-machine agent registration |
+
+### Scope
+
+This requires changes to:
+
+- **joining service** — new admin endpoint, KV-backed agent store, runtime `agent_allow_list` check
+- **edgenode-bootstrap container** — can be retired or simplified once joining service supports this
+- **cloud-init templates** — harvester template calls admin API instead of relying on separate bootstrap script
+- **`deploy/scripts/bootstrap-harvester.sh`** — removed; bootstrap becomes part of `tofu apply`
+
+### Dependencies
+
+- Joining service admin API must be implemented first
+- Can be developed independently of the staging PoC; Option A remains in place until this is ready
