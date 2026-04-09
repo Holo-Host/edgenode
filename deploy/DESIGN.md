@@ -31,7 +31,7 @@ Browser (HWC extension)
 
 | Role | Image | Count | Services enabled |
 |------|-------|-------|-----------------|
-| `edgenode` | `ghcr.io/holo-host/edgenode` | 1+ | conductor, h2hc-linker, caddy, log-sender |
+| `edgenode` | `ghcr.io/holo-host/edgenode` | 2 (staging), N (production) | conductor, h2hc-linker, caddy, log-sender |
 | `harvester` | `ghcr.io/holo-host/edgenode-harvester` | 1 | conductor (Unyt hApp), log-harvester |
 
 One or more edgenode VMs can be deployed; there is one harvester per deployment. The joining service registers all edgenode linker URLs in Cloudflare KV.
@@ -192,7 +192,10 @@ OpenTofu reads secrets via `TF_VAR_*` prefixed variables and passes them into cl
 deploy/
   DESIGN.md                    # This document
   .env.example                 # Template for all secrets (committed)
-  Makefile                     # make staging / make production / make destroy
+  scripts/
+    staging-apply.sh           # tofu init + apply for staging
+    production-apply.sh        # tofu init + apply for production
+    bootstrap-harvester.sh     # one-time harvester bootstrap (runs bootstrap container)
 
   tofu/
     cloudflare.tf              # DNS, Pages, joining service Worker, log-collector Worker, KV
@@ -225,49 +228,148 @@ $EDITOR deploy/.env.staging
 source deploy/.env.staging
 
 # 2. Provision everything (VMs, volumes, Cloudflare resources)
-make staging-init    # tofu init
-make staging-apply   # tofu apply -var-file=staging.tfvars
+./deploy/scripts/staging-apply.sh
+
+# 3. Bootstrap the harvester (one-time)
+./deploy/scripts/bootstrap-harvester.sh
 ```
 
-`tofu apply` provisions VMs with cloud-init `user_data` that mounts the persistent volume, pulls the container image, and starts the container. The joining service Worker is deployed via `wrangler deploy` as part of the same step.
+`staging-apply.sh` runs `tofu init` + `tofu apply`. Cloud-init on each VM mounts the persistent volume, pulls the container image, and starts the container. The joining service Worker is deployed via `wrangler deploy` as part of the same step.
+
+`bootstrap-harvester.sh` runs the bootstrap container, which generates the harvester's agent key, whitelists it in the joining service, and installs the Unyt hApp.
 
 ### Subsequent Deploys
 
-- **Cloud/config changes**: `make staging-apply`
+- **Cloud/config changes**: `./deploy/scripts/staging-apply.sh`
 - **Container image update**: replace the VM — `tofu apply -replace=hcloud_server.edgenode[0] -var-file=staging.tfvars`. The persistent volume is reattached; Holochain data is preserved.
 
 ### Staging → Production Promotion
 
 ```bash
 source deploy/.env.production
-make production-init
-make production-apply
+./deploy/scripts/production-apply.sh
+./deploy/scripts/bootstrap-harvester.sh
 ```
+
+---
+
+## Disaster Recovery
+
+### What must be preserved
+
+| Data | Location | Consequence of loss |
+|------|----------|---------------------|
+| Lair keystore | `/data/lair/` | **Permanent.** Agent identity is gone; re-bootstrapping requires a new key, joining service re-registration, and loss of all existing DHT associations. |
+| Conductor source chains | `/data/holochain/` | **Permanent per author.** Each node's own authored data is unrecoverable. |
+| Conductor DHT shard | `/data/holochain/` | **Recoverable.** Can be re-synced from the network, but this is slow and disrupts hosting. |
+| OpenTofu state | remote backend (object storage) | **Recoverable with effort.** Existing infrastructure can be re-imported, but state loss makes `tofu apply` dangerous until state is reconstructed. |
+
+Config and secrets are not stored on VMs — they are held by the operator and re-applied at provision time.
+
+### Backup strategy
+
+**Primary: Hetzner volume snapshots**
+
+Each persistent volume is snapshotted daily via the Hetzner API. Snapshots are point-in-time copies of the block device; a new volume can be created from any snapshot and attached to a replacement VM.
+
+```bash
+# Snapshot a volume (run from operator machine or a cron on the VM host)
+hcloud volume create-snapshot <volume-id> --description "edgenode-daily-$(date +%Y%m%d)"
+```
+
+Snapshots should be taken with the container stopped to ensure database consistency:
+
+```bash
+docker stop edgenode
+hcloud volume create-snapshot <volume-id> --description "edgenode-$(date +%Y%m%d)"
+docker start edgenode
+```
+
+Downtime per snapshot is typically under a minute.
+
+**Retention:** keep 7 daily snapshots. Hetzner charges by snapshot size; for a 10 GB volume this is minimal.
+
+**OpenTofu state**
+
+The state backend (Hetzner Object Storage) must have versioning enabled on the bucket. This provides automatic state history and protects against accidental `tofu destroy` or state corruption.
+
+```hcl
+# In backend config
+backend "s3" {
+  ...
+  # Enable versioning on the bucket in Hetzner console
+}
+```
+
+### Recovery procedures
+
+**Scenario 1: VM failure, volume intact** *(most common)*
+
+The persistent volume survives independently of the VM. Recovery is a normal `tofu apply`:
+
+```bash
+# OpenTofu detects the VM is gone, recreates it, reattaches the existing volume
+tofu apply -var-file=staging.tfvars
+```
+
+Cloud-init on the new VM mounts the volume and restarts the container. Agent identity and all data are preserved. Recovery time: ~5 minutes.
+
+**Scenario 2: Volume lost or corrupted, snapshot available**
+
+```bash
+# 1. Create a new volume from the most recent snapshot
+hcloud volume create --snapshot <snapshot-id> --name edgenode-data-restored --size 10
+
+# 2. Update the volume resource reference in tofu state or tfvars, then apply
+tofu apply -var-file=staging.tfvars
+```
+
+Data loss is bounded by the snapshot interval (at most 24 hours of source chain activity with daily snapshots).
+
+**Scenario 3: Both volume and snapshots lost** *(catastrophic)*
+
+Agent identity is unrecoverable. Steps:
+1. Provision fresh VM and volume via `tofu apply`
+2. Re-run harvester bootstrap (generate new agent key, update joining service whitelist, redeploy)
+3. Reinstall hApp — existing users will need to re-join; hosted data that was solely on this node is lost
+
+This scenario is prevented by maintaining snapshots. There is no mitigation once it occurs.
+
+### Objectives
+
+**RTO (Recovery Time Objective)** — how long it takes to restore service after a failure.
+**RPO (Recovery Point Objective)** — how much data can be lost, measured as the maximum time gap between the last backup and the failure.
+
+| Metric | Target |
+|--------|--------|
+| RTO — VM failure, volume intact | < 10 minutes |
+| RTO — volume restore from snapshot | < 30 minutes |
+| RPO — daily snapshots | < 24 hours |
+| RPO — lair keystore | 0 — lair is only written on first init; once snapshotted it does not change |
 
 ---
 
 ## Open Questions
 
-1. **Number of edgenode VMs**: The design supports N edgenode VMs. For staging, 2 is the minimum for meaningful DHT arc coverage. Production may warrant more. Each VM gets its own `linker.<n>.<domain>` DNS record and is registered separately in Cloudflare KV.
+1. **Number of edgenode VMs**: ✓ Resolved — 2 edgenode VMs for staging, plus 1 harvester VM (3 VMs total). Two edgenodes is the minimum for meaningful DHT arc coverage and exercises multi-node code paths. Production deployments for larger communities will scale beyond this; the design supports N edgenodes. Each edgenode gets its own `linker.<n>.<domain>` DNS record and is registered separately in Cloudflare KV.
 
 2. **log-collector deployment**: ✓ Resolved — see [Appendix A](#appendix-a-cloudflare-worker-deployment-spike). The log-collector deploys cleanly via OpenTofu. The joining service Worker must continue to use `wrangler deploy` until `@holo-host/lair`'s libsodium WASM dependency is resolved.
 
-3. **OpenTofu state backend**: For a single operator, local state is acceptable. For team use, Hetzner Object Storage is the preferred remote state backend — it is S3-compatible, so the standard OpenTofu S3 backend works with an endpoint override (`https://fsn1.your-objectstorage.com`), and it keeps all infrastructure costs on Hetzner.
+3. **OpenTofu state backend**: ✓ Resolved (for now) — local state for the staging PoC. For team use, Hetzner Object Storage is the preferred remote state backend — it is S3-compatible, so the standard OpenTofu S3 backend works with an endpoint override (`https://fsn1.your-objectstorage.com`), and it keeps all infrastructure costs on Hetzner. Migrate when more than one operator needs to run `tofu apply`.
 
 4. **Harvester VM sizing**: ✓ Resolved — `cx22` (2 vCPU, 4 GB RAM), same as the edgenode. The harvester runs a full Holochain conductor (Unyt hApp) plus Node.js log-harvester; 2 GB is insufficient.
 
-6. **Ansible**: Deferred. Cloud-init covers the current scope. Ansible should be reconsidered if operational needs grow (rolling updates across many nodes, configuration drift correction, complex post-boot sequencing).
-
-5. **Harvester bootstrap**: The harvester's Unyt conductor must be whitelisted in the joining service before it can install the Unyt hApp. The process (based on `unytco/automation/scripts/deploy.sh`) is:
+5. **Harvester bootstrap**: ✓ Resolved — the harvester's Unyt conductor must be whitelisted in the joining service before it can install the Unyt hApp. The process (based on `unytco/automation/scripts/deploy.sh`) is:
    - Generate an agent key via the conductor admin API
    - Add it to the joining service's `allowed_agents` list and enable the `agent_allow_list` auth method
    - Redeploy the joining service (via `wrangler deploy`)
    - Install the Unyt hApp via the admin API, signing zome calls through lair
 
-   Open sub-questions:
-   - Does this bootstrap step run as part of the Ansible `harvester` role (fully automated), or is it a separate one-time operator step?
-   - How is the lair passphrase managed for the harvester conductor — same `LAIR_PASSWORD` env var as the edgenode, or a separate secret?
-   - Is the agent key stable across conductor resets, or does the joining service whitelist need to be updated on each reset?
+   This is a one-time step per deployment (the agent key is stable for the lifetime of the persistent volume). It runs after `tofu apply` as a separate bootstrap phase via `bootstrap-harvester.sh`, which runs a Docker image (`ghcr.io/holo-host/edgenode-bootstrap`) so no local Rust/Node tooling is required. The lair passphrase for the harvester conductor is managed as a separate `HARVESTER_LAIR_PASSWORD` env var.
+
+6. **Ansible**: Deferred. Cloud-init covers the current scope. Ansible should be reconsidered if operational needs grow (rolling updates across many nodes, configuration drift correction, complex post-boot sequencing).
+
+7. **Platform: self-registering harvester**: The bootstrap container approach is sufficient for the staging PoC but does not scale to a multi-customer platform. At platform scale, the harvester conductor should register itself automatically: generate its agent key on first start, call a machine-to-machine admin endpoint on the joining service, and install the Unyt hApp — no operator intervention required. This needs a dedicated admin registration flow in the joining service that does not exist today. It should be scoped as a platform-track requirement.
 
 ---
 
