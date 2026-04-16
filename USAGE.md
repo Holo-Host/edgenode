@@ -82,18 +82,14 @@ To be an Edge Node Operator, you simply need to pull down and run the Edge Node 
 
 Step 1: Install the ISO on the machine:
 
-1. Download the latest ISO image from the [releases page](https://github.com/Holo-Host/edgenode/releases)
+1. Download the latest ISO image from the [releases page](https://github.com/Holo-Host/holo-node-iso/releases)
 2. Burn the ISO to a USB stick as a raw disk image. On Linux, a command such as the following may suffice:
 ```
 dd if=./holos-<version>.iso of=/dev/sdX bs=1024k conv=sync
 ```
    Where `/dev/sdX` is the block device node for the USB stick.
-3. Boot your computer from the USB stick and log in as root with no password.
-4. Choose the live-mode or install option from the Grub Boot Menu
-5. Note: If desirable you can run the installer script from live-mode, telling it which hard drive to install to (generally `sda` on HoloPorts). The following command will work on HoloPorts:
-```
-install-draft sda
-```
+3. Boot your computer from the USB stick and install will occur automatically
+
    Once the installation has completed, the HoloPort will automatically reboot. Remove the USB stick and allow it to boot from the hard drive.
 
 Step 2: Run the container 
