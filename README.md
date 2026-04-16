@@ -4,8 +4,7 @@ This repo contains the tooling needed to deploy and operate always-on nodes for 
 
 The tooling consists of:
 
-1. Edge Node - A Docker container specification for running Holochain with hApps in an OCI-compliant containerized environment.
-2. HolOS - A streamlined Linux ISO that enables the deployment of this container on physical or virtual hardware (especially HoloPorts).
+Edge Node - A Docker container specification for running Holochain with hApps in an OCI-compliant containerized environment.
 
 For a detailed overview and usage instructions [see here](/USAGE.md).
 
