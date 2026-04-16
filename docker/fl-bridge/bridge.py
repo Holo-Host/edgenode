@@ -2,24 +2,26 @@
 """
 fl-bridge: Conductor API bridge for edgenode-flower.
 
-Coordinates between the Holochain FL hApp and a Flower SuperNode.
-On startup it installs the FL hApp (if configured), writes a participant
-identity record, then launches the Flower SuperNode as a managed subprocess.
-It monitors SuperNode output for round-completion events and appends a
+Coordinates between the Holochain pollen hApp and the local Flower process.
+On startup it optionally pip-installs the ClientApp, installs the pollen hApp,
+writes machine and org identity records, then launches either a Flower SuperNode
+(participant role) or SuperLink (designated aggregator role in Mode C).
+It monitors process output for round-completion events and appends a
 ContributionRecord to the local audit log after each round.
 
 Deployment modes (FLOWER_DEPLOYMENT_MODE):
   overlay       - Flower connects to an existing external SuperLink.
                   Bridge records audit trail locally; DHT commitment
-                  requires the FL hApp to be deployed (see TODO below).
+                  requires the pollen hApp to be deployed (see TODO below).
   augmented     - As overlay, but the bridge validates that strategy
                   changes have been ratified on-chain before they are
                   passed to the SuperNode. (Not yet implemented.)
   decentralized - No external SuperLink. Round start/stop is signalled
                   by the round_coordination zome via the DHT. The
                   designated-aggregator address is resolved from DHT
-                  state before the SuperNode is launched. (Not yet
-                  implemented.)
+                  state before the SuperNode is launched, or this machine
+                  activates a SuperLink if elected aggregator.
+                  (Aggregator election not yet implemented.)
 """
 
 import json
@@ -52,22 +54,36 @@ _file_handler: Optional[logging.FileHandler] = None
 # Configuration
 # ---------------------------------------------------------------------------
 
-HC_ADMIN_PORT     = os.environ.get("HC_ADMIN_PORT", "4444")
-HC_APP_PORT       = os.environ.get("HC_APP_PORT", "4445")
-FL_APP_ID         = os.environ.get("FL_APP_ID", "fl-happ")
-FL_HAPP_URL       = os.environ.get("FL_HAPP_URL", "")
-FL_HAPP_PATH      = os.environ.get("FL_HAPP_PATH", "")
-NETWORK_SEED      = os.environ.get("HC_NETWORK_SEED", "fl-network")
-SUPERLINK_URL     = os.environ.get("SUPERLINK_URL", "")
-DEPLOYMENT_MODE   = os.environ.get("FLOWER_DEPLOYMENT_MODE", "overlay")
-ORG_NAME          = os.environ.get("FL_ORG_NAME", "")
-JURISDICTION      = os.environ.get("FL_JURISDICTION", "")
-FLOWER_INSECURE   = os.environ.get("FLOWER_INSECURE", "false").lower() == "true"
-FLOWER_ROOT_CERT  = os.environ.get("FLOWER_ROOT_CERT", "")
+HC_ADMIN_PORT        = os.environ.get("HC_ADMIN_PORT", "4444")
+HC_APP_PORT          = os.environ.get("HC_APP_PORT", "4445")
+FL_APP_ID            = os.environ.get("FL_APP_ID", "fl-happ")
+FL_HAPP_URL          = os.environ.get("FL_HAPP_URL", "")
+FL_HAPP_PATH         = os.environ.get("FL_HAPP_PATH", "")
+NETWORK_SEED         = os.environ.get("HC_NETWORK_SEED", "fl-network")
+SUPERLINK_URL        = os.environ.get("SUPERLINK_URL", "")
+DEPLOYMENT_MODE      = os.environ.get("FLOWER_DEPLOYMENT_MODE", "overlay")
+
+# Machine-level identity (one edgenode per participating machine)
+FL_MACHINE_NAME      = os.environ.get("FL_MACHINE_NAME", "")
+
+# Org-level identity (governance principal; one vote per org regardless of machine count)
+ORG_NAME             = os.environ.get("FL_ORG_NAME", "")
+JURISDICTION         = os.environ.get("FL_JURISDICTION", "")
+
+# ClientApp — user-provided training code
+FL_CLIENT_APP_MODULE = os.environ.get("FL_CLIENT_APP_MODULE", "")  # e.g. myapp:FlowerClient
+FL_CLIENT_APP_URL    = os.environ.get("FL_CLIENT_APP_URL", "")     # pip-installable URL/package
+
+# TLS
+FLOWER_INSECURE      = os.environ.get("FLOWER_INSECURE", "false").lower() == "true"
+FLOWER_ROOT_CERT     = os.environ.get("FLOWER_ROOT_CERT", "")
+
+# Ports
+FLOWER_SUPERLINK_PORT = os.environ.get("FLOWER_SUPERLINK_PORT", "9093")
 
 DATA_DIR           = Path("/data/flower")
 CONTRIBUTIONS_PATH = DATA_DIR / "contributions.jsonl"
-PARTICIPANT_PATH   = DATA_DIR / "participant.json"
+IDENTITY_PATH      = DATA_DIR / "identity.json"
 FL_HAPP_CACHE      = Path("/app/fl-happ.happ")
 
 # ---------------------------------------------------------------------------
@@ -98,60 +114,95 @@ def is_happ_installed() -> bool:
 
 
 def install_fl_happ() -> None:
-    """Download (if needed) and install the FL hApp into the local conductor."""
+    """Download (if needed) and install the pollen hApp into the local conductor."""
     if is_happ_installed():
-        log.info("FL hApp '%s' already installed — skipping.", FL_APP_ID)
+        log.info("pollen hApp '%s' already installed — skipping.", FL_APP_ID)
         return
 
     happ_path = FL_HAPP_PATH
     if not happ_path and FL_HAPP_URL:
         if not FL_HAPP_CACHE.exists():
-            log.info("Downloading FL hApp from %s ...", FL_HAPP_URL)
+            log.info("Downloading pollen hApp from %s ...", FL_HAPP_URL)
             result = subprocess.run(
                 ["wget", "-q", "-O", str(FL_HAPP_CACHE), FL_HAPP_URL],
                 capture_output=True,
             )
             if result.returncode != 0:
-                log.error("Failed to download FL hApp: %s", result.stderr.decode())
+                log.error("Failed to download pollen hApp: %s", result.stderr.decode())
                 sys.exit(1)
         happ_path = str(FL_HAPP_CACHE)
 
     if not happ_path:
         log.warning(
             "No FL_HAPP_URL or FL_HAPP_PATH configured — skipping hApp installation. "
-            "Audit trail will be local only until the FL hApp is deployed."
+            "Audit trail will be local only until the pollen hApp is deployed."
         )
         return
 
-    log.info("Installing FL hApp '%s' from %s ...", FL_APP_ID, happ_path)
+    log.info("Installing pollen hApp '%s' from %s ...", FL_APP_ID, happ_path)
     _hc("install-app", happ_path, "--app-id", FL_APP_ID, NETWORK_SEED, check=True)
     _hc("enable-app", FL_APP_ID, check=True)
-    log.info("FL hApp '%s' installed and enabled.", FL_APP_ID)
+    log.info("pollen hApp '%s' installed and enabled.", FL_APP_ID)
 
 
 # ---------------------------------------------------------------------------
-# Participant identity
+# ClientApp installation
 # ---------------------------------------------------------------------------
 
-def write_participant_identity() -> None:
+def install_client_app() -> None:
     """
-    Persist participant metadata to /data/flower/participant.json.
+    Pip-install the Flower ClientApp package if FL_CLIENT_APP_URL is set.
 
-    This is the local record.  In a full deployment the same data would be
-    committed to the participant_registry zome via a `call_zome` on the app
-    WebSocket — that path is left as a TODO pending FL hApp deployment.
+    This allows the operator to supply federation-specific training code
+    without rebuilding the image. The installed package is then referenced
+    via FL_CLIENT_APP_MODULE when starting the SuperNode.
     """
-    if PARTICIPANT_PATH.exists():
+    if not FL_CLIENT_APP_URL:
+        return
+    log.info("Installing ClientApp from %s ...", FL_CLIENT_APP_URL)
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--quiet", FL_CLIENT_APP_URL],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        log.error("Failed to install ClientApp: %s", result.stderr)
+        sys.exit(1)
+    log.info("ClientApp installed successfully.")
+
+
+# ---------------------------------------------------------------------------
+# Identity record
+# ---------------------------------------------------------------------------
+
+def write_identity() -> None:
+    """
+    Persist machine and org identity to /data/flower/identity.json.
+
+    Records both levels of the two-level identity model:
+      - Machine agent: this specific edgenode (participation principal)
+      - Organisation:  the owning org (governance principal)
+
+    In a full deployment the same data would be committed to the
+    participant_registry zome via a `call_zome` on the app WebSocket —
+    that path is left as a TODO pending pollen hApp deployment.
+    """
+    if IDENTITY_PATH.exists():
         return
     identity = {
-        "app_id":          FL_APP_ID,
-        "org_name":        ORG_NAME,
-        "jurisdiction":    JURISDICTION,
-        "deployment_mode": DEPLOYMENT_MODE,
-        "registered_at":   datetime.now(timezone.utc).isoformat(),
+        "machine": {
+            "name":            FL_MACHINE_NAME,
+            "deployment_mode": DEPLOYMENT_MODE,
+            "registered_at":   datetime.now(timezone.utc).isoformat(),
+        },
+        "org": {
+            "name":         ORG_NAME,
+            "jurisdiction": JURISDICTION,
+        },
+        "app_id": FL_APP_ID,
     }
-    PARTICIPANT_PATH.write_text(json.dumps(identity, indent=2))
-    log.info("Participant identity written to %s", PARTICIPANT_PATH)
+    IDENTITY_PATH.write_text(json.dumps(identity, indent=2))
+    log.info("Identity written to %s", IDENTITY_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -167,19 +218,21 @@ def record_contribution(
     """
     Append a ContributionRecord to the local JSONL audit log.
 
-    Each record captures who participated in which round and when.  The
-    local log is a fallback that is always written; in a full deployment
-    with the FL hApp active, the same record would additionally be committed
-    to the participant's Holochain source chain via:
+    Records are attributed at machine level (FL_MACHINE_NAME) within an
+    org (FL_ORG_NAME), reflecting the two-level identity model. The local
+    log is always written; in a full deployment with the pollen hApp active,
+    the same record would additionally be committed to this machine agent's
+    Holochain source chain via:
 
         contribution_audit.commit_record(ContributionRecord { ... })
 
-    TODO: implement the source-chain commitment once the FL hApp zomes are
-    deployed and an authenticated app WebSocket client is available.
+    TODO: implement source-chain commitment once pollen zomes are deployed
+    and an authenticated app WebSocket client is available.
     """
     record = {
         "round_number":    round_num,
         "app_id":          FL_APP_ID,
+        "machine_name":    FL_MACHINE_NAME,
         "org_name":        ORG_NAME,
         "model_in_hash":   model_in_hash,
         "update_hash":     update_hash,
@@ -189,13 +242,11 @@ def record_contribution(
     }
     with CONTRIBUTIONS_PATH.open("a") as f:
         f.write(json.dumps(record) + "\n")
-    log.info(
-        "ContributionRecord appended (round=%d)", round_num
-    )
+    log.info("ContributionRecord appended (round=%d, machine=%s)", round_num, FL_MACHINE_NAME)
 
 
 # ---------------------------------------------------------------------------
-# Flower SuperNode log parsing
+# Flower process log parsing
 # ---------------------------------------------------------------------------
 
 # Patterns observed in Flower 1.x SuperNode stdout
@@ -216,28 +267,39 @@ def parse_round_number(line: str) -> Optional[int]:
 
 
 # ---------------------------------------------------------------------------
-# Flower SuperNode process management
+# Flower process management
 # ---------------------------------------------------------------------------
 
-def build_supernode_cmd() -> Optional[list[str]]:
+def build_flower_cmd() -> tuple[Optional[list[str]], str]:
     """
-    Build the `flwr supernode` command for the configured deployment mode.
+    Build the Flower command for this machine's current role.
 
-    Returns None if the SuperNode should not be started (e.g. decentralised
-    mode with no aggregator address resolved yet).
+    Returns (cmd, role) where role is 'supernode' or 'superlink'.
+    Returns (None, '') if no process should be started yet.
+
+    In Mode C the role is determined by whether this machine is the
+    designated aggregator for the current round. Aggregator election
+    via the round_coordination zome is not yet implemented; the SuperNode
+    path is always taken for now, with SUPERLINK_URL as a fallback.
     """
     if DEPLOYMENT_MODE == "decentralized":
-        # TODO: resolve the current round's designated aggregator address
-        # from the round_coordination zome before building the command.
-        # For now, fall back to SUPERLINK_URL if set (useful for testing).
+        # TODO: query round_coordination zome to determine if this machine
+        # is the designated aggregator for the current round.
+        #   if is_designated_aggregator():
+        #       return _build_superlink_cmd(), "superlink"
+        # For now fall back to SuperNode if SUPERLINK_URL is set.
         if not SUPERLINK_URL:
             log.warning(
-                "Decentralized mode: no SUPERLINK_URL and aggregator election not "
-                "yet implemented — SuperNode will not start until an address is "
-                "available."
+                "Decentralized mode: aggregator election not yet implemented — "
+                "Flower will not start. Set SUPERLINK_URL to test SuperNode behaviour."
             )
-            return None
+            return None, ""
 
+    return _build_supernode_cmd(), "supernode"
+
+
+def _build_supernode_cmd() -> Optional[list[str]]:
+    """Build a `flwr supernode` command for the participant role."""
     if not SUPERLINK_URL:
         log.warning(
             "SUPERLINK_URL not set — Flower SuperNode will not start. "
@@ -246,6 +308,14 @@ def build_supernode_cmd() -> Optional[list[str]]:
         return None
 
     cmd = ["flwr", "supernode", "--superlink", SUPERLINK_URL]
+
+    if FL_CLIENT_APP_MODULE:
+        cmd += ["--clientapp", FL_CLIENT_APP_MODULE]
+    else:
+        log.warning(
+            "FL_CLIENT_APP_MODULE not set — SuperNode will start without a ClientApp "
+            "and will not perform training. Set FL_CLIENT_APP_MODULE=<module>:<class>."
+        )
 
     if FLOWER_INSECURE:
         log.warning("TLS disabled (FLOWER_INSECURE=true) — do not use in production.")
@@ -261,30 +331,53 @@ def build_supernode_cmd() -> Optional[list[str]]:
     return cmd
 
 
-def start_flower_supernode() -> Optional[subprocess.Popen]:
-    cmd = build_supernode_cmd()
+def _build_superlink_cmd() -> list[str]:
+    """
+    Build a `flwr superlink` command for the designated aggregator role (Mode C).
+
+    The SuperLink binds on FLOWER_SUPERLINK_PORT. After the command is built
+    the caller is responsible for publishing the address to the pollen
+    round_coordination zome so that other machines' SuperNodes can connect.
+
+    TODO: populate SSL cert/key args for production TLS.
+    """
+    cmd = [
+        "flwr", "superlink",
+        f"--fleet-api-address=0.0.0.0:{FLOWER_SUPERLINK_PORT}",
+    ]
+    if FLOWER_INSECURE:
+        log.warning("SuperLink TLS disabled (FLOWER_INSECURE=true) — dev only.")
+        # TODO: add correct insecure flag for flwr superlink when available
+    return cmd
+
+
+def start_flower_process() -> tuple[Optional[subprocess.Popen], str]:
+    """Start the appropriate Flower process and return (proc, role)."""
+    cmd, role = build_flower_cmd()
     if cmd is None:
-        return None
-    log.info("Starting Flower SuperNode: %s", " ".join(cmd))
-    return subprocess.Popen(
+        return None, ""
+    log.info("Starting Flower %s: %s", role, " ".join(cmd))
+    proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
     )
+    return proc, role
 
 
 # ---------------------------------------------------------------------------
 # Bridge main loop
 # ---------------------------------------------------------------------------
 
-def run_bridge_loop(proc: subprocess.Popen) -> None:
-    """Tail SuperNode output, echoing to stdout and recording round events."""
-    flower_log = open("/data/logs/flower-supernode.log", "a")
+def run_bridge_loop(proc: subprocess.Popen, role: str) -> None:
+    """Tail Flower process output, echoing to stdout and recording round events."""
+    log_path = f"/data/logs/flower-{role}.log"
+    flower_log = open(log_path, "a")
     try:
         for line in proc.stdout:
-            sys.stdout.write(f"[flower] {line}")
+            sys.stdout.write(f"[flower-{role}] {line}")
             sys.stdout.flush()
             flower_log.write(line)
             flower_log.flush()
@@ -301,12 +394,14 @@ def run_bridge_loop(proc: subprocess.Popen) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    log.info("fl-bridge starting (mode=%s)", DEPLOYMENT_MODE)
+    log.info(
+        "fl-bridge starting (mode=%s, machine=%s, org=%s)",
+        DEPLOYMENT_MODE, FL_MACHINE_NAME or "<unset>", ORG_NAME or "<unset>",
+    )
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     Path("/data/logs").mkdir(parents=True, exist_ok=True)
 
-    # Add file handler now that /data/logs is guaranteed to exist
     global _file_handler
     _file_handler = logging.FileHandler("/data/logs/fl-bridge.log")
     _file_handler.setFormatter(
@@ -314,20 +409,20 @@ def main() -> None:
     )
     log.addHandler(_file_handler)
 
+    install_client_app()
     wait_for_conductor()
     install_fl_happ()
-    write_participant_identity()
+    write_identity()
 
-    proc = start_flower_supernode()
+    proc, role = start_flower_process()
 
     if proc is None:
-        log.info("No SuperNode process started — bridge idling.")
-        # Keep the s6 service alive so the container doesn't restart in a loop
+        log.info("No Flower process started — bridge idling.")
         signal.pause()
         return
 
     def _shutdown(signum, _frame):
-        log.info("Received signal %d — terminating Flower SuperNode.", signum)
+        log.info("Received signal %d — terminating Flower %s.", signum, role)
         proc.terminate()
         try:
             proc.wait(timeout=10)
@@ -338,10 +433,10 @@ def main() -> None:
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)
 
-    run_bridge_loop(proc)
+    run_bridge_loop(proc, role)
 
     rc = proc.wait()
-    log.info("Flower SuperNode exited with code %d.", rc)
+    log.info("Flower %s exited with code %d.", role, rc)
     sys.exit(rc)
 
 
