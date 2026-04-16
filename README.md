@@ -25,16 +25,6 @@ A [Docker-based container](docker/README.md) that delivers Edge Node, ready to r
 - Holochain conductor configured to automatically run via `tini`.
 - Tools for installing and managing hApps from configuration files.
 
-### HolOS Build System
-
-A [specialized OS builder](holos/README.md) for creating custom ISO images using Buildroot, featuring:
-
-- Optimized Linux kernel.
-- Integrated Holochain services and dependencies (via `runc`-deployed Edge Node container).
-- Custom init scripts for automatic network configuration.
-- Generates ready-to-burn disk images for deployment.
-
-
 ### Tools
 
 - A CLI utility for creating and validating [hApp config files](tools/happ_config_file/README.md).
@@ -63,15 +53,8 @@ docker exec -it edgenode su - nonroot
 ps -ef
 ```
 
-### For HolOS Users
-
-1. Download a release of the iso from our [releases page](https://github.com/Holo-Host/edgenode/releases)
-2. Burn the iso to a USB stick to install on your own physical hardware or install it in a virtualized environment of your choosing. For a more detailed step-by-step on this, please follow the instructions in the Support [How To Guide](https://docs.google.com/document/d/1f3_5Ddff50pFIuzRJAmqGwT9nE873TKQC182LKyJJ4k/edit?tab=t.0#heading=h.ik0z3qmvpegt).
-3. Choose live-mode or install from the Grub boot menu
-
 ## Documentation
 
 - [Detailed overview and usage instructions](/USAGE.md)
 - [Edge Node Container Instructions](docker/README.md)
-- [HolOS Build System Guide](holos/README.md)
 - [Tools for working with Edge Nodes](tools/README.md)
