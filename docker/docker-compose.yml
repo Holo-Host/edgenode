@@ -49,8 +49,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.harvester
-      secrets:
-        - github_token
     depends_on:
       log-collector:
         condition: service_healthy
@@ -75,10 +73,6 @@ services:
 
 networks:
   test-net:
-
-secrets:
-  github_token:
-    environment: GITHUB_TOKEN
 
 volumes:
   holo-data-test:
