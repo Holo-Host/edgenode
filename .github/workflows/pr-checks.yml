@@ -23,6 +23,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Checkout log-collector
+        uses: actions/checkout@v4
+        with:
+          repository: unytco/log-collector
+          path: docker/log-collector
+          token: ${{ secrets.HARVESTER_REPO_TOKEN }}
+
+      - name: Build log-collector (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/log-collector
+          file: docker/Dockerfile.log-collector
+          load: true
+          tags: edgenode-log-collector:latest
+          cache-from: type=gha,scope=log-collector
+          cache-to: type=gha,mode=max,scope=log-collector
+
       - name: Build image for testing
         uses: docker/build-push-action@v5
         with:
