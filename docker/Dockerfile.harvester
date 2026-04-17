@@ -45,8 +45,7 @@ RUN case "${TARGETARCH}" in \
 # CI:    pre-cloned via actions/checkout (unytco/log-harvester)
 # Local: git clone --depth 1 https://github.com/unytco/log-harvester.git log-harvester-src
 COPY log-harvester-src /app/src
-RUN mkdir -p /app && \
-    cd /app/src && \
+RUN cd /app/src && \
     npm ci && \
     npm run build && \
     cp -r dist /app/dist && \

@@ -28,9 +28,16 @@ if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode-harv
         # Ensure log-harvester source is present in the build context
         if [ ! -d "$SCRIPT_DIR/log-harvester-src/.git" ]; then
             echo "Cloning log-harvester source..."
-            git clone --depth 1 \
-                https://github.com/unytco/log-harvester.git \
-                "$SCRIPT_DIR/log-harvester-src"
+            CLONE_URL="https://github.com/unytco/log-harvester.git"
+            if [ -n "$GITHUB_TOKEN" ]; then
+                CLONE_URL="https://${GITHUB_TOKEN}@github.com/unytco/log-harvester.git"
+            fi
+            git clone --depth 1 "$CLONE_URL" "$SCRIPT_DIR/log-harvester-src" || {
+                echo ""
+                echo "Error: failed to clone unytco/log-harvester (private repo)."
+                echo "Set GITHUB_TOKEN to a PAT with repo read access and retry."
+                exit 1
+            }
         fi
         echo "Building local harvester image: $IMAGE_NAME"
         docker build \
