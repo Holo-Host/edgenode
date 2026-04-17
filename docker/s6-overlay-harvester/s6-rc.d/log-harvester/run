@@ -1,0 +1,74 @@
+#!/command/with-contenv /bin/sh
+set -e
+
+APP_ID="${HC_APP_ID:-unyt}"
+NETWORK_SEED="${HC_NETWORK_SEED:-network-seed}"
+
+# Wait for holochain conductor to be ready
+echo "Waiting for holochain conductor..." >> /data/logs/startup.log
+while ! hc sandbox call --running "${HC_ADMIN_PORT}" list-apps > /dev/null 2>&1; do
+  sleep 5
+done
+echo "Holochain conductor is ready." >> /data/logs/startup.log
+
+# Install unyt.happ if not already installed
+if [ -f "${HAPP_PATH}" ]; then
+  if ! hc sandbox call --running "${HC_ADMIN_PORT}" list-apps 2>/dev/null | grep -q "${APP_ID}"; then
+    echo "Installing ${APP_ID} happ..." >> /data/logs/startup.log
+    hc sandbox call --running "${HC_ADMIN_PORT}" install-app "${HAPP_PATH}" \
+      --app-id "${APP_ID}" "${NETWORK_SEED}" >> /data/logs/startup.log 2>&1 || true
+    hc sandbox call --running "${HC_ADMIN_PORT}" enable-app "${APP_ID}" >> /data/logs/startup.log 2>&1 || true
+  fi
+else
+  echo "WARNING: ${HAPP_PATH} not found — skipping happ install" >> /data/logs/startup.log
+fi
+
+# Wait a moment for keystore to be fully ready before touching credentials
+sleep 3
+
+# Initialize config on first run; refresh credentials on restart
+if [ ! -f "${CONFIG_PATH}" ]; then
+  echo "Initializing harvester config..." >> /data/logs/startup.log
+  node /app/dist/log-harvester.js init \
+    --config "${CONFIG_PATH}" \
+    --url "${COLLECTOR_URL}" \
+    --admin "${ADMIN_SECRET}" \
+    --hc-admin "${HC_ADMIN_PORT}" \
+    --hc-app "${HC_APP_PORT}" \
+    --app-id "${APP_ID}" >> /data/logs/startup.log 2>&1
+  chown nonroot:nonroot "${CONFIG_PATH}" 2>/dev/null || true
+else
+  echo "Refreshing harvester credentials..." >> /data/logs/startup.log
+  cp "${CONFIG_PATH}" "${CONFIG_PATH}.backup"
+  LAST_INVOICE=""
+  if command -v jq > /dev/null 2>&1; then
+    LAST_INVOICE=$(jq -r '.lastInvoice // empty' "${CONFIG_PATH}" 2>/dev/null || true)
+  fi
+  rm "${CONFIG_PATH}"
+  node /app/dist/log-harvester.js init \
+    --config "${CONFIG_PATH}" \
+    --url "${COLLECTOR_URL}" \
+    --admin "${ADMIN_SECRET}" \
+    --hc-admin "${HC_ADMIN_PORT}" \
+    --hc-app "${HC_APP_PORT}" \
+    --app-id "${APP_ID}" >> /data/logs/startup.log 2>&1 && \
+    rm -f "${CONFIG_PATH}.backup" || \
+    mv "${CONFIG_PATH}.backup" "${CONFIG_PATH}"
+  if [ -n "${LAST_INVOICE}" ] && command -v jq > /dev/null 2>&1; then
+    jq ".lastInvoice = ${LAST_INVOICE}" "${CONFIG_PATH}" > "${CONFIG_PATH}.tmp" && \
+      mv "${CONFIG_PATH}.tmp" "${CONFIG_PATH}" || true
+  fi
+  chown nonroot:nonroot "${CONFIG_PATH}" 2>/dev/null || true
+fi
+
+echo "Starting log-harvester service..." >> /data/logs/startup.log
+
+TODAY_FLAG=""
+if [ "${LOG_FOR_TODAY:-false}" = "true" ]; then
+  TODAY_FLAG="--today"
+fi
+
+exec gosu nonroot node /app/dist/log-harvester.js exec \
+  --config "${CONFIG_PATH}" \
+  --loop \
+  ${TODAY_FLAG} >> /data/logs/log-harvester.log 2>&1

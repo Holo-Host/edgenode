@@ -1,0 +1,106 @@
+# syntax=docker/dockerfile:1
+# Dockerfile for the edge node harvester variant.
+# Replaces log-sender with log-harvester (unytco/log-harvester).
+# Requires log-harvester source at log-harvester-src/ in the build context:
+#   CI:    pre-cloned via actions/checkout (unytco/log-harvester)
+#   Local: run_harvester_tests.sh clones it automatically, or:
+#          git clone --depth 1 https://github.com/unytco/log-harvester.git log-harvester-src
+
+FROM cgr.dev/chainguard/wolfi-base
+
+VOLUME ["/data"]
+
+RUN apk update && apk upgrade && apk add --no-cache bash curl wget git htop jq strace tcpdump coreutils logrotate shadow gosu uuidgen xz libstdc++ nodejs npm
+
+ARG TARGETARCH
+ARG S6_OVERLAY_VERSION=3.2.0.2
+
+RUN case "${TARGETARCH}" in \
+    amd64) S6_ARCH="x86_64" ;; \
+    arm64) S6_ARCH="aarch64" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz && \
+    wget https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${S6_ARCH}.tar.xz && \
+    tar -C / -Jxpf s6-overlay-noarch.tar.xz && \
+    tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
+    rm -f s6-overlay-*.tar.xz
+
+ARG HOLOCHAIN_VERSION=0.6.1-rc.3
+ARG HC_VERSION=0.6.1-rc.3
+
+RUN case "${TARGETARCH}" in \
+    amd64) HC_ARCH="x86_64-unknown-linux-gnu" ;; \
+    arm64) HC_ARCH="aarch64-unknown-linux-gnu" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget https://github.com/holochain/holochain/releases/download/holochain-${HOLOCHAIN_VERSION}/holochain-${HC_ARCH} && \
+    wget https://github.com/holochain/holochain/releases/download/holochain-${HC_VERSION}/hc-${HC_ARCH} && \
+    mv holochain-${HC_ARCH} /bin/holochain && \
+    mv hc-${HC_ARCH} /bin/hc && \
+    chmod +x /bin/holochain && \
+    chmod +x /bin/hc
+
+# log-harvester source must be present at log-harvester-src/ in the build context.
+# CI:    pre-cloned via actions/checkout (unytco/log-harvester)
+# Local: git clone --depth 1 https://github.com/unytco/log-harvester.git log-harvester-src
+COPY log-harvester-src /app/src
+RUN cd /app/src && \
+    npm ci && \
+    npm run build && \
+    cp -r dist /app/dist && \
+    npm prune --omit=dev && \
+    cp -r node_modules /app/node_modules && \
+    cd / && rm -rf /app/src
+
+ARG UNYT_HAPP_VERSION=latest
+
+RUN if [ "${UNYT_HAPP_VERSION}" = "latest" ]; then \
+        wget -O /app/unyt.happ \
+            https://github.com/unytco/unyt-sandbox/releases/latest/download/unyt.happ; \
+    else \
+        wget -O /app/unyt.happ \
+            https://github.com/unytco/unyt-sandbox/releases/download/${UNYT_HAPP_VERSION}/unyt.happ; \
+    fi
+
+COPY happ_tool /usr/local/bin/happ_tool
+RUN chmod +x /usr/local/bin/happ_tool
+RUN ln -sf /usr/local/bin/happ_tool /usr/local/bin/install_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/uninstall_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/enable_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/disable_happ && \
+    ln -sf /usr/local/bin/happ_tool /usr/local/bin/list_happs && \
+    chmod +x /usr/local/bin/install_happ /usr/local/bin/list_happs /usr/local/bin/uninstall_happ /usr/local/bin/enable_happ /usr/local/bin/disable_happ
+
+ARG HAPP_CONFIG_FILE_VERSION=0.3.0
+
+RUN case "${TARGETARCH}" in \
+    amd64) HCF_ARCH="linux-x86_64" ;; \
+    arm64) HCF_ARCH="linux-aarch64" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget "https://github.com/Holo-Host/edgenode/releases/download/tools%2Fhapp_config_file-v${HAPP_CONFIG_FILE_VERSION}/happ_config_file-${HCF_ARCH}" && \
+    mv "happ_config_file-${HCF_ARCH}" /usr/local/bin/happ_config_file && \
+    chmod +x /usr/local/bin/happ_config_file
+
+RUN mkdir -p /usr/local/share/holochain
+COPY conductor-config-0.6.1.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
+COPY logrotate.d/holochain.conf /etc/logrotate.d/holochain.conf
+RUN chown -R nonroot:nonroot /usr/local/share/holochain
+
+COPY s6-overlay-harvester/s6-rc.d/ /etc/s6-overlay/s6-rc.d/
+RUN chmod +x \
+    /etc/s6-overlay/s6-rc.d/setup/init.sh \
+    /etc/s6-overlay/s6-rc.d/conductor/run \
+    /etc/s6-overlay/s6-rc.d/log-harvester/run \
+    /etc/s6-overlay/s6-rc.d/logrotate-cron/run
+
+ENV HC_ADMIN_PORT=4444
+ENV HC_APP_PORT=4445
+ENV HAPP_PATH=/app/unyt.happ
+ENV CONFIG_PATH=/data/log-harvester/config.json
+
+SHELL ["/bin/sh", "-c"]
+EXPOSE 4444 4445
+
+ENTRYPOINT ["/init"]

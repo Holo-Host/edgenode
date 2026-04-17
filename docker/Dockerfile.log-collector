@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+# Dockerfile for the log-collector service.
+# Build context should be a checkout of unytco/log-collector.
+
+FROM node:20-slim
+
+# Install wrangler, curl for health check, and sqlite3 for debugging
+RUN npm install -g wrangler@4.45.4 && \
+    apt-get update && \
+    apt-get install -y curl sqlite3 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy worker source from build context (unytco/log-collector checkout)
+WORKDIR /usr/src/app
+COPY . .
+
+# Install dependencies
+RUN npm install
+
+EXPOSE 8787
+
+RUN printf '#!/bin/bash\nset -e\necho "[log-collector] Applying D1 schema..."\nnpx wrangler d1 execute log-collector-db --local --file=schema.sql 2>&1 || true\necho "[log-collector] Starting wrangler dev server..."\nexec wrangler dev --env development --ip 0.0.0.0 --port 8787 \\\n  --var ADMIN_SECRET:"${ADMIN_SECRET:-test_admin_secret}"\n' \
+    > /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]

@@ -23,13 +23,83 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Checkout log-collector
+        uses: actions/checkout@v4
+        with:
+          repository: unytco/log-collector
+          path: docker/log-collector
+          token: ${{ secrets.HARVESTER_REPO_TOKEN }}
+
+      - name: Build log-collector (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/log-collector
+          file: docker/Dockerfile.log-collector
+          load: true
+          tags: edgenode-log-collector:latest
+          cache-from: type=gha,scope=log-collector
+          cache-to: type=gha,mode=max,scope=log-collector
+
       - name: Build image for testing
-        run: |
-          docker buildx build docker/ --file docker/Dockerfile \
-            --platform linux/amd64 \
-            --load \
-            --tag local-edgenode
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/
+          file: docker/Dockerfile
+          load: true
+          tags: local-edgenode
+          cache-from: type=gha,scope=edgenode
+          cache-to: type=gha,mode=max,scope=edgenode
 
       - name: Run tests
         run: |
           CI_RELEASE_TEST=true ./docker/run_tests_multi.sh local-edgenode
+
+  test-harvester-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Checkout log-collector
+        uses: actions/checkout@v4
+        with:
+          repository: unytco/log-collector
+          path: docker/log-collector
+          token: ${{ secrets.HARVESTER_REPO_TOKEN }}
+
+      - name: Build log-collector (cached)
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/log-collector
+          file: docker/Dockerfile.log-collector
+          load: true
+          tags: edgenode-log-collector:latest
+          cache-from: type=gha,scope=log-collector
+          cache-to: type=gha,mode=max,scope=log-collector
+
+      - name: Checkout log-harvester
+        uses: actions/checkout@v4
+        with:
+          repository: unytco/log-harvester
+          path: docker/log-harvester-src
+          token: ${{ secrets.HARVESTER_REPO_TOKEN }}
+
+      - name: Build harvester image for testing
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/
+          file: docker/Dockerfile.harvester
+          load: true
+          tags: local-edgenode-harvester
+          cache-from: type=gha,scope=edgenode-harvester
+          cache-to: type=gha,mode=max,scope=edgenode-harvester
+
+      - name: Run harvester tests
+        run: |
+          CI_RELEASE_TEST=true ./docker/run_harvester_tests.sh local-edgenode-harvester
