@@ -4,8 +4,7 @@ This repo contains the tooling needed to deploy and operate always-on nodes for 
 
 The tooling consists of:
 
-1. Edge Node - Docker container specifications for running Holochain with hApps in an OCI-compliant containerized environment. Two variants: `edgenode` (standard, with log-sender) and `edgenode-harvester` (with log-harvester for Unyt invoice aggregation).
-2. HolOS - A streamlined Linux ISO that enables the deployment of this container on physical or virtual hardware (especially HoloPorts).
+Edge Node - Docker container specifications for running Holochain with hApps in an OCI-compliant containerized environment. Two variants: `edgenode` (standard, with log-sender) and `edgenode-harvester` (with log-harvester for Unyt invoice aggregation).
 
 For a detailed overview and usage instructions [see here](/USAGE.md).
 
@@ -26,16 +25,6 @@ A [Docker-based container](docker/README.md) that delivers Edge Node, ready to r
 - Holochain conductor managed by s6-overlay, starting automatically on container launch.
 - Tools for installing and managing hApps from configuration files.
 - Two variants: standard (`edgenode`) and harvester (`edgenode-harvester`).
-
-### HolOS Build System
-
-A [specialized OS builder](holos/README.md) for creating custom ISO images using Buildroot, featuring:
-
-- Optimized Linux kernel.
-- Integrated Holochain services and dependencies (via `runc`-deployed Edge Node container).
-- Custom init scripts for automatic network configuration.
-- Generates ready-to-burn disk images for deployment.
-
 
 ### Tools
 
@@ -88,11 +77,6 @@ docker run --name harvester -dit \
 
 See [docker/LOG_HARVESTER_QUICKSTART.md](docker/LOG_HARVESTER_QUICKSTART.md) for full setup instructions.
 
-### For HolOS Users
-
-1. Download a release of the iso from our [releases page](https://github.com/Holo-Host/edgenode/releases)
-2. Burn the iso to a USB stick to install on your own physical hardware or install it in a virtualized environment of your choosing. For a more detailed step-by-step on this, please follow the instructions in the Support [How To Guide](https://docs.google.com/document/d/1f3_5Ddff50pFIuzRJAmqGwT9nE873TKQC182LKyJJ4k/edit?tab=t.0#heading=h.ik0z3qmvpegt).
-3. Choose live-mode or install from the Grub boot menu
 
 ## Documentation
 
@@ -100,5 +84,4 @@ See [docker/LOG_HARVESTER_QUICKSTART.md](docker/LOG_HARVESTER_QUICKSTART.md) for
 - [Edge Node Container Instructions](docker/README.md)
 - [Log-Sender Quickstart (Unyt resource accounting)](docker/LOG_SENDER_QUICKSTART.md)
 - [Log-Harvester Quickstart (Unyt invoice aggregation)](docker/LOG_HARVESTER_QUICKSTART.md)
-- [HolOS Build System Guide](holos/README.md)
 - [Tools for working with Edge Nodes](tools/README.md)
