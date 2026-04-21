@@ -616,6 +616,7 @@ services:
     volumes: [edgenode-data:/data]
     environment:
       CADDY_DOMAIN: linker.example.com
+      H2HC_LINKER_BOOTSTRAP_URL: ${H2HC_LINKER_BOOTSTRAP_URL}
       H2HC_LINKER_ADMIN_SECRET: ${LINKER_ADMIN_SECRET}
       LOG_SENDER_ENDPOINT: ${LOG_SENDER_ENDPOINT}
       LAIR_PASSWORD: ${LAIR_PASSWORD}
