@@ -2,7 +2,7 @@ FROM cgr.dev/chainguard/wolfi-base
 
 VOLUME ["/data"]
 
-RUN apk update && apk upgrade && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils logrotate shadow gosu uuidgen xz libstdc++ nodejs npm
+RUN apk update && apk upgrade && apk add --no-cache bash curl wget htop jq strace tcpdump coreutils logrotate shadow gosu uuidgen xz libstdc++ nodejs npm caddy
 
 ARG TARGETARCH
 ARG S6_OVERLAY_VERSION=3.2.0.2
@@ -47,6 +47,17 @@ RUN case "${TARGETARCH}" in \
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender
 
+ARG LINKER_VERSION=0.1.1
+
+RUN case "${TARGETARCH}" in \
+    amd64) LINKER_ARCH="linux-x86_64" ;; \
+    arm64) LINKER_ARCH="linux-aarch64" ;; \
+    *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    wget "https://github.com/holo-host/h2hc-linker/releases/download/v${LINKER_VERSION}/h2hc-linker-${LINKER_ARCH}" \
+        -O /usr/local/bin/h2hc-linker && \
+    chmod +x /usr/local/bin/h2hc-linker
+
 ARG WDOCKER_VERSION=0.15.3
 RUN npm install -g --ignore-scripts @theweave/wdocker@${WDOCKER_VERSION} && \
     cd /usr/local/lib/node_modules/@theweave/wdocker && \
@@ -87,9 +98,11 @@ RUN chmod +x \
     /etc/s6-overlay/s6-rc.d/setup/init.sh \
     /etc/s6-overlay/s6-rc.d/conductor/run \
     /etc/s6-overlay/s6-rc.d/log-sender/run \
-    /etc/s6-overlay/s6-rc.d/logrotate-cron/run
+    /etc/s6-overlay/s6-rc.d/logrotate-cron/run \
+    /etc/s6-overlay/s6-rc.d/linker/run \
+    /etc/s6-overlay/s6-rc.d/caddy/run
 
 SHELL ["/bin/sh", "-c"]
-EXPOSE 4444
+EXPOSE 4444 80 443
 
 ENTRYPOINT ["/init"]

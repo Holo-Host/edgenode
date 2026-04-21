@@ -119,13 +119,52 @@ Paths are symlinked into the `/data` volume for persistence:
 
 Services by variant:
 
-| Service | `edgenode` | `edgenode-harvester` |
-|---------|-----------|---------------------|
-| `setup` (oneshot) | ✓ | ✓ |
-| `conductor` (longrun) | ✓ | ✓ |
-| `logrotate-cron` (longrun) | ✓ | ✓ |
-| `log-sender` (longrun) | ✓ | — |
-| `log-harvester` (longrun) | — | ✓ |
+| Service | `edgenode` | `edgenode-harvester` | Auto-enabled when |
+|---------|-----------|---------------------|-------------------|
+| `setup` (oneshot) | ✓ | ✓ | always |
+| `conductor` (longrun) | ✓ | ✓ | always |
+| `logrotate-cron` (longrun) | ✓ | ✓ | always |
+| `log-sender` (longrun) | ✓ | — | `LOG_SENDER_ENDPOINT` is set |
+| `log-harvester` (longrun) | — | ✓ | always |
+| `linker` (longrun) | ✓ | — | `H2HC_LINKER_BOOTSTRAP_URL` is set |
+| `caddy` (longrun) | ✓ | — | `CADDY_DOMAIN` and `H2HC_LINKER_BOOTSTRAP_URL` are both set |
+
+### Optional services: linker and Caddy
+
+`linker` and `caddy` are off by default and enable themselves automatically based on environment variables. s6 keeps them in a dormant-but-supervised idle state (`tail -f /dev/null`) when disabled — no crash, no restart loop.
+
+**h2hc-linker** — WebRTC signalling bridge between browser nodes and the conductor:
+
+```sh
+docker run --name edgenode -dit \
+  -v $(pwd)/holo-data:/data \
+  -p 4444:4444 -p 8080:8080 \
+  -e H2HC_LINKER_BOOTSTRAP_URL=https://bootstrap.holo.host \
+  ghcr.io/holo-host/edgenode
+```
+
+Optional linker variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `H2HC_LINKER_BOOTSTRAP_URL` | — | Required to enable the service |
+| `H2HC_LINKER_ADDRESS` | `0.0.0.0` | Bind address (container default overrides upstream `127.0.0.1`) |
+| `H2HC_LINKER_PORT` | `8080` | Listen port |
+| `H2HC_LINKER_ADMIN_SECRET` | — | Enables auth layer between linker and joining service |
+| `H2HC_LINKER_CONDUCTOR_URL` | — | Enables zome call proxying |
+
+**Caddy** — TLS termination and reverse proxy in front of linker. Requires a public DNS record pointing at the host and ports 80/443 exposed:
+
+```sh
+docker run --name edgenode -dit \
+  -v $(pwd)/holo-data:/data \
+  -p 80:80 -p 443:443 -p 4444:4444 \
+  -e H2HC_LINKER_BOOTSTRAP_URL=https://bootstrap.holo.host \
+  -e CADDY_DOMAIN=linker.example.com \
+  ghcr.io/holo-host/edgenode
+```
+
+Caddy will not start if `H2HC_LINKER_BOOTSTRAP_URL` is unset, since there would be nothing to proxy to.
 
 ## Development
 

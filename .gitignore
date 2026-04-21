@@ -3,6 +3,7 @@ test-data/
 holo-data-test/
 .roo/
 .gemini/
+.agents/
 docker/happ_config_file
 docker/log-collector/
 docker/log-harvester-src/
