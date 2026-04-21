@@ -40,7 +40,7 @@ err()  { echo -e "\033[0;31m[bootstrap]\033[0m $*" >&2; }
 
 for var in HARVESTER_NETWORK_SEED JOINING_SERVICE_CONFIG_PATH JOINING_SERVICE_DEPLOY_SCRIPT; do
   if [[ -z "${!var:-}" ]]; then
-    err "$var is not set. Did you source deploy/.env.staging?"
+    err "$var is not set. Did you source deploy/.env.<org>-<env>?"
     exit 1
   fi
 done

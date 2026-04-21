@@ -37,9 +37,8 @@ variable "ssh_public_key" {
 # ── Deployment config ───────────────────────────────────────────────────────
 
 variable "project_name" {
-  description = "Short name prefixed on all Hetzner and Cloudflare resources"
+  description = "Deployment identifier in <org>-<env> form (e.g. 'acme-staging'). Prefixed on all Hetzner and Cloudflare resource names."
   type        = string
-  default     = "edgenode"
 }
 
 variable "hetzner_location" {
