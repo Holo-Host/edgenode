@@ -33,7 +33,7 @@ caddy_running() {
 # Tier 1: disabled state — always run (standard CI has no linker/caddy env vars)
 # ---------------------------------------------------------------------------
 
-@test "h2hc-linker is not running when H2HC_LINKER_ADMIN_SECRET is unset" {
+@test "h2hc-linker is not running when H2HC_LINKER_BOOTSTRAP_URL is unset" {
   if linker_running; then skip "h2hc-linker is configured and running"; fi
   run docker compose exec -T "$SERVICE" pgrep h2hc-linker
   assert_failure
@@ -60,26 +60,26 @@ caddy_running() {
 }
 
 # ---------------------------------------------------------------------------
-# Tier 2: enabled state — skipped unless H2HC_LINKER_ADMIN_SECRET / CADDY_DOMAIN set
+# Tier 2: enabled state — skipped unless H2HC_LINKER_BOOTSTRAP_URL / CADDY_DOMAIN set
 # Run via a compose override that sets the env vars and provides a test domain.
 # ---------------------------------------------------------------------------
 
 @test "h2hc-linker runs as nonroot when configured" {
-  if ! linker_running; then skip "h2hc-linker not configured (H2HC_LINKER_ADMIN_SECRET unset)"; fi
+  if ! linker_running; then skip "h2hc-linker not configured (H2HC_LINKER_BOOTSTRAP_URL unset)"; fi
   run docker compose exec -T "$SERVICE" \
     sh -c "ps aux | grep -E 'nonroot.*h2hc-linker'"
   assert_success
 }
 
 @test "h2hc-linker is listening on H2HC_LINKER_PORT when configured" {
-  if ! linker_running; then skip "h2hc-linker not configured (H2HC_LINKER_ADMIN_SECRET unset)"; fi
+  if ! linker_running; then skip "h2hc-linker not configured (H2HC_LINKER_BOOTSTRAP_URL unset)"; fi
   run docker compose exec -T "$SERVICE" \
     sh -c "timeout 2 bash -c 'echo >/dev/tcp/localhost/${H2HC_LINKER_PORT:-8080}' 2>/dev/null && echo open || echo closed"
   assert_output "open"
 }
 
 @test "startup log contains linker startup message when configured" {
-  if ! linker_running; then skip "h2hc-linker not configured (H2HC_LINKER_ADMIN_SECRET unset)"; fi
+  if ! linker_running; then skip "h2hc-linker not configured (H2HC_LINKER_BOOTSTRAP_URL unset)"; fi
   run docker compose exec -T "$SERVICE" grep "Starting h2hc-linker" /data/logs/startup.log
   assert_success
 }

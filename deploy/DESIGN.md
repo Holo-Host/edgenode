@@ -107,8 +107,8 @@ The standard edgenode image is flexible — services are toggled via environment
 | Service | Toggle variable | Auto-enabled when |
 |---------|----------------|-------------------|
 | Holochain conductor | `CONDUCTOR_MODE` | set (existing behaviour) |
-| h2hc-linker | `ENABLE_LINKER` | `H2HC_LINKER_ADMIN_SECRET` is set |
-| Caddy (reverse proxy + TLS) | `ENABLE_CADDY` | `CADDY_DOMAIN` is set |
+| h2hc-linker | `ENABLE_LINKER` | `H2HC_LINKER_BOOTSTRAP_URL` is set |
+| Caddy (reverse proxy + TLS) | `ENABLE_CADDY` | `CADDY_DOMAIN` and `H2HC_LINKER_BOOTSTRAP_URL` are set |
 | log-sender | `ENABLE_LOG_SENDER` | `LOG_SENDER_ENDPOINT` is set |
 | wdocker | `ENABLE_WDOCKER` | explicit |
 
@@ -119,8 +119,8 @@ The **harvester variant** (`Dockerfile.harvester`) does not include h2hc-linker 
 h2hc-linker is a separate Rust binary from a separate repo. It is included in the standard edgenode image at build time, pinned via a build argument:
 
 ```dockerfile
-ARG LINKER_VERSION=0.1.0
-RUN wget https://github.com/holo-host/h2hc-linker/releases/download/v${LINKER_VERSION}/h2hc-linker-x86_64-unknown-linux-gnu \
+ARG LINKER_VERSION=0.1.1
+RUN wget https://github.com/holo-host/h2hc-linker/releases/download/v${LINKER_VERSION}/h2hc-linker-linux-x86_64 \
     -O /usr/local/bin/h2hc-linker && chmod +x /usr/local/bin/h2hc-linker
 ```
 
@@ -140,8 +140,7 @@ Caddy serves the h2hc-linker on HTTPS at that domain. The container must expose 
 docker run \
   -p 80:80 -p 443:443 -p 4444:4444 \
   -e CADDY_DOMAIN=linker.example.com \
-  -e ENABLE_CADDY=1 \
-  -e ENABLE_LINKER=1 \
+  -e H2HC_LINKER_BOOTSTRAP_URL=https://bootstrap.holo.host \
   -e H2HC_LINKER_ADMIN_SECRET=... \
   ghcr.io/holo-host/edgenode
 ```

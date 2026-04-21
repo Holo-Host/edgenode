@@ -47,11 +47,11 @@ RUN case "${TARGETARCH}" in \
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender
 
-ARG LINKER_VERSION=0.1.0
+ARG LINKER_VERSION=0.1.1
 
 RUN case "${TARGETARCH}" in \
-    amd64) LINKER_ARCH="x86_64-unknown-linux-gnu" ;; \
-    arm64) LINKER_ARCH="aarch64-unknown-linux-gnu" ;; \
+    amd64) LINKER_ARCH="linux-x86_64" ;; \
+    arm64) LINKER_ARCH="linux-aarch64" ;; \
     *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
     esac && \
     wget "https://github.com/holo-host/h2hc-linker/releases/download/v${LINKER_VERSION}/h2hc-linker-${LINKER_ARCH}" \

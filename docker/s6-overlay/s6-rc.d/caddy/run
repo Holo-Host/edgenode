@@ -1,8 +1,8 @@
 #!/command/with-contenv /bin/sh
 set -e
 
-# Auto-enabled when CADDY_DOMAIN is set (implies linker is also configured)
-if [ -z "${CADDY_DOMAIN:-}" ] || [ -z "${H2HC_LINKER_ADMIN_SECRET:-}" ]; then
+# Auto-enabled when CADDY_DOMAIN and H2HC_LINKER_BOOTSTRAP_URL are both set
+if [ -z "${CADDY_DOMAIN:-}" ] || [ -z "${H2HC_LINKER_BOOTSTRAP_URL:-}" ]; then
   exec tail -f /dev/null
 fi
 
