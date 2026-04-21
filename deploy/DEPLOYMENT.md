@@ -9,6 +9,20 @@ Compose), see [DESIGN.md — Appendix C](DESIGN.md#appendix-c-deployment-path-op
 
 ---
 
+## Naming Convention
+
+Each deployment is identified by `<org>-<env>`, where:
+
+- `<org>` — a short slug for the organisation operating the stack (assigned by Holo)
+- `<env>` — environment tier: `staging` or `prod`
+
+Examples: `acme-staging`, `acme-prod`, `junto-staging`.
+
+This identifier prefixes all cloud resources (Hetzner VMs, Cloudflare Workers,
+DNS records) and is used as the OpenTofu workspace name for state isolation.
+
+---
+
 ## Prerequisites
 
 | Tool | Purpose |
@@ -29,8 +43,8 @@ Accounts required: **Hetzner Cloud**, **Cloudflare** (Workers + DNS).
 ### 1. Populate secrets
 
 ```bash
-cp deploy/.env.example deploy/.env.staging
-$EDITOR deploy/.env.staging
+cp deploy/.env.example deploy/.env.acme-staging
+$EDITOR deploy/.env.acme-staging
 ```
 
 Fill in all values. The file is self-documenting. Key items:
@@ -41,23 +55,25 @@ Fill in all values. The file is self-documenting. Key items:
 - `HARVESTER_NETWORK_SEED` — network seed for the Unyt hApp cell (obtain from the Unyt team)
 - `JOINING_SERVICE_CONFIG_PATH` / `JOINING_SERVICE_DEPLOY_SCRIPT` — paths in your joining service checkout
 
-### 2. Update staging.tfvars
+### 2. Create deployment tfvars
 
-Edit `deploy/tofu/staging.tfvars` and replace the placeholder domain:
+Copy the example and fill in the values for this deployment:
 
-```hcl
-domain = "staging.yourdomain.com"   # must be in your Cloudflare zone
+```bash
+cp deploy/tofu/example.tfvars deploy/tofu/acme-staging.tfvars
+$EDITOR deploy/tofu/acme-staging.tfvars
 ```
 
-All other values in `staging.tfvars` are reasonable defaults for a staging
-deployment (2 × `cx22` edgenodes + 1 × `cx22` harvester, `nbg1` region, 10 GB volumes).
+Set `project_name = "acme-staging"` and replace the placeholder domain. All
+other values are reasonable defaults (2 × `cx22` edgenodes + 1 × `cx22`
+harvester, `nbg1` region, 10 GB volumes).
 
 ### 3. Configure your DNS zone
 
-The `cloudflare_zone_id` in `.env.staging` must match the zone that owns
-`staging.yourdomain.com`. OpenTofu creates `linker-0.staging.yourdomain.com`
-and `linker-1.staging.yourdomain.com` as DNS A records pointing at the edgenode
-VM IPs.
+The `CLOUDFLARE_ZONE_ID` in `.env.acme-staging` must match the zone that owns
+the domain set in `acme-staging.tfvars`. OpenTofu creates
+`linker-0.<domain>` and `linker-1.<domain>` as DNS A records pointing at the
+edgenode VM IPs.
 
 Ensure the Cloudflare API token has **DNS: Edit** permission on that zone.
 
@@ -66,13 +82,14 @@ Ensure the Cloudflare API token has **DNS: Edit** permission on that zone.
 ## Provisioning
 
 ```bash
-source deploy/.env.staging
-./deploy/scripts/staging-apply.sh
+source deploy/.env.acme-staging
+./deploy/scripts/apply.sh acme staging
 ```
 
 This script:
 1. Builds the log-collector Worker bundle (esbuild)
-2. Runs `tofu init` + `tofu apply` with `staging.tfvars`
+2. Selects (or creates) the `acme-staging` OpenTofu workspace
+3. Runs `tofu init` + `tofu apply` with `acme-staging.tfvars`
 
 OpenTofu provisions in dependency order:
 - Cloudflare: KV namespace → log-collector Worker → DNS records (after VMs)
@@ -87,7 +104,7 @@ the container.
 ### Preview changes without applying
 
 ```bash
-./deploy/scripts/staging-apply.sh --dry-run
+./deploy/scripts/apply.sh acme staging --dry-run
 ```
 
 ### Verify containers are running
@@ -111,7 +128,7 @@ installed. Run the bootstrap after the conductor is ready (~1-2 minutes after
 provisioning):
 
 ```bash
-source deploy/.env.staging
+source deploy/.env.acme-staging
 ./deploy/scripts/bootstrap-harvester.sh
 ```
 
@@ -134,8 +151,8 @@ intentionally wiped the volume.
 ### Config or infrastructure changes
 
 ```bash
-source deploy/.env.staging
-./deploy/scripts/staging-apply.sh
+source deploy/.env.acme-staging
+./deploy/scripts/apply.sh acme staging
 ```
 
 OpenTofu is idempotent — it only changes resources that differ from the
@@ -147,17 +164,18 @@ Replace the VM. OpenTofu detaches and reattaches the persistent volume to the
 new VM; Holochain data is fully preserved.
 
 ```bash
-source deploy/.env.staging
+source deploy/.env.acme-staging
 cd deploy/tofu
+tofu workspace select acme-staging
 
 # Replace a specific edgenode VM (index 0 or 1)
-tofu apply -replace=hcloud_server.edgenode[0] -var-file=staging.tfvars
+tofu apply -replace=hcloud_server.edgenode[0] -var-file=acme-staging.tfvars
 
 # Replace the harvester VM
-tofu apply -replace=hcloud_server.harvester -var-file=staging.tfvars
+tofu apply -replace=hcloud_server.harvester -var-file=acme-staging.tfvars
 ```
 
-To deploy a specific image version rather than `latest`, update `staging.tfvars`:
+To deploy a specific image version rather than `latest`, update `acme-staging.tfvars`:
 
 ```hcl
 edgenode_image  = "ghcr.io/holo-host/edgenode:v1.2.3"
@@ -167,18 +185,20 @@ harvester_image = "ghcr.io/holo-host/edgenode-harvester:v1.2.3"
 ### Joining service update (config change only)
 
 ```bash
-source deploy/.env.staging
+source deploy/.env.acme-staging
 # Edit $JOINING_SERVICE_CONFIG_PATH
 bash "$JOINING_SERVICE_DEPLOY_SCRIPT" deploy --config-file "$JOINING_SERVICE_CONFIG_PATH"
 ```
 
-### Staging → production promotion
+### Staging → production
 
 ```bash
-cp deploy/.env.example deploy/.env.production
-$EDITOR deploy/.env.production     # set production credentials and domain
-source deploy/.env.production
-./deploy/scripts/production-apply.sh
+cp deploy/.env.example deploy/.env.acme-prod
+$EDITOR deploy/.env.acme-prod      # set production credentials and domain
+cp deploy/tofu/example.tfvars deploy/tofu/acme-prod.tfvars
+$EDITOR deploy/tofu/acme-prod.tfvars   # set project_name = "acme-prod", increase volume sizes
+source deploy/.env.acme-prod
+./deploy/scripts/apply.sh acme prod
 ./deploy/scripts/bootstrap-harvester.sh
 ```
 
@@ -206,12 +226,12 @@ for recovery procedures.
 
 ### Recovery: VM failure, volume intact
 
-The persistent volume survives independently. A normal `tofu apply` recreates
+The persistent volume survives independently. A normal `apply.sh` recreates
 the VM and reattaches the volume. No data is lost; no bootstrap re-run needed.
 
 ```bash
-source deploy/.env.staging
-./deploy/scripts/staging-apply.sh
+source deploy/.env.acme-staging
+./deploy/scripts/apply.sh acme staging
 ```
 
 ---
@@ -219,9 +239,10 @@ source deploy/.env.staging
 ## Teardown
 
 ```bash
-source deploy/.env.staging
+source deploy/.env.acme-staging
 cd deploy/tofu
-tofu destroy -var-file=staging.tfvars
+tofu workspace select acme-staging
+tofu destroy -var-file=acme-staging.tfvars
 ```
 
 > **Warning:** This destroys VMs and their volumes. All Holochain data is lost
