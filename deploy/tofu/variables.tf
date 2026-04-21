@@ -97,10 +97,16 @@ variable "harvester_volume_size" {
 
 # ── Application secrets ─────────────────────────────────────────────────────
 
+variable "linker_bootstrap_url" {
+  description = "Kitsune2 bootstrap server URL for h2hc-linker (H2HC_LINKER_BOOTSTRAP_URL)"
+  type        = string
+}
+
 variable "linker_admin_secret" {
-  description = "Shared secret between h2hc-linker and the joining service"
+  description = "Shared secret between h2hc-linker and the joining service (optional auth layer)"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
 variable "invite_codes" {

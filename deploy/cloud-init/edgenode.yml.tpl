@@ -43,6 +43,7 @@ write_files:
         -p 443:443 \
         -p 4444:4444 \
         -e CADDY_DOMAIN="${caddy_domain}" \
+        -e H2HC_LINKER_BOOTSTRAP_URL="${linker_bootstrap_url}" \
         -e H2HC_LINKER_ADMIN_SECRET="${linker_admin_secret}" \
         -e LOG_SENDER_ENDPOINT="${log_sender_endpoint}" \
         -e LOG_SENDER_UNYT_PUB_KEY="${log_sender_unyt_pub_key}" \

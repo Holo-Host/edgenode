@@ -88,6 +88,7 @@ resource "hcloud_server" "edgenode" {
   user_data = templatefile("${path.module}/../cloud-init/edgenode.yml.tpl", {
     volume_id               = hcloud_volume.edgenode[count.index].id
     caddy_domain            = "linker-${count.index}.${var.domain}"
+    linker_bootstrap_url    = var.linker_bootstrap_url
     linker_admin_secret     = var.linker_admin_secret
     log_sender_endpoint     = local.log_collector_url
     log_sender_unyt_pub_key = var.log_sender_unyt_pub_key
