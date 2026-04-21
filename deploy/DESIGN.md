@@ -513,3 +513,144 @@ This requires changes to:
 
 - Joining service admin API must be implemented first
 - Can be developed independently of the staging PoC; Option A remains in place until this is ready
+
+---
+
+## Appendix C: Deployment Path Options
+
+The Hetzner + Cloudflare path described in this document is one of several
+viable deployment models. The edgenode container and the tooling around it are
+designed to be portable — the container takes environment variables, the
+persistent data lives on a mounted volume, and the bootstrap is a standalone
+Docker image. Different operators have different infrastructure preferences and
+cost/complexity trade-offs.
+
+### Option A: Hetzner VMs + Cloudflare (current)
+
+**What:** Hetzner `cx22` VMs running Docker, Cloudflare Workers for joining
+service and log-collector, Cloudflare DNS.
+
+**Tooling:** OpenTofu + cloud-init + wrangler
+
+**Best for:** Teams operating a managed deployment for a community. Predictable
+costs, EU datacenter locations, straightforward ops.
+
+**Trade-offs:**
+- Requires managing VMs and their lifecycle (image updates = VM replacement)
+- Two infrastructure providers to manage (Hetzner + Cloudflare)
+- Hetzner has no built-in auto-scaling
+
+**Status:** Implemented — see `deploy/tofu/` and `deploy/scripts/`.
+
+---
+
+### Option B: Pure Cloudflare (Containers + Workers)
+
+**What:** [Cloudflare Containers](https://developers.cloudflare.com/containers/)
+run the edgenode and harvester images. The joining service and log-collector
+remain as Workers. Everything lives in Cloudflare.
+
+**Tooling:** OpenTofu (Cloudflare provider only) + wrangler
+
+**Best for:** Operators who want a single-provider stack and are comfortable
+with Cloudflare's pricing model. Eliminates VM management entirely.
+
+**Key considerations:**
+- Cloudflare Containers are billed per container-second, not per month — cost
+  model is very different from always-on VMs; evaluate for workloads that are
+  largely idle
+- Persistent storage: Containers have ephemeral local storage. Holochain's
+  `/data` directory would need to be backed by Cloudflare Durable Objects or
+  R2 via a FUSE mount — neither is a standard pattern today. **This is the
+  primary blocker for this path.**
+- `lair_server_in_proc` writes to disk; the keystore must survive container
+  restarts. Without durable storage, identity is lost on each restart.
+- Container networking: Cloudflare Containers can communicate with Workers
+  via service bindings, which simplifies the log-collector integration.
+- The harvester bootstrap would need to adapt — no SSH access to containers,
+  so the admin WebSocket tunnel approach requires a different mechanism
+  (e.g. a Cloudflare Tunnel or the joining service platform-track API from
+  Appendix B).
+
+**Status:** Not yet implemented. Blocked on durable storage story for
+Holochain's `/data`. Worth revisiting as Cloudflare's storage primitives mature.
+
+---
+
+### Option C: Docker Compose (self-hosters and small operators)
+
+**What:** A `docker-compose.yml` that runs the full stack on a single machine
+— edgenode container, harvester container, and a local reverse proxy. No cloud
+provider accounts required beyond a domain and a public IP.
+
+**Tooling:** `docker compose up`
+
+**Best for:**
+- Individual developers running a local or home-server deployment
+- Small community operators who own hardware or a single VPS
+- Local development and integration testing
+
+**Key considerations:**
+- Persistent volumes: Docker named volumes or bind mounts to a local directory;
+  straightforward on a single machine
+- TLS: Caddy in the edgenode container handles this automatically given a
+  public domain — same as the Hetzner path
+- Joining service: operators either run the joining service locally (via
+  wrangler dev) or point at an existing hosted instance
+- Log-collector: can run as a local Worker via `wrangler dev` or be omitted
+  for development
+- No OpenTofu required — `docker compose up -d` is the entire provisioning step
+- Harvester bootstrap: same `ghcr.io/holo-host/edgenode-bootstrap` container
+  works; the conductor admin port is accessible on `localhost` rather than via
+  SSH tunnel
+- **Not suitable for production community deployments** — single point of
+  failure, no geographic distribution, operator must manage their own backups
+
+**Approximate `docker-compose.yml` shape:**
+
+```yaml
+services:
+  edgenode:
+    image: ghcr.io/holo-host/edgenode:latest
+    ports: ["80:80", "443:443", "4444:4444"]
+    volumes: [edgenode-data:/data]
+    environment:
+      CADDY_DOMAIN: linker.example.com
+      H2HC_LINKER_ADMIN_SECRET: ${LINKER_ADMIN_SECRET}
+      LOG_SENDER_ENDPOINT: ${LOG_SENDER_ENDPOINT}
+      LAIR_PASSWORD: ${LAIR_PASSWORD}
+    restart: unless-stopped
+
+  harvester:
+    image: ghcr.io/holo-host/edgenode-harvester:latest
+    ports: ["4444:4444"]
+    volumes: [harvester-data:/data]
+    environment:
+      LAIR_PASSWORD: ${HARVESTER_LAIR_PASSWORD}
+      COLLECTOR_URL: ${COLLECTOR_URL}
+      ADMIN_SECRET: ${ADMIN_SECRET}
+    restart: unless-stopped
+
+volumes:
+  edgenode-data:
+  harvester-data:
+```
+
+**Status:** Not yet implemented. A well-documented Docker Compose example
+would be a high-value addition for self-hosters and would also serve as the
+simplest possible integration test environment for the edgenode container.
+
+---
+
+### Comparison
+
+| | Hetzner + Cloudflare | Pure Cloudflare | Docker Compose |
+|---|---|---|---|
+| Infrastructure providers | 2 (Hetzner, Cloudflare) | 1 (Cloudflare) | 0 (self-hosted) |
+| VM management | Yes | No | No |
+| Persistent storage | Hetzner volumes | Blocked (see above) | Docker volumes |
+| Scaling | Manual (`edgenode_count`) | Automatic (Containers) | Manual |
+| Cost model | Fixed monthly (VMs) | Per-second (Containers) | Hardware / VPS cost |
+| Setup complexity | Medium | Low (once available) | Low |
+| Production-ready | Yes | Not yet | No |
+| Status | Implemented | Future | Future |
