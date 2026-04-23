@@ -1,7 +1,7 @@
 #cloud-config
 #
 # Harvester VM initialisation — rendered by OpenTofu templatefile().
-# Template variables (${...}) are substituted by OpenTofu before the
+# Template variables ($${...}) are substituted by OpenTofu before the
 # cloud-init payload is passed to the Hetzner API.
 #
 # After this cloud-init completes, run deploy/scripts/bootstrap-harvester.sh

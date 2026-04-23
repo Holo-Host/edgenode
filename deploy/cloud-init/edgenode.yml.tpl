@@ -1,7 +1,7 @@
 #cloud-config
 #
 # Edgenode VM initialisation — rendered by OpenTofu templatefile().
-# Template variables (${...}) are substituted by OpenTofu before the
+# Template variables ($${...}) are substituted by OpenTofu before the
 # cloud-init payload is passed to the Hetzner API.
 # Shell variables in the init script use $VAR (no braces) to avoid conflicts.
 
