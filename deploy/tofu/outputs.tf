@@ -19,8 +19,13 @@ output "log_collector_url" {
 }
 
 output "sessions_kv_namespace_id" {
-  description = "SESSIONS KV namespace ID (pass to joining service wrangler deploy)"
+  description = "SESSIONS KV namespace ID (joining service runtime)"
   value       = cloudflare_workers_kv_namespace.sessions.id
+}
+
+output "deployment_kv_namespace_id" {
+  description = "DEPLOYMENT KV namespace ID (per-deployment metadata store)"
+  value       = cloudflare_workers_kv_namespace.deployment.id
 }
 
 output "volume_ids" {
