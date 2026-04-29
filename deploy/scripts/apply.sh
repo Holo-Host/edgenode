@@ -121,5 +121,5 @@ else
   log "Deployment complete. Outputs:"
   tofu output
   log ""
-  log "Next: run deploy/scripts/bootstrap-harvester.sh to install the Unyt hApp on the harvester."
+  log "Next: run 'hdeploy bootstrap-harvester --deployment $DEPLOYMENT' to install the hApp on the harvester."
 fi
