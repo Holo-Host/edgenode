@@ -4,9 +4,10 @@
 # Template variables ($${...}) are substituted by OpenTofu before the
 # cloud-init payload is passed to the Hetzner API.
 #
-# After this cloud-init completes, run deploy/scripts/bootstrap-harvester.sh
-# to generate the agent key, whitelist it in the joining service, and install
-# the Unyt hApp. The conductor starts here but the hApp is not yet installed.
+# After this cloud-init completes, run:
+#   hdeploy bootstrap-harvester --deployment <org>-<env> --tofu-dir deploy/tofu
+# to generate the agent key, install the Unyt hApp, and record the result in KV.
+# The conductor starts here but the hApp is not yet installed.
 
 packages:
   - docker.io
@@ -38,7 +39,7 @@ write_files:
 
       # Pull and start harvester container
       # The Holochain conductor starts but the Unyt hApp is not yet installed.
-      # Run deploy/scripts/bootstrap-harvester.sh after this completes.
+      # Run `hdeploy bootstrap-harvester` after this completes.
       docker pull ${harvester_image}
       docker run -d \
         --name harvester \
@@ -51,7 +52,7 @@ write_files:
         -e ADMIN_SECRET="${admin_secret}" \
         ${harvester_image}
 
-      echo "Harvester container started. Run bootstrap-harvester.sh to complete setup."
+      echo "Harvester container started. Run 'hdeploy bootstrap-harvester' to complete setup."
 
 runcmd:
   - /usr/local/bin/harvester-init.sh
