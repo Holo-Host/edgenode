@@ -24,11 +24,21 @@ provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
 
-# ── KV namespace: SESSIONS (joining service) ────────────────────────────────
+# ── KV namespace: SESSIONS (joining service runtime) ───────────────────────
 
 resource "cloudflare_workers_kv_namespace" "sessions" {
   account_id = var.cloudflare_account_id
   title      = "${var.project_name}-sessions"
+}
+
+# ── KV namespace: DEPLOYMENT (per-deployment metadata) ─────────────────────
+# Holds provisioning-time config written by scripts and read by the control
+# plane — not bound to any Worker. Keys: network_seed, joining_key_pub,
+# harvester_ip, bootstrap_result.
+
+resource "cloudflare_workers_kv_namespace" "deployment" {
+  account_id = var.cloudflare_account_id
+  title      = "${var.project_name}-deployment"
 }
 
 # ── Log-collector Worker ────────────────────────────────────────────────────
