@@ -127,8 +127,9 @@ variable "harvester_lair_password" {
 }
 
 variable "log_sender_unyt_pub_key" {
-  description = "Unyt agent public key (uhCAk...) used by log-sender for billing attribution"
+  description = "Unyt agent public key (uhCAk...) used by log-sender for billing attribution. Left empty at provision time — populated by bootstrap-edgenode via docker exec --env after bootstrap-harvester generates the harvester agent key."
   type        = string
+  default     = ""
 }
 
 variable "log_collector_admin_secret" {
