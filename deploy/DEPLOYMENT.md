@@ -141,16 +141,30 @@ existing seed.
 
 ## Deploy the Joining Service
 
+Copy and fill in `deploy/joining-service-config.example.json` for your hApp:
+
 ```bash
-source deploy/.env.acme-staging
-hdeploy deploy-joining-service --deployment acme-staging \
-  --tofu-dir deploy/tofu \
-  --joining-service-dir ../joining-service
+cp deploy/joining-service-config.example.json deploy/acme-mewsfeed-joining-config.json
+$EDITOR deploy/acme-mewsfeed-joining-config.json
 ```
 
-This deploys the joining service Worker via wrangler and writes
-`linker_registrations` to the sessions KV namespace. Safe to re-run after
-infrastructure changes that affect linker URLs.
+The config needs at minimum: `happ.id`, `happ.name`, `happ.happ_bundle_url`, and
+`auth_methods`. See `joining-service-config.example.json` for membrane proof and
+invite code variants.
+
+`network_seed` and `linker_registrations` are injected automatically — do not set
+them in the config file.
+
+```bash
+source deploy/.env.acme-mewsfeed-staging
+hdeploy deploy-joining-service -d acme-mewsfeed-staging \
+  --joining-service-dir ../joining-service \
+  --joining-config deploy/acme-mewsfeed-joining-config.json
+```
+
+This deploys the joining service Worker via wrangler and writes `joining_config`
+(including the network seed from deployment KV and linker URLs from tofu outputs)
+to the sessions KV namespace. Safe to re-run after infrastructure changes.
 
 ---
 
@@ -220,10 +234,10 @@ harvester_image = "ghcr.io/holo-host/edgenode-harvester:v1.2.3"
 ### Joining service update
 
 ```bash
-source deploy/.env.acme-staging
-hdeploy deploy-joining-service --deployment acme-staging \
-  --tofu-dir deploy/tofu \
-  --joining-service-dir ../joining-service
+source deploy/.env.acme-mewsfeed-staging
+hdeploy deploy-joining-service -d acme-mewsfeed-staging \
+  --joining-service-dir ../joining-service \
+  --joining-config deploy/acme-mewsfeed-joining-config.json
 ```
 
 ### Staging → production
@@ -239,9 +253,9 @@ hdeploy provision --deployment acme-prod \
   --tofu-dir deploy/tofu \
   --log-collector-src docker/log-collector
 hdeploy init-deployment --deployment acme-prod --tofu-dir deploy/tofu
-hdeploy deploy-joining-service --deployment acme-prod \
-  --tofu-dir deploy/tofu \
-  --joining-service-dir ../joining-service
+hdeploy deploy-joining-service -d acme-mewsfeed-prod \
+  --joining-service-dir ../joining-service \
+  --joining-config deploy/acme-mewsfeed-joining-config.json
 hdeploy bootstrap-harvester --deployment acme-prod \
   --tofu-dir deploy/tofu \
   --bootstrap-image ghcr.io/holo-host/bootstrap:latest

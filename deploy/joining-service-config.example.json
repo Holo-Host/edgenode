@@ -1,0 +1,41 @@
+{
+  "_comment": "Joining service config passed to: hdeploy deploy-joining-service -d <deployment> --joining-config <this-file>. Copy, rename, and fill in values for your hApp. network_seed and linker_registrations are injected automatically by hdeploy — do not set them here.",
+
+  "happ": {
+    "id": "mewsfeed",
+    "name": "Mewsfeed",
+    "happ_bundle_url": "https://github.com/GeekGene/mewsfeed/releases/download/v0.14.0/mewsfeed.webhapp",
+    "icon_url": ""
+  },
+
+  "auth_methods": ["open"],
+
+  "_auth_method_variants": {
+    "_comment": "Replace auth_methods above with one of these for non-open deployments.",
+    "invite_code_only":               ["invite_code"],
+    "membrane_proof_only":            ["membrane_proof"],
+    "invite_code_or_membrane_proof":  [{ "any_of": ["invite_code", "membrane_proof"] }]
+  },
+
+  "_membrane_proof": {
+    "_comment": "Required when auth_methods includes 'membrane_proof'. The signing key is generated once via: cd ../joining-service && npm run gen-signing-key. Its derived public key must be baked into the DNA properties as the progenitor before the hApp bundle is compiled — see ../joining-service/DEPLOYMENT.md.",
+    "enabled": true,
+    "signing_key_path": "/path/to/signing-key.hex"
+  },
+
+  "_dna_hashes": {
+    "_comment": "Required when membrane_proof.enabled is true. Base64-encoded DNA hashes the signing key is authorised to sign membrane proofs for.",
+    "example": ["uhCkk..."]
+  },
+
+  "_invite_codes": {
+    "_comment": "Invite codes are NOT stored here. They are stored in deployment KV via the INVITE_CODES env var and read by the joining service Worker at runtime."
+  },
+
+  "_network": {
+    "_comment": "Optional. Exposes bootstrap and relay URLs in /v1/info. Off by default — enabling increases DDoS surface area for the listed services.",
+    "bootstrap_url": "",
+    "relay_url": "",
+    "reveal_in_info": false
+  }
+}
