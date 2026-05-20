@@ -47,7 +47,7 @@ RUN case "${TARGETARCH}" in \
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender
 
-ARG LINKER_VERSION=0.1.1
+ARG LINKER_VERSION=0.1.2
 
 RUN case "${TARGETARCH}" in \
     amd64) LINKER_ARCH="linux-x86_64" ;; \
