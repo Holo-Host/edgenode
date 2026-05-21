@@ -4,8 +4,7 @@
   "happ": {
     "id": "mewsfeed",
     "name": "Mewsfeed",
-    "happ_bundle_url": "https://github.com/GeekGene/mewsfeed/releases/download/v0.14.0/mewsfeed.webhapp",
-    "icon_url": ""
+    "happ_bundle_url": "https://github.com/GeekGene/mewsfeed/releases/download/v0.14.0/mewsfeed.webhapp"
   },
 
   "auth_methods": ["open"],
