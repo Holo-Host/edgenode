@@ -363,6 +363,26 @@ to the sessions KV namespace.
 
 ---
 
+## Bootstrap the Edgenodes
+
+After the harvester is bootstrapped, install the publisher hApp on each edgenode
+conductor. This runs the same bootstrap container but targets the edgenode VMs:
+
+```bash
+source deploy/.env.acme-staging
+hdeploy bootstrap-edgenode --deployment acme-staging \
+  --tofu-dir deploy/tofu \
+  --happ-url https://github.com/GeekGene/mewsfeed/releases/download/v0.14.0/mewsfeed.webhapp \
+  --bootstrap-image ghcr.io/holo-host/bootstrap:latest
+```
+
+Replace `--happ-url` with the `.webhapp` bundle URL for your hApp.
+
+**Bootstrap is a one-time operation** per edgenode volume. Do not re-run unless
+you have intentionally wiped the volume.
+
+---
+
 ## Subsequent Operations
 
 ### hApp config update (create_app / modify_app)
