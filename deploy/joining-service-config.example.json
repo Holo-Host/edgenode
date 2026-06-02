@@ -1,5 +1,5 @@
 {
-  "_comment": "Joining service config passed to: hdeploy deploy-joining-service -d <deployment> --joining-config <this-file>. Copy, rename, and fill in values for your hApp. network_seed and linker_registrations are injected automatically by hdeploy — do not set them here.",
+  "_comment": "Joining service config passed to: hdeploy deploy-joining-service -d <deployment> --joining-config <this-file>. Copy, rename, and fill in values for your hApp. network_seed and linker_registrations are injected automatically by hdeploy — do not set them here. Keys prefixed with _ are documentation only — they are stripped by the schema validator and safe to leave in the file.",
 
   "happ": {
     "id": "mewsfeed",

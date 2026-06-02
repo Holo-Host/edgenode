@@ -12,15 +12,21 @@ Compose), see [DESIGN.md — Appendix C](DESIGN.md#appendix-c-deployment-path-op
 
 ## Naming Convention
 
-Each deployment is identified by `<org>-<env>`, where:
+Each deployment is currently identified by `<steward>-<env>`, where:
 
-- `<org>` — a short slug for the organisation operating the stack (assigned by Holo)
+- `<steward>` — a short slug for the steward operating the stack (assigned by Holo)
 - `<env>` — environment tier: `staging` or `prod`
 
 Examples: `acme-staging`, `acme-prod`, `junto-staging`.
 
 This identifier prefixes all cloud resources (Hetzner VMs, Cloudflare Workers,
 DNS records) and is used as the OpenTofu workspace name for state isolation.
+
+> **Future:** Before running multiple hApps per steward or moving to production,
+> names will transition to the three-segment form `<steward>-<happ>-<env>`
+> (e.g. `acme-mewsfeed-staging`). The CLI, schemas, and env files will be updated
+> at that point — see `platform-automation/docs/multi-tenancy.md` for the target
+> design.
 
 ---
 
@@ -144,8 +150,8 @@ existing seed.
 Copy and fill in `deploy/joining-service-config.example.json` for your hApp:
 
 ```bash
-cp deploy/joining-service-config.example.json deploy/acme-mewsfeed-joining-config.json
-$EDITOR deploy/acme-mewsfeed-joining-config.json
+cp deploy/joining-service-config.example.json deploy/acme-joining-config.json
+$EDITOR deploy/acme-joining-config.json
 ```
 
 The config needs at minimum: `happ.id`, `happ.name`, `happ.happ_bundle_url`, and
@@ -156,10 +162,10 @@ invite code variants.
 them in the config file.
 
 ```bash
-source deploy/.env.acme-mewsfeed-staging
-hdeploy deploy-joining-service -d acme-mewsfeed-staging \
+source deploy/.env.acme-staging
+hdeploy deploy-joining-service -d acme-staging \
   --joining-service-dir ../joining-service \
-  --joining-config deploy/acme-mewsfeed-joining-config.json
+  --joining-config deploy/acme-joining-config.json
 ```
 
 This deploys the joining service Worker via wrangler and writes `joining_config`
@@ -234,10 +240,10 @@ harvester_image = "ghcr.io/holo-host/edgenode-harvester:v1.2.3"
 ### Joining service update
 
 ```bash
-source deploy/.env.acme-mewsfeed-staging
-hdeploy deploy-joining-service -d acme-mewsfeed-staging \
+source deploy/.env.acme-staging
+hdeploy deploy-joining-service -d acme-staging \
   --joining-service-dir ../joining-service \
-  --joining-config deploy/acme-mewsfeed-joining-config.json
+  --joining-config deploy/acme-joining-config.json
 ```
 
 ### Staging → production
@@ -253,9 +259,9 @@ hdeploy provision --deployment acme-prod \
   --tofu-dir deploy/tofu \
   --log-collector-src docker/log-collector
 hdeploy init-deployment --deployment acme-prod --tofu-dir deploy/tofu
-hdeploy deploy-joining-service -d acme-mewsfeed-prod \
+hdeploy deploy-joining-service -d acme-prod \
   --joining-service-dir ../joining-service \
-  --joining-config deploy/acme-mewsfeed-joining-config.json
+  --joining-config deploy/acme-joining-config.json
 hdeploy bootstrap-harvester --deployment acme-prod \
   --tofu-dir deploy/tofu \
   --bootstrap-image ghcr.io/holo-host/bootstrap:latest
