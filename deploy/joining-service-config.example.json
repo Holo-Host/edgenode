@@ -32,9 +32,9 @@
   },
 
   "_network": {
-    "_comment": "Optional. Exposes bootstrap and relay URLs in /v1/info. Off by default — enabling increases DDoS surface area for the listed services.",
-    "bootstrap_url": "",
-    "relay_url": "",
-    "reveal_in_info": false
+    "_comment": "Optional. Exposes bootstrap and relay URLs in /v1/info. Off by default — enabling increases DDoS surface area for the listed services. Omit bootstrap_url and relay_url entirely when not in use — empty strings fail schema validation.",
+    "reveal_in_info": false,
+    "_bootstrap_url_example": "https://bootstrap.holo.host",
+    "_relay_url_example": "wss://relay.holo.host"
   }
 }
