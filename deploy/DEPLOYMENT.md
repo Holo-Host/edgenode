@@ -15,18 +15,18 @@ Compose), see [DESIGN.md — Appendix C](DESIGN.md#appendix-c-deployment-path-op
 Each deployment is currently identified by `<steward>-<env>`, where:
 
 - `<steward>` — a short slug for the steward operating the stack (assigned by Holo)
-- `<env>` — environment tier: `staging` or `prod`
+- `<env>` — environment tier: `staging` or `production`
 
-Examples: `acme-staging`, `acme-prod`, `junto-staging`.
+Examples: `acme-staging`, `acme-production`, `junto-staging`.
 
 This identifier prefixes all cloud resources (Hetzner VMs, Cloudflare Workers,
 DNS records) and is used as the OpenTofu workspace name for state isolation.
 
 > **Future:** Before running multiple hApps per steward or moving to production,
 > names will transition to the three-segment form `<steward>-<happ>-<env>`
-> (e.g. `acme-mewsfeed-staging`). The CLI, schemas, and env files will be updated
-> at that point — see `platform-automation/docs/multi-tenancy.md` for the target
-> design.
+> (e.g. `acme-mewsfeed-staging`, `acme-mewsfeed-production`). The CLI, schemas,
+> and env files will be updated at that point — see
+> `platform-automation/docs/multi-tenancy.md` for the target design.
 
 ---
 
@@ -199,6 +199,26 @@ intentionally wiped the volume.
 
 ---
 
+## Bootstrap the Edgenodes
+
+After the harvester is bootstrapped, install the publisher hApp on each edgenode
+conductor. This runs the same bootstrap container but targets the edgenode VMs:
+
+```bash
+source deploy/.env.acme-staging
+hdeploy bootstrap-edgenode --deployment acme-staging \
+  --tofu-dir deploy/tofu \
+  --happ-url https://github.com/GeekGene/mewsfeed/releases/download/v0.14.0/mewsfeed.webhapp \
+  --bootstrap-image ghcr.io/holo-host/bootstrap:latest
+```
+
+Replace `--happ-url` with the `.webhapp` bundle URL for your hApp.
+
+**Bootstrap is a one-time operation** per edgenode volume. Do not re-run unless
+you have intentionally wiped the volume.
+
+---
+
 ## Subsequent Operations
 
 ### Config or infrastructure changes
@@ -249,22 +269,26 @@ hdeploy deploy-joining-service -d acme-staging \
 ### Staging → production
 
 ```bash
-cp deploy/.env.example deploy/.env.acme-prod
-$EDITOR deploy/.env.acme-prod      # set production credentials and domain
-cp deploy/tofu/example.tfvars deploy/tofu/acme-prod.tfvars
-$EDITOR deploy/tofu/acme-prod.tfvars   # set project_name = "acme-prod", increase volume sizes
-source deploy/.env.acme-prod
+cp deploy/.env.example deploy/.env.acme-production
+$EDITOR deploy/.env.acme-production      # set production credentials and domain
+cp deploy/tofu/example.tfvars deploy/tofu/acme-production.tfvars
+$EDITOR deploy/tofu/acme-production.tfvars   # set project_name = "acme-production", increase volume sizes
+source deploy/.env.acme-production
 
-hdeploy provision --deployment acme-prod \
+hdeploy provision --deployment acme-production \
   --tofu-dir deploy/tofu \
   --log-collector-src docker/log-collector
-hdeploy init-deployment --deployment acme-prod --tofu-dir deploy/tofu
-hdeploy deploy-joining-service -d acme-prod \
-  --joining-service-dir ../joining-service \
-  --joining-config deploy/acme-joining-config.json
-hdeploy bootstrap-harvester --deployment acme-prod \
+hdeploy init-deployment --deployment acme-production --tofu-dir deploy/tofu
+hdeploy bootstrap-harvester --deployment acme-production \
   --tofu-dir deploy/tofu \
   --bootstrap-image ghcr.io/holo-host/bootstrap:latest
+hdeploy bootstrap-edgenode --deployment acme-production \
+  --tofu-dir deploy/tofu \
+  --happ-url https://github.com/GeekGene/mewsfeed/releases/download/v0.14.0/mewsfeed.webhapp \
+  --bootstrap-image ghcr.io/holo-host/bootstrap:latest
+hdeploy deploy-joining-service -d acme-production \
+  --joining-service-dir ../joining-service \
+  --joining-config deploy/acme-joining-config.json
 ```
 
 ---
