@@ -114,7 +114,7 @@ Fill in all values. The file is self-documenting. Key items:
 - `SSH_PUBLIC_KEY` — contents of your SSH public key (e.g. `cat ~/.ssh/id_ed25519.pub`)
 - `TOFU_DIR` — **absolute** path to `deploy/tofu` in the edgenode repo (e.g. `export TOFU_DIR="$(pwd)/deploy/tofu"`); must be absolute — `hdeploy` runs from `../platform-automation` and relative paths will not resolve
 - `JOINING_SERVICE_DIR` — path to a local checkout of `Holo-Host/joining-service` (required for first deployment)
-- `BOOTSTRAP_IMAGE` — bootstrap container image (e.g. `ghcr.io/holo-host/bootstrap:latest`)
+- `BOOTSTRAP_IMAGE` — bootstrap container image (e.g. `ghcr.io/holo-host/edgenode-bootstrap:latest`)
 
 ### 2. Create deployment tfvars
 
