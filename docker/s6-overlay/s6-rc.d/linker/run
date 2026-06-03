@@ -15,5 +15,6 @@ echo "Starting h2hc-linker..." >> /data/logs/startup.log
 # H2HC_LINKER_ADMIN_SECRET — optional, enables auth layer
 # H2HC_LINKER_CONDUCTOR_URL — optional, enables zome call proxying
 export H2HC_LINKER_ADDRESS="${H2HC_LINKER_ADDRESS:-0.0.0.0}"
+export H2HC_LINKER_KEY_FILE="${H2HC_LINKER_KEY_FILE:-/data/linker-key.ed25519}"
 
 exec gosu nonroot h2hc-linker >> /data/logs/linker.log 2>&1
