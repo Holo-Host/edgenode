@@ -149,11 +149,36 @@ just generates and sequences them.
 
 ### Step 1: Steward generates a plan
 
-The steward opens `happ-publisher-ui`, fills in their hApp details, and triggers
-the **deploy** action. The UI generates:
+The steward opens `happ-publisher-ui` (`npm run dev` in the `happ-publisher-ui`
+repo), creates a new app, and fills in the form. Field reference:
+
+| Field | What to enter | Notes |
+|-------|---------------|-------|
+| **Display Name** | Human-readable app name (e.g. `Mewsfeed`) | Shown in joining service `/v1/info` |
+| **App Slug** | Short lowercase identifier (e.g. `mewsfeed`) | Used as `happ.id` in joining config; immutable after creation |
+| **Icon URL** | URL to a square app icon image | Optional |
+| **Domain** | Domain this deployment will serve from (e.g. `mewsfeed.holo.host`) | ⚠ Relationship to domain in tfvars needs clarification before production |
+| **hApp Bundle URL** | URL to the `.happ` or `.webhapp` release asset | e.g. a GitHub Releases URL |
+| **Auth Methods** | `open` / `invite_code` / `membrane_proof` | `open` for public access; see membrane proof warning below |
+| **Use Membrane Proof** | Enable if the DNA requires signed membrane proofs | ⚠ **Requires pre-work before the hApp bundle is compiled** — see below |
+| **Deployment Name** | `<steward>-<env>` slug (e.g. `acmemewsfeed-staging`) | Must match the name used for env file, tfvars, and all `hdeploy` commands |
+| **Network Seed** | Leave blank | Injected automatically by `hdeploy init-deployment`; do not set manually |
+| **Unyt Payor Agent Key** | Unyt agent public key for billing attribution (`uhCAk…`) | Use the Holo-hosted Unyt instance key, or the steward's own key if running a private Unyt instance |
+| **Unyt Instance Ref** | Unyt instance reference string | From the Holo-hosted instance, or the steward's own Unyt agreement |
+| **Unyt Agreement Ref** | Unyt agreement reference string | From the Holo-hosted instance, or the steward's own Unyt agreement |
+
+> ⚠ **Membrane proof pre-work:** If `membrane_proof.enabled` is true, a signing
+> key must be generated (`cd ../joining-service && npm run gen-signing-key`) and
+> its derived public key baked into the DNA properties as the progenitor
+> **before the hApp bundle is compiled**. The `signing_key_path` entered here
+> must point to that key. DNA hashes must also be provided. This cannot be
+> retrofitted after a bundle is released — coordinate with the hApp developer
+> before the DNA is finalised.
+
+Once the form is saved, trigger the **deploy** action to generate:
 
 - A **command plan** — an ordered list of `hdeploy` commands to execute
-- A **joining config JSON** — the joining service configuration for their hApp,
+- A **joining config JSON** — the joining service configuration for this hApp,
   at path `config/<deployment>/joining-service/joining-config.json` (relative to
   the `platform-automation` directory)
 
