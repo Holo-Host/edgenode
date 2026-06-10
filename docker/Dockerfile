@@ -18,8 +18,8 @@ RUN case "${TARGETARCH}" in \
     tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
     rm -f s6-overlay-*.tar.xz
 
-ARG HOLOCHAIN_VERSION=0.6.1-rc.3
-ARG HC_VERSION=0.6.1-rc.3
+ARG HOLOCHAIN_VERSION=0.6.1
+ARG HC_VERSION=0.6.1
 
 RUN case "${TARGETARCH}" in \
     amd64) HC_ARCH="x86_64-unknown-linux-gnu" ;; \
