@@ -1,0 +1,3 @@
+#!/command/with-contenv /bin/sh
+echo "Starting fl-bridge..." >> /data/logs/startup.log
+exec gosu nonroot python3 /app/bridge.py

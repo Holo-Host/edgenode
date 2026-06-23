@@ -1,0 +1,6 @@
+#!/bin/sh
+while true; do
+  logrotate /etc/logrotate.d/holochain.conf
+  logrotate /etc/logrotate.d/flower.conf
+  sleep 86400
+done
