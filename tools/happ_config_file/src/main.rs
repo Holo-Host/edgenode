@@ -64,7 +64,7 @@ struct Holochain {
     /// Legacy WebRTC field; ignored since Holochain 0.7, kept so old files still validate
     #[serde(skip_serializing_if = "Option::is_none")]
     stun_server_urls: Option<Vec<String>>,
-    /// iroh backend (HC ≥ 0.6.1 default)
+    /// iroh relay URL (the only transport since Holochain 0.7)
     #[serde(skip_serializing_if = "Option::is_none")]
     relay_url: Option<String>,
 }
@@ -140,11 +140,15 @@ impl ConfigFile {
         }
         if let Some(eco) = &self.economics {
             // Validate that agreement_hash is a legal ActionHash
-            let _ = ActionHash::try_from(&eco.agreement_hash)
-                .context("economics.agreementHash must be a valid ActionHash")?;
+            if !eco.agreement_hash.is_empty() {
+                let _ = ActionHash::try_from(&eco.agreement_hash)
+                    .context("economics.agreementHash must be a valid ActionHash")?;
+            }
             // Validate that payor is a legal AgentPubKey
-            let _ = AgentPubKey::try_from(&eco.payor_unyt_agent_pub_key)
-                .context("economics.payorUnytAgentPubKey must be a valid AgentPubKey")?;
+            if !eco.payor_unyt_agent_pub_key.is_empty() {
+                let _ = AgentPubKey::try_from(&eco.payor_unyt_agent_pub_key)
+                    .context("economics.payorUnytAgentPubKey must be a valid AgentPubKey")?;
+            }
         }
         if let Some(calls) = &self.app.init_zome_calls {
             for call in calls {
@@ -339,5 +343,11 @@ mod tests {
         }"#;
         let cfg: ConfigFile = serde_json::from_str(legacy).unwrap();
         cfg.validate().expect("legacy fields are tolerated");
+    }
+
+    #[test]
+    fn validate_accepts_empty_economics_keys() {
+        let cfg: ConfigFile = serde_json::from_str(include_str!("../../../docker/ziptest.json")).unwrap();
+        cfg.validate().expect("empty economics keys are allowed");
     }
 }
