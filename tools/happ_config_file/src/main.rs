@@ -58,10 +58,10 @@ struct Holochain {
     version: String,
     flags: Vec<String>,
     bootstrap_url: String,
-    /// WebRTC/go-pion backends (HC ≤ 0.6.0)
+    /// Legacy WebRTC field; ignored since Holochain 0.7, kept so old files still validate
     #[serde(skip_serializing_if = "Option::is_none")]
     signal_server_url: Option<String>,
-    /// WebRTC/go-pion backends (HC ≤ 0.6.0)
+    /// Legacy WebRTC field; ignored since Holochain 0.7, kept so old files still validate
     #[serde(skip_serializing_if = "Option::is_none")]
     stun_server_urls: Option<Vec<String>>,
     /// iroh backend (HC ≥ 0.6.1 default)
@@ -108,6 +108,11 @@ impl ConfigFile {
         if !self.env.holochain.bootstrap_url.is_empty() {
             Url::parse(&self.env.holochain.bootstrap_url)
                 .context("env.holochain.bootstrapUrl must be a valid URL")?;
+        }
+        if self.env.holochain.signal_server_url.is_some()
+            || self.env.holochain.stun_server_urls.is_some()
+        {
+            eprintln!("warning: signalServerUrl/stunServerUrls are ignored; Holochain 0.7 uses iroh (relayUrl) only");
         }
         if let Some(signal_url) = &self.env.holochain.signal_server_url {
             if !signal_url.is_empty() {
@@ -183,10 +188,6 @@ enum Commands {
         /// Include an example init_zome_calls block in the created file
         #[arg(long = "init-zome-calls")]
         init_zome_calls: bool,
-        /// Generate legacy WebRTC/go-pion networking config (HC <= 0.6.0);
-        /// includes signalServerUrl/stunServerUrls instead of relayUrl
-        #[arg(long)]
-        webrtc: bool,
     },
     /// Validate a configuration file
     Validate {
@@ -204,38 +205,19 @@ fn main() -> Result<()> {
             gateway,
             economics,
             init_zome_calls,
-            webrtc,
-        } => do_create(name, gateway, economics, init_zome_calls, webrtc)?,
+        } => do_create(name, gateway, economics, init_zome_calls)?,
         Commands::Validate { input } => do_validate(input)?,
     }
     Ok(())
 }
 
-fn do_create(
-    name: Option<String>,
+fn build_template(
+    app_name: String,
     include_gateway: bool,
     include_economics: bool,
     include_init_calls: bool,
-    webrtc: bool,
-) -> Result<()> {
-    // Determine output file name and app.name based on optional name
-    let (output, app_name): (PathBuf, String) = if let Some(provided_name) = name {
-        let name_re = Regex::new(r"^[a-z0-9_]+$").unwrap();
-        if provided_name.is_empty() || !name_re.is_match(&provided_name) {
-            bail!("name must be lowercase alphanumeric with underscores");
-        }
-        (
-            PathBuf::from(format!("{}_config.json", provided_name)),
-            provided_name,
-        )
-    } else {
-        (
-            PathBuf::from("example_happ_config.json"),
-            "example_happ".to_string(),
-        )
-    };
-
-    let template = ConfigFile {
+) -> ConfigFile {
+    ConfigFile {
         app: App {
             name: app_name,
             version: "0.1.0".to_string(),
@@ -255,24 +237,13 @@ fn do_create(
             },
         },
         env: Env {
-            holochain: if webrtc {
-                Holochain {
-                    version: "".to_string(),
-                    flags: vec!["".to_string()],
-                    bootstrap_url: "".to_string(),
-                    signal_server_url: Some("".to_string()),
-                    stun_server_urls: Some(vec!["".to_string()]),
-                    relay_url: None,
-                }
-            } else {
-                Holochain {
-                    version: "".to_string(),
-                    flags: vec!["".to_string()],
-                    bootstrap_url: "".to_string(),
-                    signal_server_url: None,
-                    stun_server_urls: None,
-                    relay_url: Some("".to_string()),
-                }
+            holochain: Holochain {
+                version: "".to_string(),
+                flags: vec!["".to_string()],
+                bootstrap_url: "".to_string(),
+                signal_server_url: None,
+                stun_server_urls: None,
+                relay_url: Some("".to_string()),
             },
             gw: if include_gateway {
                 Some(Gateway {
@@ -301,7 +272,33 @@ fn do_create(
         } else {
             None
         },
+    }
+}
+
+fn do_create(
+    name: Option<String>,
+    include_gateway: bool,
+    include_economics: bool,
+    include_init_calls: bool,
+) -> Result<()> {
+    // Determine output file name and app.name based on optional name
+    let (output, app_name): (PathBuf, String) = if let Some(provided_name) = name {
+        let name_re = Regex::new(r"^[a-z0-9_]+$").unwrap();
+        if provided_name.is_empty() || !name_re.is_match(&provided_name) {
+            bail!("name must be lowercase alphanumeric with underscores");
+        }
+        (
+            PathBuf::from(format!("{}_config.json", provided_name)),
+            provided_name,
+        )
+    } else {
+        (
+            PathBuf::from("example_happ_config.json"),
+            "example_happ".to_string(),
+        )
     };
+
+    let template = build_template(app_name, include_gateway, include_economics, include_init_calls);
 
     let json = serde_json::to_string_pretty(&template)?;
     fs::write(&output, json).with_context(|| format!("writing to {}", output.display()))?;
@@ -316,4 +313,31 @@ fn do_validate(input: PathBuf) -> Result<()> {
     cfg.validate()?;
     println!("{} is valid", input.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_template_emits_only_iroh_networking() {
+        let cfg = build_template("example_happ".to_string(), false, false, false);
+        let json = serde_json::to_value(&cfg).unwrap();
+        let hc = &json["env"]["holochain"];
+        assert!(hc.get("signalServerUrl").is_none(), "signalServerUrl must not be emitted");
+        assert!(hc.get("stunServerUrls").is_none(), "stunServerUrls must not be emitted");
+        assert_eq!(hc["relayUrl"], "");
+    }
+
+    #[test]
+    fn validate_accepts_legacy_webrtc_fields() {
+        let legacy = r#"{
+          "app": {"name": "x", "version": "0.1.0", "happUrl": "https://example.com/x.happ",
+                  "modifiers": {"networkSeed": "", "properties": ""}},
+          "env": {"holochain": {"version": "", "flags": [""], "bootstrapUrl": "",
+                  "signalServerUrl": "", "stunServerUrls": [""]}}
+        }"#;
+        let cfg: ConfigFile = serde_json::from_str(legacy).unwrap();
+        cfg.validate().expect("legacy fields are tolerated");
+    }
 }
