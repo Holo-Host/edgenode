@@ -33,6 +33,11 @@ RUN case "${TARGETARCH}" in \
     chmod +x /bin/holochain && \
     chmod +x /bin/hc
 
+# Optional build-time override: drop a prebuilt binary at
+# local-bin/log-sender-<x86_64|aarch64> to use it instead of the release
+# download (used while a fix is unreleased upstream). Gitignored.
+COPY local-bin/ /usr/local/local-bin/
+
 ARG LOG_SENDER_VERSION=0.1.5
 
 RUN case "${TARGETARCH}" in \
@@ -41,8 +46,14 @@ RUN case "${TARGETARCH}" in \
     *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
     esac && \
     mkdir -p /usr/local/bin && \
-    wget https://github.com/unytco/log-sender/releases/download/v${LOG_SENDER_VERSION}/log-sender-${LS_ARCH} && \
-    mv log-sender-${LS_ARCH} /usr/local/bin/log-sender && \
+    if [ -f "/usr/local/local-bin/log-sender-${LS_ARCH}" ]; then \
+      echo "Using local log-sender-${LS_ARCH} override" && \
+      cp "/usr/local/local-bin/log-sender-${LS_ARCH}" /usr/local/bin/log-sender; \
+    else \
+      wget https://github.com/unytco/log-sender/releases/download/v${LOG_SENDER_VERSION}/log-sender-${LS_ARCH} && \
+      mv log-sender-${LS_ARCH} /usr/local/bin/log-sender; \
+    fi && \
+    rm -rf /usr/local/local-bin && \
     chmod +x /usr/local/bin/log-sender && \
     mkdir -p /etc/log-sender && \
     chown nonroot:nonroot /etc/log-sender

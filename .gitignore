@@ -14,3 +14,5 @@ UNYT_TEST_RESULTS*.*
 unyt_test_r*.*
 holos/tmp
 holos/rust/holos-config/target
+docker/local-bin/*
+!docker/local-bin/.gitkeep
