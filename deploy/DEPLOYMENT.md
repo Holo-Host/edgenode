@@ -482,6 +482,99 @@ hdeploy deploy-joining-service -d acme-production \
 
 ---
 
+## Upgrading to Holochain 0.7
+
+Holochain 0.7 has no data migration from 0.6.x, and 0.6 and 0.7 networks do
+not interoperate — the DNA hash scheme changed and 0.7 is iroh-only where 0.6
+used WebRTC. Every node in a deployment (both edgenodes and the harvester)
+must move to 0.7 together; a deployment with a mix of 0.6 and 0.7 conductors
+cannot gossip or join.
+
+### Verified procedure
+
+A spike against `ghcr.io/holo-host/edgenode:latest` (0.6.1) and the 0.7.0
+image confirmed that the lair keystore under `/data/holochain/var/ks`
+survives the upgrade: an agent key generated under 0.6.1 was still usable by
+the 0.7.0 conductor after everything else under `/data/holochain/var` was
+wiped — `install-app --agent-key <the 0.6.1 key>` succeeded and `list-apps`
+returned the same key. The conductor databases do not carry over (0.7 renames
+them and moves them to a flat `databases/` layout), so they must be deleted;
+the keystore must not be.
+
+Per edgenode VM:
+
+```bash
+ssh root@$EDGENODE_IP
+
+# Capture the running container's env values before removing it — these were
+# set by cloud-init from OpenTofu/tfvars and are not stored anywhere else on
+# the VM. Reuse them verbatim below.
+docker inspect edgenode --format '{{range .Config.Env}}{{println .}}{{end}}'
+
+# Stop the running 0.6.x container (leave /data mounted)
+docker stop edgenode
+docker rm edgenode
+
+# Wipe everything under the conductor's data root except the keystore
+find /data/holochain/var -mindepth 1 -maxdepth 1 ! -name ks -exec rm -rf {} +
+
+# Pull and start the 0.7 image with the same flags cloud-init used originally
+# (see deploy/cloud-init/edgenode.yml.tpl) — reuse the env values captured
+# above verbatim, especially LAIR_PASSWORD, or the preserved keystore becomes
+# inaccessible
+docker pull ghcr.io/holo-host/edgenode:<0.7-tag>
+docker run -d \
+  --name edgenode \
+  --restart unless-stopped \
+  -v /data:/data \
+  -p 80:80 \
+  -p 443:443 \
+  -p 4444:4444 \
+  -e CADDY_DOMAIN="$CADDY_DOMAIN" \
+  -e H2HC_LINKER_BOOTSTRAP_URL="$H2HC_LINKER_BOOTSTRAP_URL" \
+  -e H2HC_LINKER_ADMIN_SECRET="$H2HC_LINKER_ADMIN_SECRET" \
+  -e LOG_SENDER_ENDPOINT="$LOG_SENDER_ENDPOINT" \
+  -e LOG_SENDER_UNYT_PUB_KEY="$LOG_SENDER_UNYT_PUB_KEY" \
+  -e LAIR_PASSWORD="$LAIR_PASSWORD" \
+  ghcr.io/holo-host/edgenode:<0.7-tag>
+```
+
+### Agent key
+
+The edgenode's agent key survives the upgrade when the procedure above is
+followed — no re-registration with the joining service is needed. This only
+holds because `ks` is preserved: a volume recreated from scratch loses the
+agent key permanently (see [DESIGN.md — Disaster Recovery](DESIGN.md#disaster-recovery),
+"What must be preserved") and requires re-running the joining-service
+bootstrap to register a new key.
+
+### Harvester
+
+Before starting the 0.7 harvester for the first time, set
+`LANE_DEFINITION_IDS` (required — see `docker/LOG_HARVESTER_QUICKSTART.md`).
+The keystore/database handling above applies to the harvester's volume too.
+Once it starts, read its agent key from the startup log:
+
+```bash
+docker exec harvester grep -A2 agentPubKey /data/logs/startup.log
+```
+
+Provision the Unyt hosting agreement with this key before invoicing begins —
+the harvester will attempt to submit invoices, but Unyt will reject them until
+the agreement recognizes the key.
+
+### Reinstall hApps
+
+hApps built for Holochain 0.6 cannot be installed on a 0.7 conductor (the DNA
+hash scheme changed). After the upgrade, reinstall each hApp from a
+0.7-built bundle:
+
+```bash
+docker exec edgenode install_happ /path/to/config.json
+```
+
+---
+
 ## Backup and Disaster Recovery
 
 ### Daily volume snapshots (recommended)

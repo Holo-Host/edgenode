@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docker/Dockerfile` accepts a prebuilt binary at `docker/local-bin/log-sender-<arch>` (gitignored) that overrides the release download
 
 ### Breaking
-- No data migration from 0.6.x. Existing `/data` volumes must be reset before starting a 0.7 image (see `deploy/DEPLOYMENT.md`, "Upgrading to Holochain 0.7")
+- No data migration from 0.6.x. Existing `/data` volumes must be reset before starting a 0.7 image (keystore may be kept) — see [Upgrading to Holochain 0.7](../deploy/DEPLOYMENT.md#upgrading-to-holochain-07)
 - hApps built for Holochain 0.6 cannot be installed; the DNA hash scheme changed and 0.7 networks do not interoperate with 0.6 networks
 - Harvester deployments must set `LANE_DEFINITION_IDS`
 
