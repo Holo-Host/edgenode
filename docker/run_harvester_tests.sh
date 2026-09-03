@@ -27,7 +27,7 @@ if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode-harv
     else
         # Ensure log-harvester source is present in the build context.
         #   LOG_HARVESTER_SRC=/path/to/checkout   use a local checkout (rsync'd in)
-        #   LOG_HARVESTER_REF=<branch|tag|sha>    clone that ref (default: the 0.7 branch)
+        #   LOG_HARVESTER_REF=<branch|tag>         clone that ref (default: the 0.7 branch)
         LOG_HARVESTER_REF="${LOG_HARVESTER_REF:-feat/adapt-to-holo-hosting-agreement}"
         if [ -n "${LOG_HARVESTER_SRC:-}" ]; then
             echo "Copying log-harvester source from $LOG_HARVESTER_SRC..."

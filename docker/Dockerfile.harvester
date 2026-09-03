@@ -4,7 +4,7 @@
 # Requires log-harvester source at log-harvester-src/ in the build context:
 #   CI:    pre-cloned via actions/checkout (unytco/log-harvester)
 #   Local: run_harvester_tests.sh clones it automatically, or:
-#          git clone --depth 1 https://github.com/unytco/log-harvester.git log-harvester-src
+#          git clone --depth 1 --branch feat/adapt-to-holo-hosting-agreement https://github.com/unytco/log-harvester.git log-harvester-src
 
 FROM cgr.dev/chainguard/wolfi-base
 

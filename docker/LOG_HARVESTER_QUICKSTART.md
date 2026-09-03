@@ -45,11 +45,9 @@ Images are available from [GitHub Packages](https://github.com/Holo-Host/edgenod
 
 The `unyt.happ` is baked in from the latest [unytco/unyt-sandbox](https://github.com/unytco/unyt-sandbox) release. To pin a specific version, build locally:
 
-The image pins unyt v0.104.0; unyt releases from v0.101.0 on are Holochain 0.7 builds.
-
 ```bash
 # Clone log-harvester source first (required for the COPY step)
-git clone --depth 1 https://github.com/unytco/log-harvester.git docker/log-harvester-src
+git clone --depth 1 --branch feat/adapt-to-holo-hosting-agreement https://github.com/unytco/log-harvester.git docker/log-harvester-src
 
 docker buildx build docker/ --file docker/Dockerfile.harvester \
   --build-arg UNYT_HAPP_VERSION=v0.104.0 \

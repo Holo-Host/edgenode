@@ -36,6 +36,9 @@ hc_admin add-app-ws "${HC_APP_PORT}" --allowed-origins "log-harvester" >> "$LOG"
 # The holo-hosting agreement pins parks and executions to lane definition
 # hashes; init needs at least one. LANE_DEFINITION_IDS is comma or space
 # separated. UNIT_INDEX_* and INVOICE_PERIOD_MS are optional overrides.
+if [ -z "${LANE_DEFINITION_IDS:-}" ]; then
+  echo "WARNING: LANE_DEFINITION_IDS is not set; harvester init will fail (--lane is required)" >> "$LOG"
+fi
 LANE_ARGS=""
 for lane in $(echo "${LANE_DEFINITION_IDS:-}" | tr ',' ' '); do
   LANE_ARGS="$LANE_ARGS --lane $lane"

@@ -180,7 +180,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: unytco/log-harvester
-          ref: feat/adapt-to-holo-hosting-agreement
+          # pinned head of feat/adapt-to-holo-hosting-agreement (0.7 branch); update when it moves or merges
+          ref: cec7518d7f774938e2dfa82457f32e1cda92c235
           path: docker/log-harvester-src
           token: ${{ secrets.HARVESTER_REPO_TOKEN }}
 
