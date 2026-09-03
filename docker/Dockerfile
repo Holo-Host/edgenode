@@ -69,12 +69,11 @@ RUN case "${TARGETARCH}" in \
         -O /usr/local/bin/h2hc-linker && \
     chmod +x /usr/local/bin/h2hc-linker
 
-ARG WDOCKER_VERSION=0.15.3
-RUN npm install -g --ignore-scripts @theweave/wdocker@${WDOCKER_VERSION} && \
-    cd /usr/local/lib/node_modules/@theweave/wdocker && \
-    jq '.dependencies["@theweave/utils"] = "latest" | .dependencies["@theweave/group-client"] = "latest" | .dependencies["@theweave/api"] = "latest"' package.json > /tmp/pkg.json && \
-    mv /tmp/pkg.json package.json && \
-    npm install --ignore-scripts
+# 0.16.x targets Holochain 0.7 (@holochain/client ^0.21). Unlike 0.15.x it
+# publishes real semver ranges for its @theweave/* deps, so no package.json
+# rewrite is needed.
+ARG WDOCKER_VERSION=0.16.0-dev.4
+RUN npm install -g --ignore-scripts @theweave/wdocker@${WDOCKER_VERSION}
 
 COPY happ_tool /usr/local/bin/happ_tool
 RUN chmod +x /usr/local/bin/happ_tool
