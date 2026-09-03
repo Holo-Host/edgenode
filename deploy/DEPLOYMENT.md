@@ -421,7 +421,10 @@ current state.
 ### Container image update (edgenode or harvester)
 
 Replace the VM. OpenTofu detaches and reattaches the persistent volume to the
-new VM; Holochain data is fully preserved.
+new VM; Holochain data is fully preserved. This applies to same-major bumps
+only. Moving from a 0.6.x image to 0.7.x requires the manual procedure in
+[Upgrading to Holochain 0.7](#upgrading-to-holochain-07); do not use
+`-replace` for that transition.
 
 ```bash
 source deploy/.env.acme-staging
@@ -490,6 +493,12 @@ used WebRTC. Every node in a deployment (both edgenodes and the harvester)
 must move to 0.7 together; a deployment with a mix of 0.6 and 0.7 conductors
 cannot gossip or join.
 
+Do not use the generic [Container image update](#container-image-update-edgenode-or-harvester)
+path (`tofu apply -replace=...`) for this transition — it only swaps the VM
+and image tag, it does not wipe the conductor databases, and a 0.7 conductor
+starting against un-wiped 0.6 databases is untested and not the procedure
+this section verifies. Use the manual steps below instead.
+
 ### Verified procedure
 
 A spike against `ghcr.io/holo-host/edgenode:latest` (0.6.1) and the 0.7.0
@@ -504,6 +513,7 @@ the keystore must not be.
 Per edgenode VM:
 
 ```bash
+EDGENODE_IP=$(cd deploy/tofu && tofu output -json edgenode_ips | jq -r '.[0]')
 ssh root@$EDGENODE_IP
 
 # Capture the running container's env values before removing it — these were
@@ -520,8 +530,7 @@ find /data/holochain/var -mindepth 1 -maxdepth 1 ! -name ks -exec rm -rf {} +
 
 # Pull and start the 0.7 image with the same flags cloud-init used originally
 # (see deploy/cloud-init/edgenode.yml.tpl) — reuse the env values captured
-# above verbatim, especially LAIR_PASSWORD, or the preserved keystore becomes
-# inaccessible
+# above verbatim
 docker pull ghcr.io/holo-host/edgenode:<0.7-tag>
 docker run -d \
   --name edgenode \
