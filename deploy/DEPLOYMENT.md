@@ -488,8 +488,9 @@ hdeploy deploy-joining-service -d acme-production \
 ## Upgrading to Holochain 0.7
 
 Holochain 0.7 has no data migration from 0.6.x, and 0.6 and 0.7 networks do
-not interoperate — the DNA hash scheme changed and 0.7 is iroh-only where 0.6
-used WebRTC. Every node in a deployment (both edgenodes and the harvester)
+not interoperate — the DNA hash scheme changed, and 0.7 removed the WebRTC
+transport and its `signal_url`, leaving iroh as the only transport. Every
+node in a deployment (both edgenodes and the harvester)
 must move to 0.7 together; a deployment with a mix of 0.6 and 0.7 conductors
 cannot gossip or join.
 
@@ -512,21 +513,31 @@ the keystore must not be.
 
 Per edgenode VM:
 
+On your workstation:
+
 ```bash
 EDGENODE_IP=$(cd deploy/tofu && tofu output -json edgenode_ips | jq -r '.[0]')
 ssh root@$EDGENODE_IP
+```
 
-# Capture the running container's env values before removing it — these were
-# set by cloud-init from OpenTofu/tfvars and are not stored anywhere else on
-# the VM. Reuse them verbatim below.
-docker inspect edgenode --format '{{range .Config.Env}}{{println .}}{{end}}'
+On the VM, as root:
+
+```bash
+# Capture the running container's environment before stopping it
+docker inspect edgenode --format '{{range .Config.Env}}{{println .}}{{end}}' > /root/edgenode.env
 
 # Stop the running 0.6.x container (leave /data mounted)
 docker stop edgenode
 docker rm edgenode
+```
 
+Take a volume snapshot first (see
+[Backup and Disaster Recovery](#backup-and-disaster-recovery)).
+
+```bash
 # Wipe everything under the conductor's data root except the keystore
 find /data/holochain/var -mindepth 1 -maxdepth 1 ! -name ks -exec rm -rf {} +
+ls /data/holochain/var   # must print only: ks
 
 # Pull and start the 0.7 image with the same flags cloud-init used originally
 # (see deploy/cloud-init/edgenode.yml.tpl) — reuse the env values captured
@@ -539,12 +550,7 @@ docker run -d \
   -p 80:80 \
   -p 443:443 \
   -p 4444:4444 \
-  -e CADDY_DOMAIN="$CADDY_DOMAIN" \
-  -e H2HC_LINKER_BOOTSTRAP_URL="$H2HC_LINKER_BOOTSTRAP_URL" \
-  -e H2HC_LINKER_ADMIN_SECRET="$H2HC_LINKER_ADMIN_SECRET" \
-  -e LOG_SENDER_ENDPOINT="$LOG_SENDER_ENDPOINT" \
-  -e LOG_SENDER_UNYT_PUB_KEY="$LOG_SENDER_UNYT_PUB_KEY" \
-  -e LAIR_PASSWORD="$LAIR_PASSWORD" \
+  --env-file /root/edgenode.env \
   ghcr.io/holo-host/edgenode:<0.7-tag>
 ```
 
@@ -561,6 +567,10 @@ bootstrap to register a new key.
 
 Before starting the 0.7 harvester for the first time, set
 `LANE_DEFINITION_IDS` (required — see `docker/LOG_HARVESTER_QUICKSTART.md`).
+For tofu-managed stacks, also add `LANE_DEFINITION_IDS` and
+`export TF_VAR_lane_definition_ids="$LANE_DEFINITION_IDS"` to the
+deployment's `deploy/.env.<name>` file, otherwise `tofu apply` fails on the
+required variable.
 The keystore/database handling above applies to the harvester's volume too.
 Once it starts, read its agent key from the startup log:
 
@@ -581,6 +591,16 @@ hash scheme changed). After the upgrade, reinstall each hApp from a
 ```bash
 docker exec edgenode install_happ /path/to/config.json
 ```
+
+### Known gaps after upgrading
+
+- h2hc-linker v0.1.2 in the image is built against Holochain 0.6 and is not
+  expected to work with the 0.7 conductor until h2hc-linker v0.2.0 is
+  released and the image is rebuilt with `LINKER_VERSION=0.2.0`; browser
+  clients that join through the linker will not work in the meantime.
+- log-sender: images built from a clean checkout ship log-sender v0.1.5,
+  which crash-loops on 0.7 (see `docker/CHANGELOG.md` Known limitations).
+  Metering resumes once the image is rebuilt with `LOG_SENDER_VERSION=0.1.6`.
 
 ---
 

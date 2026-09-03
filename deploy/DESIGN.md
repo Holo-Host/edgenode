@@ -258,7 +258,7 @@ source deploy/.env.production
 
 | Data | Location | Consequence of loss |
 |------|----------|---------------------|
-| Lair keystore | `/data/lair/` | **Permanent.** Agent identity is gone; re-bootstrapping requires a new key, joining service re-registration, and loss of all existing DHT associations. |
+| Lair keystore | `/data/holochain/var/ks` | **Permanent.** Agent identity is gone; re-bootstrapping requires a new key, joining service re-registration, and loss of all existing DHT associations. |
 | Conductor source chains | `/data/holochain/` | **Permanent per author.** Each node's own authored data is unrecoverable. |
 | Conductor DHT shard | `/data/holochain/` | **Recoverable.** Can be re-synced from the network, but this is slow and disrupts hosting. |
 | OpenTofu state | remote backend (object storage) | **Recoverable with effort.** Existing infrastructure can be re-imported, but state loss makes `tofu apply` dangerous until state is reconstructed. |
