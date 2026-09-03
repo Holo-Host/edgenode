@@ -1,0 +1,12 @@
+{
+  "app": {
+    "name": "ziptest",
+    "version": "0.6.0-dev.0",
+    "happUrl": "https://github.com/holochain-apps/ziptest/releases/download/v0.6.0-dev.0/ziptest.happ",
+    "happSha256": "4da017a73dee5e857448b9075a801e23029ab58d4acee50a1f9ae6d7557bb8f3",
+    "modifiers": { "networkSeed": "", "properties": "" }
+  },
+  "env": {
+    "holochain": { "version": "0.7.0", "flags": [""], "bootstrapUrl": "", "relayUrl": "" }
+  }
+}

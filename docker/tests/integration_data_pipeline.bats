@@ -117,9 +117,9 @@ wait_for_database_data() {
         --report-interval-seconds 2
     assert_success
 
-    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    docker compose cp "$SCRIPT_DIR/ziptest.json" "$SERVICE_NAME:/home/nonroot/"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" \
-        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+        sh -c 'cd /home/nonroot && install_happ ziptest.json test-node'
     assert_success
 
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
@@ -161,9 +161,9 @@ wait_for_database_data() {
         --report-interval-seconds 2
     assert_success
 
-    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    docker compose cp "$SCRIPT_DIR/ziptest.json" "$SERVICE_NAME:/home/nonroot/"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" \
-        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+        sh -c 'cd /home/nonroot && install_happ ziptest.json test-node'
     assert_success
 
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
@@ -208,9 +208,9 @@ wait_for_database_data() {
         --report-interval-seconds 2
     assert_success
 
-    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    docker compose cp "$SCRIPT_DIR/ziptest.json" "$SERVICE_NAME:/home/nonroot/"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" \
-        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+        sh -c 'cd /home/nonroot && install_happ ziptest.json test-node'
     assert_success
 
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
@@ -268,9 +268,9 @@ wait_for_database_data() {
         --report-interval-seconds 3
     assert_success
 
-    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    docker compose cp "$SCRIPT_DIR/ziptest.json" "$SERVICE_NAME:/home/nonroot/"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" \
-        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+        sh -c 'cd /home/nonroot && install_happ ziptest.json test-node'
     assert_success
 
     # Start service in background then write fetchedOps entries while it's running
@@ -340,9 +340,9 @@ wait_for_database_data() {
         --report-interval-seconds 2
     assert_success
 
-    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    docker compose cp "$SCRIPT_DIR/ziptest.json" "$SERVICE_NAME:/home/nonroot/"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" \
-        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+        sh -c 'cd /home/nonroot && install_happ ziptest.json test-node'
     assert_success
 
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
@@ -421,9 +421,9 @@ wait_for_database_data() {
         --report-interval-seconds 2
     assert_success
 
-    docker compose cp "$SCRIPT_DIR/relay.json" "$SERVICE_NAME:/home/nonroot/"
+    docker compose cp "$SCRIPT_DIR/ziptest.json" "$SERVICE_NAME:/home/nonroot/"
     run docker compose exec -T -u nonroot "$SERVICE_NAME" \
-        sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+        sh -c 'cd /home/nonroot && install_happ ziptest.json test-node'
     assert_success
 
     run docker compose exec -T -u nonroot -e RUST_LOG=info "$SERVICE_NAME" \
