@@ -52,7 +52,7 @@ The image pins unyt v0.104.0; unyt releases from v0.101.0 on are Holochain 0.7 b
 git clone --depth 1 https://github.com/unytco/log-harvester.git docker/log-harvester-src
 
 docker buildx build docker/ --file docker/Dockerfile.harvester \
-  --build-arg UNYT_HAPP_VERSION=v0.62.0 \
+  --build-arg UNYT_HAPP_VERSION=v0.104.0 \
   --tag my-edgenode-harvester \
   --load
 ```

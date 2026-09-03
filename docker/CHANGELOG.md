@@ -22,6 +22,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `run_tests_multi.sh` runs each `.bats` file individually with a log-collector health-check between files, preventing wrangler crash cascades from affecting subsequent test files
 - `docker-compose.yml`: log-collector service gets `restart: unless-stopped` so Docker auto-recovers after wrangler dev crashes under concurrent D1 load
+- Upgraded both images to Holochain 0.7.0. New template `conductor-config-0.7.0.template.yaml` drops `signal_url` (0.7 is iroh-only and rejects unknown fields) and points `relay_url` at the bootstrap host, which serves the iroh relay in 0.7
+- `happ_tool` and the harvester s6 script now use `hc client call -p <port>` / `hc client zome-call*`; `hc sandbox call` no longer exists in hc 0.7
+- Test fixtures switched from kando v0.17.1 / volla relay to ziptest v0.6.0-dev.0 (0.7-built); `multi_install.bats` re-enabled using ziptest's `create_thing` as an init zome call
+- Harvester builds log-harvester from its `feat/adapt-to-holo-hosting-agreement` branch: `LANE_DEFINITION_IDS` is now required, the app websocket is attached by the s6 script, and the harvester agent key is logged at startup via `whoami`
+- `unyt.happ` in the harvester image pinned to v0.104.0 instead of `releases/latest`
+- `@theweave/wdocker` bumped to 0.16.0-dev.4 (Holochain 0.7 client)
+- `happ_config_file` 0.4.0: iroh-only templates, `--webrtc` removed
+- `docker/Dockerfile` accepts a prebuilt binary at `docker/local-bin/log-sender-<arch>` (gitignored) that overrides the release download
+
+### Breaking
+- No data migration from 0.6.x. Existing `/data` volumes must be reset before starting a 0.7 image (see `deploy/DEPLOYMENT.md`, "Upgrading to Holochain 0.7")
+- hApps built for Holochain 0.6 cannot be installed; the DNA hash scheme changed and 0.7 networks do not interoperate with 0.6 networks
+- Harvester deployments must set `LANE_DEFINITION_IDS`
+
+### Known limitations
+- h2hc-linker v0.1.2 is built against Holochain 0.6 crates; the linker service is not expected to work against the 0.7 conductor until h2hc-linker v0.2.0 is released and the image is rebuilt with `LINKER_VERSION=0.2.0`.
+- log-sender v0.1.5 panics on Holochain 0.7's flat `databases/` layout (its db-size metering reads the old `databases/dht/` directory). The fix (v0.1.6, `dht-*.db` filtering) is pending upstream release; until `LOG_SENDER_VERSION` is bumped, the image is built with a locally supplied binary via the `docker/local-bin/` override described in `docker/Dockerfile`.
 
 ## [0.1.0-alpha1] - 2026-03-13
 

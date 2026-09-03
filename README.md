@@ -22,7 +22,7 @@ For a detailed overview and usage instructions [see here](/USAGE.md).
 
 A [Docker-based container](docker/README.md) that delivers Edge Node, ready to run hApps:
 
-- Holochain conductor managed by s6-overlay, starting automatically on container launch.
+- Holochain 0.7.0 conductor managed by s6-overlay, starting automatically on container launch.
 - Tools for installing and managing hApps from configuration files.
 - Two variants: standard (`edgenode`) and harvester (`edgenode-harvester`).
 

@@ -2,6 +2,8 @@
 
 Docker containers for running Holochain and installing hApps as always-on nodes.
 
+The images ship Holochain 0.7.0. Data directories from 0.6.x images are not compatible; see the upgrade notes in `deploy/DEPLOYMENT.md`.
+
 Two variants are available:
 
 | Image | Description |
@@ -190,15 +192,17 @@ For verbose output:
 RUST_LOG=debug hc sandbox run 0
 ```
 
-### Manual hApp install (Kando example)
+### Manual hApp install (ziptest example)
 
 ```sh
-export ADMIN_PORT=<port_from_sandbox>
-export AGENT_KEY=$(hc s -f $ADMIN_PORT call new-agent | awk '{print $NF}')
-export APP_ID="kando::v0.17.1::$AGENT_KEY"
-wget https://github.com/holochain-apps/kando/releases/download/v0.17.1/kando.happ
-hc s -f $ADMIN_PORT call install-app ./kando.happ "<network_seed>" --agent-key "$AGENT_KEY" --app-id "$APP_ID"
-hc s -f $ADMIN_PORT call list-apps
+export ADMIN_PORT=4444
+export AGENT_KEY=$(hc client call -p $ADMIN_PORT new-agent | tr -d '"')
+export APP_ID="ziptest::0.6.0-dev.0::$AGENT_KEY"
+wget https://github.com/holochain-apps/ziptest/releases/download/v0.6.0-dev.0/ziptest.webhapp
+hc web-app unpack ziptest.webhapp -o ziptest-unpacked
+hc client call -p $ADMIN_PORT install-app ./ziptest-unpacked/ziptest.happ "<network_seed>" --agent-key "$AGENT_KEY" --app-id "$APP_ID"
+hc client call -p $ADMIN_PORT enable-app "$APP_ID"
+hc client call -p $ADMIN_PORT list-apps
 ```
 
 ### Verifying binaries
