@@ -6,7 +6,7 @@ load 'libs/bats-assert/load'
 @test "Multiple happ installation with initZomeCalls" {
   docker compose cp "$SCRIPT_DIR/ziptest-init.json" "$SERVICE_NAME":/home/nonroot/
 
-  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc client call -p 4444 list-apps | jq -r ".[].installed_app_id"'
+  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc client call -p 4444 list-apps | grep -v "Initialising" | jq -r ".[].installed_app_id"'
   local before
   before=$(echo "$output" | grep -c '^ziptest::0.6.0-dev.0::' || true)
 
@@ -20,7 +20,7 @@ load 'libs/bats-assert/load'
   assert_success
   assert_output --partial "calling create_thing"
 
-  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc client call -p 4444 list-apps | jq -r ".[].installed_app_id"'
+  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc client call -p 4444 list-apps | grep -v "Initialising" | jq -r ".[].installed_app_id"'
   assert_success
   local after
   after=$(echo "$output" | grep -c '^ziptest::0.6.0-dev.0::' || true)

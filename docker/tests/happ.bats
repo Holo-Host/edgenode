@@ -11,7 +11,7 @@ load 'libs/bats-assert/load'
   echo "$output"
   assert_success
 
-  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc s call -r 4444 list-apps'
+  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc client call -p 4444 list-apps'
   assert_output --partial "ziptest"
 }
 
@@ -26,7 +26,7 @@ load 'libs/bats-assert/load'
   docker compose cp ziptest-realsha.json "$SERVICE_NAME":/home/nonroot/
   run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'cd /home/nonroot && install_happ ziptest-realsha.json test-node'
   assert_success
-  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc s call -r 4444 list-apps'
+  run docker compose exec -T -u nonroot "$SERVICE_NAME" sh -c 'hc client call -p 4444 list-apps'
   assert_output --partial "ziptest"
 }
 
