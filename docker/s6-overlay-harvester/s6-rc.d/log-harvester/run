@@ -3,65 +3,97 @@ set -e
 
 APP_ID="${HC_APP_ID:-unyt}"
 NETWORK_SEED="${HC_NETWORK_SEED:-network-seed}"
+LOG=/data/logs/startup.log
+
+# Admin calls against the local conductor (hc 0.7: `hc client call`)
+hc_admin() {
+  hc client call -p "${HC_ADMIN_PORT}" "$@"
+}
 
 # Wait for holochain conductor to be ready
-echo "Waiting for holochain conductor..." >> /data/logs/startup.log
-while ! hc sandbox call --running "${HC_ADMIN_PORT}" list-apps > /dev/null 2>&1; do
+echo "Waiting for holochain conductor..." >> "$LOG"
+while ! hc_admin list-apps > /dev/null 2>&1; do
   sleep 5
 done
-echo "Holochain conductor is ready." >> /data/logs/startup.log
+echo "Holochain conductor is ready." >> "$LOG"
 
 # Install unyt.happ if not already installed
 if [ -f "${HAPP_PATH}" ]; then
-  if ! hc sandbox call --running "${HC_ADMIN_PORT}" list-apps 2>/dev/null | grep -q "${APP_ID}"; then
-    echo "Installing ${APP_ID} happ..." >> /data/logs/startup.log
-    hc sandbox call --running "${HC_ADMIN_PORT}" install-app "${HAPP_PATH}" \
-      --app-id "${APP_ID}" "${NETWORK_SEED}" >> /data/logs/startup.log 2>&1 || true
-    hc sandbox call --running "${HC_ADMIN_PORT}" enable-app "${APP_ID}" >> /data/logs/startup.log 2>&1 || true
+  if ! hc_admin list-apps 2>/dev/null | grep -q "\"${APP_ID}\""; then
+    echo "Installing ${APP_ID} happ..." >> "$LOG"
+    hc_admin install-app "${HAPP_PATH}" --app-id "${APP_ID}" "${NETWORK_SEED}" >> "$LOG" 2>&1 || true
+    hc_admin enable-app "${APP_ID}" >> "$LOG" 2>&1 || true
   fi
 else
-  echo "WARNING: ${HAPP_PATH} not found — skipping happ install" >> /data/logs/startup.log
+  echo "WARNING: ${HAPP_PATH} not found - skipping happ install" >> "$LOG"
 fi
+
+# Attach the app websocket the harvester connects to. The 0.7 log-harvester
+# no longer attaches it itself. Idempotent: a second attach on the same port
+# fails and is ignored.
+hc_admin add-app-ws "${HC_APP_PORT}" --allowed-origins "log-harvester" >> "$LOG" 2>&1 || true
+
+# The holo-hosting agreement pins parks and executions to lane definition
+# hashes; init needs at least one. LANE_DEFINITION_IDS is comma or space
+# separated. UNIT_INDEX_* and INVOICE_PERIOD_MS are optional overrides.
+LANE_ARGS=""
+for lane in $(echo "${LANE_DEFINITION_IDS:-}" | tr ',' ' '); do
+  LANE_ARGS="$LANE_ARGS --lane $lane"
+done
+EXTRA_ARGS=""
+[ -n "${UNIT_INDEX_STORAGE:-}" ] && EXTRA_ARGS="$EXTRA_ARGS --unit-storage ${UNIT_INDEX_STORAGE}"
+[ -n "${UNIT_INDEX_GOSSIP:-}" ] && EXTRA_ARGS="$EXTRA_ARGS --unit-gossip ${UNIT_INDEX_GOSSIP}"
+[ -n "${INVOICE_PERIOD_MS:-}" ] && EXTRA_ARGS="$EXTRA_ARGS --period-ms ${INVOICE_PERIOD_MS}"
+
+# init, retried to ride out conductor/lair startup races (as unyt's own
+# docker-entrypoint.sh does)
+run_init() {
+  for attempt in 1 2 3; do
+    if node /app/dist/log-harvester.js init \
+        --config "${CONFIG_PATH}" \
+        --url "${COLLECTOR_URL}" \
+        --admin "${ADMIN_SECRET}" \
+        --hc-admin "${HC_ADMIN_PORT}" \
+        --hc-app "${HC_APP_PORT}" \
+        --app-id "${APP_ID}" \
+        $LANE_ARGS $EXTRA_ARGS >> "$LOG" 2>&1; then
+      return 0
+    fi
+    echo "harvester init failed (attempt $attempt of 3)" >> "$LOG"
+    sleep 3
+  done
+  return 1
+}
 
 # Wait a moment for keystore to be fully ready before touching credentials
 sleep 3
 
 # Initialize config on first run; refresh credentials on restart
 if [ ! -f "${CONFIG_PATH}" ]; then
-  echo "Initializing harvester config..." >> /data/logs/startup.log
-  node /app/dist/log-harvester.js init \
-    --config "${CONFIG_PATH}" \
-    --url "${COLLECTOR_URL}" \
-    --admin "${ADMIN_SECRET}" \
-    --hc-admin "${HC_ADMIN_PORT}" \
-    --hc-app "${HC_APP_PORT}" \
-    --app-id "${APP_ID}" >> /data/logs/startup.log 2>&1
+  echo "Initializing harvester config..." >> "$LOG"
+  run_init || { echo "harvester init failed; not starting harvester" >> "$LOG"; exec tail -f /dev/null; }
   chown nonroot:nonroot "${CONFIG_PATH}" 2>/dev/null || true
 else
-  echo "Refreshing harvester credentials..." >> /data/logs/startup.log
+  echo "Refreshing harvester credentials..." >> "$LOG"
   cp "${CONFIG_PATH}" "${CONFIG_PATH}.backup"
-  LAST_INVOICE=""
-  if command -v jq > /dev/null 2>&1; then
-    LAST_INVOICE=$(jq -r '.lastInvoice // empty' "${CONFIG_PATH}" 2>/dev/null || true)
-  fi
+  LAST_INVOICE=$(jq -r '.lastInvoice // empty' "${CONFIG_PATH}" 2>/dev/null || true)
   rm "${CONFIG_PATH}"
-  node /app/dist/log-harvester.js init \
-    --config "${CONFIG_PATH}" \
-    --url "${COLLECTOR_URL}" \
-    --admin "${ADMIN_SECRET}" \
-    --hc-admin "${HC_ADMIN_PORT}" \
-    --hc-app "${HC_APP_PORT}" \
-    --app-id "${APP_ID}" >> /data/logs/startup.log 2>&1 && \
-    rm -f "${CONFIG_PATH}.backup" || \
+  if run_init; then
+    rm -f "${CONFIG_PATH}.backup"
+  else
     mv "${CONFIG_PATH}.backup" "${CONFIG_PATH}"
-  if [ -n "${LAST_INVOICE}" ] && command -v jq > /dev/null 2>&1; then
+  fi
+  if [ -n "${LAST_INVOICE}" ]; then
     jq ".lastInvoice = ${LAST_INVOICE}" "${CONFIG_PATH}" > "${CONFIG_PATH}.tmp" && \
       mv "${CONFIG_PATH}.tmp" "${CONFIG_PATH}" || true
   fi
   chown nonroot:nonroot "${CONFIG_PATH}" 2>/dev/null || true
 fi
 
-echo "Starting log-harvester service..." >> /data/logs/startup.log
+# Log the agent key the agreement must authorize (whoami is new in the 0.7 branch)
+node /app/dist/log-harvester.js whoami --config "${CONFIG_PATH}" >> "$LOG" 2>&1 || true
+
+echo "Starting log-harvester service..." >> "$LOG"
 
 TODAY_FLAG=""
 if [ "${LOG_FOR_TODAY:-false}" = "true" ]; then

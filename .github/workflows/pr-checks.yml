@@ -87,6 +87,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: unytco/log-harvester
+          ref: feat/adapt-to-holo-hosting-agreement
           path: docker/log-harvester-src
           token: ${{ secrets.HARVESTER_REPO_TOKEN }}
 

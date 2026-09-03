@@ -18,7 +18,7 @@ setup() {
 
 @test "unyt.happ is installed" {
   run docker compose exec -T "$HARVESTER_SERVICE" \
-    hc sandbox call --running 4444 list-apps
+    hc client call -p 4444 list-apps
   assert_success
   assert_output --partial "unyt"
 }

@@ -45,6 +45,8 @@ Images are available from [GitHub Packages](https://github.com/Holo-Host/edgenod
 
 The `unyt.happ` is baked in from the latest [unytco/unyt-sandbox](https://github.com/unytco/unyt-sandbox) release. To pin a specific version, build locally:
 
+The image pins unyt v0.104.0; unyt releases from v0.101.0 on are Holochain 0.7 builds.
+
 ```bash
 # Clone log-harvester source first (required for the COPY step)
 git clone --depth 1 https://github.com/unytco/log-harvester.git docker/log-harvester-src
@@ -65,6 +67,7 @@ docker run --name harvester -dit \
   -e COLLECTOR_URL=https://your-log-collector.unyt.dev \
   -e ADMIN_SECRET=your-admin-secret \
   -e LAIR_PASSWORD=your-lair-password \
+  -e LANE_DEFINITION_IDS=uhCkk... \
   ghcr.io/holo-host/edgenode-harvester
 ```
 
@@ -91,7 +94,7 @@ docker exec -it harvester pgrep holochain
 Check the unyt hApp is installed:
 
 ```bash
-docker exec -it harvester hc sandbox call --running 4444 list-apps
+docker exec -it harvester hc client call -p 4444 list-apps
 ```
 
 Check the harvester config was initialized:
@@ -119,6 +122,10 @@ docker exec -it harvester tail -f /data/logs/log-harvester.log
 | `HC_APP_PORT` | Holochain app websocket port | `4445` |
 | `LOG_FOR_TODAY` | Query today's UTC range instead of yesterday's (useful when testing same-day submissions) | `false` |
 | `RUST_LOG` | Holochain log level | `info` |
+| `LANE_DEFINITION_IDS` | Lane definition hash(es) the agreement pins parks/executions to, comma separated | (required) |
+| `UNIT_INDEX_STORAGE` | Service-unit index the agreement meters storage on | `3` |
+| `UNIT_INDEX_GOSSIP` | Service-unit index the agreement meters gossip/bandwidth on | `2` |
+| `INVOICE_PERIOD_MS` | Invoicing period in ms (window and minimum gap) | `86400000` |
 
 ## Persistent data
 
