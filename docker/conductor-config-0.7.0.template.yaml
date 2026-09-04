@@ -1,0 +1,24 @@
+---
+# Conductor configuration (Holochain 0.7)
+admin_interfaces:
+- driver:
+    type: websocket
+    port: 4444
+    danger_bind_addr: null
+    allowed_origins: '*'
+
+network:
+  # In 0.7 the kitsune2 bootstrap server also serves the iroh relay,
+  # so both URLs point at the same host.
+  bootstrap_url: "https://dev-test-bootstrap2.holochain.org"
+  relay_url: "https://dev-test-bootstrap2.holochain.org"
+
+  report: !json_lines
+    days_retained: 30
+    fetched_op_interval_s: 300
+
+data_root_path: "/var/local/lib/holochain"
+
+keystore:
+  type: lair_server_in_proc
+  lair_root: "/var/local/lib/holochain/ks"

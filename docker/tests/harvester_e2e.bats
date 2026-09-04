@@ -61,13 +61,13 @@ setup() {
     --report-interval-seconds 2
   assert_success
 
-  # install_happ registers the relay DNA in the log-collector under the startup
+  # install_happ registers the ziptest DNA in the log-collector under the startup
   # log-sender config's drone (which uses UNYT_PUB_KEY = uhCAkDM-...).
   # This populates dna_registrations so get-registered-dna succeeds for that UNYT key.
-  local relay_json="${SCRIPT_DIR:-${BATS_TEST_DIRNAME}/..}/relay.json"
-  docker compose cp "$relay_json" "${EDGENODE_SERVICE}:/home/nonroot/"
+  local ziptest_json="${SCRIPT_DIR:-${BATS_TEST_DIRNAME}/..}/ziptest.json"
+  docker compose cp "$ziptest_json" "${EDGENODE_SERVICE}:/home/nonroot/"
   run docker compose exec -T -u nonroot "$EDGENODE_SERVICE" \
-    sh -c 'cd /home/nonroot && install_happ relay.json test-node'
+    sh -c 'cd /home/nonroot && install_happ ziptest.json test-node'
   assert_success
 
   run docker compose exec -T -u nonroot "$EDGENODE_SERVICE" \

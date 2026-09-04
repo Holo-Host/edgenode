@@ -28,8 +28,11 @@ The test cases are in the `tests/` directory:
 - `process.bats`: Verifies `holochain` runs as the `nonroot` user.
 - `persistence.bats`: Verifies data written to `/data` persists across container restarts.
 - `happ.bats`: Verifies a hApp can be installed via `install_happ`.
-- `webhapp.bats`: Verifies a `.webhapp` file (kando v0.17.1) can be downloaded, extracted, and installed, including SHA256 validation.
-- `multi_install.bats`: Multi-happ installation tests (currently skipped — needs a HC 0.6.1-compatible hApp with `initZomeCalls`).
+- `webhapp.bats`: Verifies a `.webhapp` file (ziptest v0.6.0-dev.0) can be downloaded, extracted, and installed, including SHA256 validation.
+
+Both files install ziptest via its `.webhapp` URL because the ziptest release ships no bare `.happ`, so the plain-`.happ`-URL path is currently uncovered.
+
+- `multi_install.bats`: installs ziptest twice with initZomeCalls, exercising zome-call-auth, zome-call, and DNA-hash extraction with several apps present.
 - `log_tool.bats`: Verifies `log-sender` init, service, and config behaviour.
 - `log_sender_e2e.bats`: End-to-end log-sender → log-collector pipeline tests.
 - `log_sender_debug.bats`: Debug log-sender service with test JSONL data.
@@ -59,6 +62,8 @@ This builds the harvester image, starts `log-collector`, `edgenode`, and `edgeno
 - `harvester_process.bats`: Holochain and Node.js processes run as `nonroot`.
 - `harvester_integration.bats`: Connectivity checks — harvester can reach log-collector and query `/logs`.
 - `harvester_e2e.bats`: Full pipeline — log-sender submits signed metrics to log-collector, harvester fetches and invoices them (`--today --dry-run`), asserts `"Successfully invoiced logs."`.
+
+The `LOG_HARVESTER_SRC` option of `run_harvester_tests.sh` (use a local log-harvester checkout instead of cloning) requires `rsync` on the host.
 
 To test against a pre-built image instead of building locally:
 

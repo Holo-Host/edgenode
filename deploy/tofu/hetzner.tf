@@ -120,6 +120,7 @@ resource "hcloud_server" "harvester" {
   user_data = templatefile("${path.module}/../cloud-init/harvester.yml.tpl", {
     volume_id               = hcloud_volume.harvester.id
     harvester_lair_password = var.harvester_lair_password
+    lane_definition_ids     = var.lane_definition_ids
     collector_url           = local.log_collector_url
     admin_secret            = var.log_collector_admin_secret
     harvester_image         = var.harvester_image

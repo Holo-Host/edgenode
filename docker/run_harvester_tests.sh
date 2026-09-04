@@ -25,17 +25,25 @@ if [[ "$CI_RELEASE_TEST" != "true" ]] && [[ "$IMAGE_NAME" == local-edgenode-harv
     if [[ "$FORCE_REBUILD" != "true" ]] && docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
         echo "Using existing local image: $IMAGE_NAME (set FORCE_REBUILD=true to rebuild)"
     else
-        # Ensure log-harvester source is present in the build context
-        if [ ! -d "$SCRIPT_DIR/log-harvester-src/.git" ]; then
-            echo "Cloning log-harvester source..."
+        # Ensure log-harvester source is present in the build context.
+        #   LOG_HARVESTER_SRC=/path/to/checkout   use a local checkout (rsync'd in)
+        #   LOG_HARVESTER_REF=<branch|tag>         clone that ref (default: the 0.7 branch)
+        LOG_HARVESTER_REF="${LOG_HARVESTER_REF:-feat/adapt-to-holo-hosting-agreement}"
+        if [ -n "${LOG_HARVESTER_SRC:-}" ]; then
+            echo "Copying log-harvester source from $LOG_HARVESTER_SRC..."
+            rm -rf "$SCRIPT_DIR/log-harvester-src"
+            rsync -a --exclude node_modules --exclude dist --exclude .git --exclude '*.tsbuildinfo' \
+                "$LOG_HARVESTER_SRC/" "$SCRIPT_DIR/log-harvester-src/"
+        elif [ ! -d "$SCRIPT_DIR/log-harvester-src/.git" ]; then
+            echo "Cloning log-harvester source (ref $LOG_HARVESTER_REF)..."
             CLONE_URL="https://github.com/unytco/log-harvester.git"
             if [ -n "$GITHUB_TOKEN" ]; then
                 CLONE_URL="https://${GITHUB_TOKEN}@github.com/unytco/log-harvester.git"
             fi
-            git clone --depth 1 "$CLONE_URL" "$SCRIPT_DIR/log-harvester-src" || {
+            git clone --depth 1 --branch "$LOG_HARVESTER_REF" "$CLONE_URL" "$SCRIPT_DIR/log-harvester-src" || {
                 echo ""
-                echo "Error: failed to clone unytco/log-harvester (private repo)."
-                echo "Set GITHUB_TOKEN to a PAT with repo read access and retry."
+                echo "Error: failed to clone unytco/log-harvester (private repo) at $LOG_HARVESTER_REF."
+                echo "Set GITHUB_TOKEN to a PAT with repo read access, or LOG_HARVESTER_SRC to a local checkout."
                 exit 1
             }
         fi

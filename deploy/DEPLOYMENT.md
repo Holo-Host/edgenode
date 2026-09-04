@@ -421,7 +421,10 @@ current state.
 ### Container image update (edgenode or harvester)
 
 Replace the VM. OpenTofu detaches and reattaches the persistent volume to the
-new VM; Holochain data is fully preserved.
+new VM; Holochain data is fully preserved. This applies to same-major bumps
+only. Moving from a 0.6.x image to 0.7.x requires the manual procedure in
+[Upgrading to Holochain 0.7](#upgrading-to-holochain-07); do not use
+`-replace` for that transition.
 
 ```bash
 source deploy/.env.acme-staging
@@ -479,6 +482,122 @@ hdeploy deploy-joining-service -d acme-production \
   --joining-service-dir "$JOINING_SERVICE_DIR" \
   --joining-config deploy/acme-joining-config.json
 ```
+
+---
+
+## Upgrading to Holochain 0.7
+
+Holochain 0.7 has no data migration from 0.6.x, and 0.6 and 0.7 networks do
+not interoperate — the DNA hash scheme changed, and 0.7 removed the WebRTC
+transport and its `signal_url`, leaving iroh as the only transport. Every
+node in a deployment (both edgenodes and the harvester)
+must move to 0.7 together; a deployment with a mix of 0.6 and 0.7 conductors
+cannot gossip or join.
+
+Do not use the generic [Container image update](#container-image-update-edgenode-or-harvester)
+path (`tofu apply -replace=...`) for this transition — it only swaps the VM
+and image tag, it does not wipe the conductor databases, and a 0.7 conductor
+starting against un-wiped 0.6 databases is untested and not the procedure
+this section verifies. Use the manual steps below instead.
+
+### Verified procedure
+
+A spike against `ghcr.io/holo-host/edgenode:latest` (0.6.1) and the 0.7.0
+image confirmed that the lair keystore under `/data/holochain/var/ks`
+survives the upgrade: an agent key generated under 0.6.1 was still usable by
+the 0.7.0 conductor after everything else under `/data/holochain/var` was
+wiped — `install-app --agent-key <the 0.6.1 key>` succeeded and `list-apps`
+returned the same key. The conductor databases do not carry over (0.7 renames
+them and moves them to a flat `databases/` layout), so they must be deleted;
+the keystore must not be.
+
+Per edgenode VM:
+
+On your workstation:
+
+```bash
+EDGENODE_IP=$(cd deploy/tofu && tofu output -json edgenode_ips | jq -r '.[0]')
+ssh root@$EDGENODE_IP
+```
+
+On the VM, as root:
+
+```bash
+# Capture the running container's environment before stopping it
+docker inspect edgenode --format '{{range .Config.Env}}{{println .}}{{end}}' > /root/edgenode.env
+
+# Stop the running 0.6.x container (leave /data mounted)
+docker stop edgenode
+docker rm edgenode
+```
+
+Take a volume snapshot first (see
+[Backup and Disaster Recovery](#backup-and-disaster-recovery)).
+
+```bash
+# Wipe everything under the conductor's data root except the keystore
+find /data/holochain/var -mindepth 1 -maxdepth 1 ! -name ks -exec rm -rf {} +
+ls /data/holochain/var   # must print only: ks
+
+# Pull and start the 0.7 image with the same flags cloud-init used originally
+# (see deploy/cloud-init/edgenode.yml.tpl) — reuse the env values captured
+# above verbatim
+docker pull ghcr.io/holo-host/edgenode:<0.7-tag>
+docker run -d \
+  --name edgenode \
+  --restart unless-stopped \
+  -v /data:/data \
+  -p 80:80 \
+  -p 443:443 \
+  -p 4444:4444 \
+  --env-file /root/edgenode.env \
+  ghcr.io/holo-host/edgenode:<0.7-tag>
+```
+
+### Agent key
+
+The edgenode's agent key survives the upgrade when the procedure above is
+followed — no re-registration with the joining service is needed. This only
+holds because `ks` is preserved: a volume recreated from scratch loses the
+agent key permanently (see [DESIGN.md — Disaster Recovery](DESIGN.md#disaster-recovery),
+"What must be preserved") and requires re-running the joining-service
+bootstrap to register a new key.
+
+### Harvester
+
+Before starting the 0.7 harvester for the first time, set
+`LANE_DEFINITION_IDS` (required — see `docker/LOG_HARVESTER_QUICKSTART.md`).
+For tofu-managed stacks, also add `LANE_DEFINITION_IDS` and
+`export TF_VAR_lane_definition_ids="$LANE_DEFINITION_IDS"` to the
+deployment's `deploy/.env.<name>` file, otherwise `tofu apply` fails on the
+required variable.
+The keystore/database handling above applies to the harvester's volume too.
+Once it starts, read its agent key from the startup log:
+
+```bash
+docker exec harvester grep -A2 agentPubKey /data/logs/startup.log
+```
+
+Provision the Unyt hosting agreement with this key before invoicing begins —
+the harvester will attempt to submit invoices, but Unyt will reject them until
+the agreement recognizes the key.
+
+### Reinstall hApps
+
+hApps built for Holochain 0.6 cannot be installed on a 0.7 conductor (the DNA
+hash scheme changed). After the upgrade, reinstall each hApp from a
+0.7-built bundle:
+
+```bash
+docker exec edgenode install_happ /path/to/config.json
+```
+
+### Known gaps after upgrading
+
+- h2hc-linker v0.1.2 in the image is built against Holochain 0.6 and is not
+  expected to work with the 0.7 conductor until h2hc-linker v0.2.0 is
+  released and the image is rebuilt with `LINKER_VERSION=0.2.0`; browser
+  clients that join through the linker will not work in the meantime.
 
 ---
 

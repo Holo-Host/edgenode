@@ -180,6 +180,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: unytco/log-harvester
+          # pinned head of feat/adapt-to-holo-hosting-agreement (0.7 branch).
+          # That branch is rebased, so a stale pin becomes unreachable and the
+          # release build fails here — repin to the current head, or drop the
+          # ref entirely once the branch merges to main.
+          ref: c1c490dd7c27aeeb4f39dae752cb3fc301b6db25
           path: docker/log-harvester-src
           token: ${{ secrets.HARVESTER_REPO_TOKEN }}
 

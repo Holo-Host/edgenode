@@ -18,8 +18,8 @@ RUN case "${TARGETARCH}" in \
     tar -C / -Jxpf s6-overlay-${S6_ARCH}.tar.xz && \
     rm -f s6-overlay-*.tar.xz
 
-ARG HOLOCHAIN_VERSION=0.6.1
-ARG HC_VERSION=0.6.1
+ARG HOLOCHAIN_VERSION=0.7.0
+ARG HC_VERSION=0.7.0
 
 RUN case "${TARGETARCH}" in \
     amd64) HC_ARCH="x86_64-unknown-linux-gnu" ;; \
@@ -33,7 +33,7 @@ RUN case "${TARGETARCH}" in \
     chmod +x /bin/holochain && \
     chmod +x /bin/hc
 
-ARG LOG_SENDER_VERSION=0.1.5
+ARG LOG_SENDER_VERSION=0.1.6
 
 RUN case "${TARGETARCH}" in \
     amd64) LS_ARCH="x86_64" ;; \
@@ -58,12 +58,11 @@ RUN case "${TARGETARCH}" in \
         -O /usr/local/bin/h2hc-linker && \
     chmod +x /usr/local/bin/h2hc-linker
 
-ARG WDOCKER_VERSION=0.15.3
-RUN npm install -g --ignore-scripts @theweave/wdocker@${WDOCKER_VERSION} && \
-    cd /usr/local/lib/node_modules/@theweave/wdocker && \
-    jq '.dependencies["@theweave/utils"] = "latest" | .dependencies["@theweave/group-client"] = "latest" | .dependencies["@theweave/api"] = "latest"' package.json > /tmp/pkg.json && \
-    mv /tmp/pkg.json package.json && \
-    npm install --ignore-scripts
+# 0.16.x targets Holochain 0.7 (@holochain/client ^0.21). Unlike 0.15.x it
+# publishes real semver ranges for its @theweave/* deps, so no package.json
+# rewrite is needed.
+ARG WDOCKER_VERSION=0.16.0-dev.4
+RUN npm install -g --ignore-scripts @theweave/wdocker@${WDOCKER_VERSION}
 
 COPY happ_tool /usr/local/bin/happ_tool
 RUN chmod +x /usr/local/bin/happ_tool
@@ -89,7 +88,7 @@ RUN case "${TARGETARCH}" in \
     chmod +x /usr/local/bin/happ_config_file
 
 RUN mkdir -p /usr/local/share/holochain
-COPY conductor-config-0.6.1.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
+COPY conductor-config-0.7.0.template.yaml /usr/local/share/holochain/conductor-config.template.yaml
 COPY logrotate.d/holochain.conf /etc/logrotate.d/holochain.conf
 RUN chown -R nonroot:nonroot /usr/local/share/holochain
 

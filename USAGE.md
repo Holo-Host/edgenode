@@ -41,7 +41,7 @@ Step 1: Create JSON file using `happ_config_file create`, modifying the fields o
       "version": "",  
       "flags": [""],  
       "bootstrapUrl": "",  
-      "signalServerUrl": "",  
+      "relayUrl": "",  
     },  
     "gw": {  
       "enable": false,  
@@ -57,6 +57,8 @@ Step 1: Create JSON file using `happ_config_file create`, modifying the fields o
   }  
 }
 ```
+
+Holochain 0.7 uses iroh networking only; `signalServerUrl` and `stunServerUrls` from older templates are ignored.
 
 Some notes on the contents of the fields:
 

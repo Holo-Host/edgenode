@@ -48,6 +48,7 @@ write_files:
         -p 4444:4444 \
         -p 4445:4445 \
         -e LAIR_PASSWORD="${harvester_lair_password}" \
+        -e LANE_DEFINITION_IDS="${lane_definition_ids}" \
         -e COLLECTOR_URL="${collector_url}" \
         -e ADMIN_SECRET="${admin_secret}" \
         ${harvester_image}

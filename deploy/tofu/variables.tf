@@ -126,6 +126,11 @@ variable "harvester_lair_password" {
   sensitive   = true
 }
 
+variable "lane_definition_ids" {
+  description = "Comma-separated lane definition hash(es) the harvester's agreement pins parks and executions to (LANE_DEFINITION_IDS)"
+  type        = string
+}
+
 variable "log_sender_unyt_pub_key" {
   description = "Unyt agent public key (uhCAk...) used by log-sender for billing attribution. Left empty at provision time — populated by bootstrap-edgenode via docker exec --env after bootstrap-harvester generates the harvester agent key."
   type        = string

@@ -20,25 +20,19 @@ validate_port() {
 }
 
 # Function to extract DNA hash from installed app
-# Supports both HC 0.5.6 (regex-based) and HC 0.6.0+ (JSON) output formats
+# Parses the JSON that `hc client call list-apps` prints (Holochain 0.7+).
 # Arguments: $1 = admin_port, $2 = app_id
 # Returns: DNA hash via stdout, empty if not found
 extract_dna_hash() {
   local admin_port="$1"
   local app_id="$2"
   local list_apps_output dna_hash
-  
-  list_apps_output=$(hc s call -r "$admin_port" list-apps 2>/dev/null || true)
-  
-  # Try JSON parsing first (HC 0.6.0+ returns JSON)
+
+  list_apps_output=$(hc client call -p "$admin_port" list-apps 2>/dev/null || true)
+
   dna_hash=$(echo "$list_apps_output" | grep -v "Initialising" | \
     jq -r --arg app_id "$app_id" '.[] | select(.installed_app_id == $app_id) | .cell_info | to_entries[0].value[0].value.cell_id.dna_hash' 2>/dev/null || true)
-  
-  # If JSON parsing failed, try regex parsing (HC 0.5.6 returns "AppInfo {" format)
-  if [ -z "$dna_hash" ]; then
-    dna_hash=$(echo "$list_apps_output" | sed 's/AppInfo {/\n&/g' | grep "installed_app_id: \"$app_id\"" | awk -F 'DnaHash\\(|\\), AgentPubKey' '{print $2}' || true)
-  fi
-  
+
   echo "$dna_hash"
 }
 
@@ -106,7 +100,7 @@ if [ "$SCRIPT_NAME" = "happ_tool" ]; then
       fi
       validate_app_id "$APP_ID"
       echo "[*] Uninstalling app $APP_ID..."
-      hc s call -r "$ADMIN_PORT" uninstall-app "$APP_ID"
+      hc client call -p "$ADMIN_PORT" uninstall-app "$APP_ID"
       echo "[✔] App $APP_ID uninstalled!"
       exit 0
       ;;
@@ -118,7 +112,7 @@ if [ "$SCRIPT_NAME" = "happ_tool" ]; then
       fi
       validate_app_id "$APP_ID"
       echo "[*] Enabling app $APP_ID..."
-      hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
+      hc client call -p "$ADMIN_PORT" enable-app "$APP_ID"
       echo "[✔] App $APP_ID enabled!"
       exit 0
       ;;
@@ -130,12 +124,12 @@ if [ "$SCRIPT_NAME" = "happ_tool" ]; then
       fi
       validate_app_id "$APP_ID"
       echo "[*] Disabling app $APP_ID..."
-      hc s call -r "$ADMIN_PORT" disable-app "$APP_ID"
+      hc client call -p "$ADMIN_PORT" disable-app "$APP_ID"
       echo "[✔] App $APP_ID disabled!"
       exit 0
       ;;
     list)
-      hc s call -r "$ADMIN_PORT" list-apps
+      hc client call -p "$ADMIN_PORT" list-apps
       exit 0
       ;;
     help|--help|-h)
@@ -153,7 +147,7 @@ fi
 # --- Legacy sub-commands (via symlinks, for backward compatibility) ---
 # The script behaves differently based on the name it's called with.
 if [ "$SCRIPT_NAME" = "list_happs" ]; then
-  hc s call -r "$ADMIN_PORT" list-apps
+  hc client call -p "$ADMIN_PORT" list-apps
   exit 0
 fi
 
@@ -165,7 +159,7 @@ if [ "$SCRIPT_NAME" = "uninstall_happ" ]; then
   fi
   validate_app_id "$APP_ID"
   echo "[*] Uninstalling app $APP_ID..."
-  hc s call -r "$ADMIN_PORT" uninstall-app "$APP_ID"
+  hc client call -p "$ADMIN_PORT" uninstall-app "$APP_ID"
   echo "[✔] App $APP_ID uninstalled!"
   exit 0
 fi
@@ -178,7 +172,7 @@ if [ "$SCRIPT_NAME" = "enable_happ" ]; then
   fi
   validate_app_id "$APP_ID"
   echo "[*] Enabling app $APP_ID..."
-  hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
+  hc client call -p "$ADMIN_PORT" enable-app "$APP_ID"
   echo "[✔] App $APP_ID enabled!"
   exit 0
 fi
@@ -191,7 +185,7 @@ if [ "$SCRIPT_NAME" = "disable_happ" ]; then
   fi
   validate_app_id "$APP_ID"
   echo "[*] Disabling app $APP_ID..."
-  hc s call -r "$ADMIN_PORT" disable-app "$APP_ID"
+  hc client call -p "$ADMIN_PORT" disable-app "$APP_ID"
   echo "[✔] App $APP_ID disabled!"
   exit 0
 fi
@@ -304,14 +298,15 @@ fi
 
 # ---- Generate agent key ----
 echo "DEBUG: Starting agent key generation"
-RAW_OUTPUT=$(hc s call -r "$ADMIN_PORT" new-agent 2>&1)
+RAW_OUTPUT=$(hc client call -p "$ADMIN_PORT" new-agent 2>&1)
 echo "[*] Debug: Raw new-agent output:"
 echo "$RAW_OUTPUT"
 
 # Robust agent key extraction with fallback strategies
 # Try multiple extraction methods to handle different Holochain versions
 
-# Method 1: Original simple extraction (for hc-0.5.6 and standard images)
+# Method 1: last whitespace-separated token, quotes stripped.
+# `hc client call new-agent` prints the key as a JSON string on one line.
 AGENT_KEY=$(echo "$RAW_OUTPUT" | awk '{print $NF}' | tr -d '"' | grep -v '^$')
 
 # Method 2: JSON format extraction (for UNYT images with reporting)
@@ -359,7 +354,7 @@ validate_app_id "$APP_ID"
 # ---- Install app ----
 echo "DEBUG: Preparing to install app"
 echo "[*] Installing app..."
-hc s call -r "$ADMIN_PORT" install-app \
+hc client call -p "$ADMIN_PORT" install-app \
   --agent-key "$AGENT_KEY" \
   --app-id "$APP_ID" \
   "$HAPP_FILE" \
@@ -368,13 +363,13 @@ hc s call -r "$ADMIN_PORT" install-app \
 # ---- Enable app ----
 echo "DEBUG: App install command finished, preparing to enable"
 echo "[*] Enabling app..."
-hc s call -r "$ADMIN_PORT" enable-app "$APP_ID"
+hc client call -p "$ADMIN_PORT" enable-app "$APP_ID"
 
 # ---- Initial zome calls (if configured) ----
 INIT_CALLS_JSON=$(jq -c '.app.initZomeCalls // .app.init_zome_calls // []' "$CONFIG_FILE")
 if [ "$INIT_CALLS_JSON" != "[]" ]; then
   echo "[*] Found initZomeCalls in config; authorizing zome calls..."
-  echo "" | hc s zome-call-auth --piped -r "$ADMIN_PORT" "$APP_ID"
+  echo "" | hc client zome-call-auth -p "$ADMIN_PORT" --piped "$APP_ID"
   
   echo "[*] Getting app info to extract DnaHash for $APP_ID..."
   DNA_HASH=$(extract_dna_hash "$ADMIN_PORT" "$APP_ID")
@@ -397,7 +392,7 @@ if [ "$INIT_CALLS_JSON" != "[]" ]; then
       fi
       
       echo "calling $FN_NAME with $PAYLOAD"
-      echo "" | hc s zome-call --piped -r "$ADMIN_PORT" "$APP_ID" "$DNA_HASH" "$ZOME" "$FN_NAME" "$PAYLOAD"
+      echo "" | hc client zome-call -p "$ADMIN_PORT" --piped "$APP_ID" "$DNA_HASH" "$ZOME" "$FN_NAME" "$PAYLOAD"
     done
   else
     echo "[!] Could not extract DnaHash from apps list"
