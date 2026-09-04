@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `unyt.happ` in the harvester image pinned to v0.104.0 instead of `releases/latest`
 - `@theweave/wdocker` bumped to 0.16.0-dev.4 (Holochain 0.7 client)
 - `happ_config_file` 0.4.0: iroh-only templates, `--webrtc` removed
-- `docker/Dockerfile` accepts a prebuilt binary at `docker/local-bin/log-sender-<arch>` (gitignored) that overrides the release download
+- `log-sender` bumped to v0.1.6, which meters the `dht-*.db` files of Holochain 0.7's flat `databases/` layout and no longer aborts report shipping when the db-size check fails
 
 ### Breaking
 - No data migration from 0.6.x. Existing `/data` volumes must be reset before starting a 0.7 image (keystore may be kept) — see [Upgrading to Holochain 0.7](../deploy/DEPLOYMENT.md#upgrading-to-holochain-07)
@@ -38,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limitations
 - h2hc-linker v0.1.2 is built against Holochain 0.6 crates; the linker service is not expected to work against the 0.7 conductor until h2hc-linker v0.2.0 is released and the image is rebuilt with `LINKER_VERSION=0.2.0`.
-- log-sender v0.1.5 panics on Holochain 0.7's flat `databases/` layout (its db-size metering reads the old `databases/dht/` directory). The fix (v0.1.6, `dht-*.db` filtering) is pending upstream release. Images built from a clean checkout (including CI) ship log-sender v0.1.5 and therefore do not report metrics on 0.7 until `LOG_SENDER_VERSION` is bumped to 0.1.6. Developers who have built the fixed binary can drop it into `docker/local-bin/` (gitignored) to override the download, as described in `docker/Dockerfile`.
 
 ## [0.1.0-alpha1] - 2026-03-13
 

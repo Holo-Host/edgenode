@@ -598,9 +598,6 @@ docker exec edgenode install_happ /path/to/config.json
   expected to work with the 0.7 conductor until h2hc-linker v0.2.0 is
   released and the image is rebuilt with `LINKER_VERSION=0.2.0`; browser
   clients that join through the linker will not work in the meantime.
-- log-sender: images built from a clean checkout ship log-sender v0.1.5,
-  which crash-loops on 0.7 (see `docker/CHANGELOG.md` Known limitations).
-  Metering resumes once the image is rebuilt with `LOG_SENDER_VERSION=0.1.6`.
 
 ---
 
