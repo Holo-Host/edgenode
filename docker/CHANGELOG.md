@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Harvester builds log-harvester from its `feat/adapt-to-holo-hosting-agreement` branch: `LANE_DEFINITION_IDS` is now required, the app websocket is attached by the s6 script, and the harvester agent key is logged at startup via `whoami`
 - `unyt.happ` in the harvester image pinned to v0.104.0 instead of `releases/latest`
 - `@theweave/wdocker` bumped to 0.16.0-dev.4 (Holochain 0.7 client)
-- `happ_config_file` 0.4.0: iroh-only templates, `--webrtc` removed
+- `happ_config_file` 0.4.0: iroh-only templates, `--webrtc` removed; both images now install the 0.4.0 binary
 - `log-sender` bumped to v0.1.6, which meters the `dht-*.db` files of Holochain 0.7's flat `databases/` layout and no longer aborts report shipping when the db-size check fails
 
 ### Breaking

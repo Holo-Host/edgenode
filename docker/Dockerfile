@@ -76,7 +76,7 @@ RUN ln -sf /usr/local/bin/happ_tool /usr/local/bin/install_happ && \
 COPY log_tool /usr/local/bin/log_tool
 RUN chmod +x /usr/local/bin/log_tool
 
-ARG HAPP_CONFIG_FILE_VERSION=0.3.0
+ARG HAPP_CONFIG_FILE_VERSION=0.4.0
 
 RUN case "${TARGETARCH}" in \
     amd64) HCF_ARCH="linux-x86_64" ;; \
