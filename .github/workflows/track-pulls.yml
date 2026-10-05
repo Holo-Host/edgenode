@@ -1,0 +1,70 @@
+name: Track Image Pulls
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight UTC
+  workflow_dispatch:
+
+concurrency:
+  group: track-pulls
+  cancel-in-progress: false
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push to the data branch only; main is never touched
+    env:
+      PACKAGE_URL: https://github.com/orgs/Holo-Host/packages/container/package/edgenode
+      DATA_BRANCH: gh-pages
+
+    steps:
+      - name: Fetch total pull count
+        id: count
+        run: |
+          # GitHub exposes no API for container package downloads (GraphQL does not
+          # list ghcr packages; REST omits the count), so read the public package page.
+          COUNT=$(curl -fsSL "$PACKAGE_URL" \
+            | perl -0777 -ne 'print $1 if /Total downloads<\/span>\s*<h3 title="(\d+)"/')
+          if ! [[ "$COUNT" =~ ^[0-9]+$ ]] || [ "$COUNT" -eq 0 ]; then
+            echo "::error::Could not parse a pull count from $PACKAGE_URL (got '${COUNT}'); page markup may have changed"
+            exit 1
+          fi
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+        continue-on-error: true
+        id: checkout
+
+      - name: Create data branch if missing
+        if: steps.checkout.outcome == 'failure'
+        uses: actions/checkout@v4
+
+      - name: Initialise orphan data branch
+        if: steps.checkout.outcome == 'failure'
+        run: |
+          git checkout --orphan "$DATA_BRANCH"
+          git rm -rf --quiet .
+
+      - name: Update history and badge
+        env:
+          COUNT: ${{ steps.count.outputs.count }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          [ -f pull-history.csv ] || echo "date,pulls" > pull-history.csv
+          # One row per day: replace today's row if the job is re-run
+          sed -i "/^$DATE,/d" pull-history.csv
+          echo "$DATE,$COUNT" >> pull-history.csv
+
+          # Shields.io endpoint schema: https://shields.io/badges/endpoint-badge
+          printf '{"schemaVersion":1,"label":"pulls","message":"%s","color":"blue"}\n' \
+            "$COUNT" > badge.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pull-history.csv badge.json
+          git commit -m "chore: pull count $COUNT on $DATE" || { echo "No changes to commit"; exit 0; }
+          git push origin "HEAD:$DATA_BRANCH"
