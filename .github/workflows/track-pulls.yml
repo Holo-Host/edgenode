@@ -16,7 +16,7 @@ jobs:
       contents: write # push to the data branch only; main is never touched
     env:
       PACKAGE_URL_BASE: https://github.com/orgs/Holo-Host/packages/container/package
-      DATA_BRANCH: gh-pages
+      DATA_BRANCH: pull-stats
 
     steps:
       - name: Fetch total pull counts
