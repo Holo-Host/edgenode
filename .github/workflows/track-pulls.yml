@@ -1,0 +1,81 @@
+name: Track Image Pulls
+
+on:
+  schedule:
+    - cron: '23 4 * * *' # Daily; off the top of the hour, where scheduled runs can be delayed or dropped
+  workflow_dispatch:
+
+concurrency:
+  group: track-pulls
+  cancel-in-progress: false
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push to the data branch only; main is never touched
+    env:
+      PACKAGE_URL_BASE: https://github.com/orgs/Holo-Host/packages/container/package
+      DATA_BRANCH: pull-stats
+
+    steps:
+      - name: Fetch total pull counts
+        id: count
+        run: |
+          # GitHub exposes no API for container package downloads (GraphQL does not
+          # list ghcr packages; REST omits the count), so read the public package pages.
+          fetch() {
+            local count
+            count=$(curl -fsSL "$PACKAGE_URL_BASE/$1" \
+              | perl -0777 -ne 'print $1 if /Total downloads<\/span>\s*<h3 title="(\d+)"/')
+            if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "$count" -eq 0 ]; then
+              echo "::error::Could not parse a pull count for $1 (got '${count}'); page markup may have changed" >&2
+              exit 1
+            fi
+            echo "$count"
+          }
+          # Assign before echoing: a failure inside `echo "$(...)"` would not abort the step
+          EDGENODE=$(fetch edgenode)
+          HARVESTER=$(fetch edgenode-harvester)
+          echo "edgenode=$EDGENODE" >> "$GITHUB_OUTPUT"
+          echo "harvester=$HARVESTER" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout data branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DATA_BRANCH }}
+        continue-on-error: true
+        id: checkout
+
+      - name: Create data branch if missing
+        if: steps.checkout.outcome == 'failure'
+        uses: actions/checkout@v4
+
+      - name: Initialise orphan data branch
+        if: steps.checkout.outcome == 'failure'
+        run: |
+          git checkout --orphan "$DATA_BRANCH"
+          git rm -rf --quiet --ignore-unmatch .
+
+      - name: Update history and badges
+        env:
+          EDGENODE: ${{ steps.count.outputs.edgenode }}
+          HARVESTER: ${{ steps.count.outputs.harvester }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          [ -f pull-history.csv ] || echo "date,edgenode,edgenode-harvester" > pull-history.csv
+          # One row per day: replace today's row if the job is re-run
+          sed -i "/^$DATE,/d" pull-history.csv
+          echo "$DATE,$EDGENODE,$HARVESTER" >> pull-history.csv
+
+          # Shields.io endpoint schema: https://shields.io/badges/endpoint-badge
+          printf '{"schemaVersion":1,"label":"pulls","message":"%s","color":"blue"}\n' \
+            "$EDGENODE" > badge.json
+          printf '{"schemaVersion":1,"label":"harvester pulls","message":"%s","color":"blue"}\n' \
+            "$HARVESTER" > badge-harvester.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pull-history.csv badge.json badge-harvester.json
+          git commit -m "chore: pull counts edgenode=$EDGENODE harvester=$HARVESTER on $DATE" || { echo "No changes to commit"; exit 0; }
+          git push origin "HEAD:$DATA_BRANCH"

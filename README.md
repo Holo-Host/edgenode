@@ -1,5 +1,7 @@
 # Edge Node
 
+![Pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHolo-Host%2Fedgenode%2Fpull-stats%2Fbadge.json) ![Harvester pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHolo-Host%2Fedgenode%2Fpull-stats%2Fbadge-harvester.json)
+
 This repo contains the tooling needed to deploy and operate always-on nodes for Holochain applications (hApps).
 
 The tooling consists of:
