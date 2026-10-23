@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI PR checks now build and test both `edgenode` and `edgenode-harvester` images with GHA layer caching
 
 ### Changed
+- Upgraded both images to Holochain 0.7.1; its direct-signal wire format change requires all nodes on a network to upgrade together
 - `run_tests_multi.sh` runs each `.bats` file individually with a log-collector health-check between files, preventing wrangler crash cascades from affecting subsequent test files
 - `docker-compose.yml`: log-collector service gets `restart: unless-stopped` so Docker auto-recovers after wrangler dev crashes under concurrent D1 load
 - Upgraded both images to Holochain 0.7.0. New template `conductor-config-0.7.0.template.yaml` drops `signal_url` (0.7 is iroh-only and rejects unknown fields) and points `relay_url` at the bootstrap host, which serves the iroh relay in 0.7

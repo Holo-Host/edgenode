@@ -2,7 +2,7 @@
 
 Docker containers for running Holochain and installing hApps as always-on nodes.
 
-The images ship Holochain 0.7.0. Data directories from 0.6.x images are not compatible; see the upgrade notes in `deploy/DEPLOYMENT.md`.
+The images ship Holochain 0.7.1. Data directories from 0.6.x images are not compatible; see the upgrade notes in `deploy/DEPLOYMENT.md`.
 
 Two variants are available:
 
