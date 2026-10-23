@@ -6,6 +6,6 @@
     "modifiers": { "networkSeed": "", "properties": "" }
   },
   "env": {
-    "holochain": { "version": "0.7.0", "flags": [""], "bootstrapUrl": "", "relayUrl": "" }
+    "holochain": { "version": "0.7.1", "flags": [""], "bootstrapUrl": "", "relayUrl": "" }
   }
 }
