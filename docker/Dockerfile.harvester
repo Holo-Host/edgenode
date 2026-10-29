@@ -53,7 +53,7 @@ RUN cd /app/src && \
     cp -r node_modules /app/node_modules && \
     cd / && rm -rf /app/src
 
-ARG UNYT_HAPP_VERSION=v0.104.0
+ARG UNYT_HAPP_VERSION=v0.117.0
 
 RUN if [ "${UNYT_HAPP_VERSION}" = "latest" ]; then \
         wget -O /app/unyt.happ \

@@ -184,7 +184,7 @@ jobs:
           # That branch is rebased, so a stale pin becomes unreachable and the
           # release build fails here — repin to the current head, or drop the
           # ref entirely once the branch merges to main.
-          ref: c1c490dd7c27aeeb4f39dae752cb3fc301b6db25
+          ref: 25fd6985a443b305196257ce8ebffd5cf72669f6
           path: docker/log-harvester-src
           token: ${{ secrets.HARVESTER_REPO_TOKEN }}
 
