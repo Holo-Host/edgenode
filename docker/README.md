@@ -2,7 +2,7 @@
 
 Docker containers for running Holochain and installing hApps as always-on nodes.
 
-The images ship Holochain 0.7.0. Data directories from 0.6.x images are not compatible; see the upgrade notes in `deploy/DEPLOYMENT.md`.
+The images ship Holochain 0.7.1. Data directories from 0.6.x images are not compatible; see the upgrade notes in `deploy/DEPLOYMENT.md`.
 
 Two variants are available:
 
@@ -197,8 +197,8 @@ RUST_LOG=debug hc sandbox run 0
 ```sh
 export ADMIN_PORT=4444
 export AGENT_KEY=$(hc client call -p $ADMIN_PORT new-agent | tr -d '"')
-export APP_ID="ziptest::0.6.0-dev.0::$AGENT_KEY"
-wget https://github.com/holochain-apps/ziptest/releases/download/v0.6.0-dev.0/ziptest.webhapp
+export APP_ID="ziptest::0.7.0::$AGENT_KEY"
+wget https://github.com/holochain/ziptest/releases/download/v0.7.0/ziptest.webhapp
 hc web-app unpack ziptest.webhapp -o ziptest-unpacked
 hc client call -p $ADMIN_PORT install-app ./ziptest-unpacked/ziptest.happ "<network_seed>" --agent-key "$AGENT_KEY" --app-id "$APP_ID"
 hc client call -p $ADMIN_PORT enable-app "$APP_ID"

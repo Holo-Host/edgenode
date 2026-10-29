@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI PR checks now build and test both `edgenode` and `edgenode-harvester` images with GHA layer caching
 
 ### Changed
+- Upgraded both images to Holochain 0.7.1; its direct-signal wire format change requires all nodes on a network to upgrade together
+- Test fixtures moved to ziptest v0.7.0 (built for Holochain 0.7.1). The ziptest v0.6.0-dev.0 zomes fail at init on 0.7.1 because the capability-grant format changed
+- Harvester image: `unyt.happ` pinned to v0.117.0 (hdk 0.7.1). v0.104.0 zomes fail at init on 0.7.1 for the same reason. Release builds pin log-harvester to `25fd698` (Holochain 0.7.1 client)
 - `run_tests_multi.sh` runs each `.bats` file individually with a log-collector health-check between files, preventing wrangler crash cascades from affecting subsequent test files
 - `docker-compose.yml`: log-collector service gets `restart: unless-stopped` so Docker auto-recovers after wrangler dev crashes under concurrent D1 load
 - Upgraded both images to Holochain 0.7.0. New template `conductor-config-0.7.0.template.yaml` drops `signal_url` (0.7 is iroh-only and rejects unknown fields) and points `relay_url` at the bootstrap host, which serves the iroh relay in 0.7
