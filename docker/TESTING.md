@@ -28,7 +28,7 @@ The test cases are in the `tests/` directory:
 - `process.bats`: Verifies `holochain` runs as the `nonroot` user.
 - `persistence.bats`: Verifies data written to `/data` persists across container restarts.
 - `happ.bats`: Verifies a hApp can be installed via `install_happ`.
-- `webhapp.bats`: Verifies a `.webhapp` file (ziptest v0.6.0-dev.0) can be downloaded, extracted, and installed, including SHA256 validation.
+- `webhapp.bats`: Verifies a `.webhapp` file (ziptest v0.7.0) can be downloaded, extracted, and installed, including SHA256 validation.
 
 Both files install ziptest via its `.webhapp` URL because the ziptest release ships no bare `.happ`, so the plain-`.happ`-URL path is currently uncovered.
 
