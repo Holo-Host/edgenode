@@ -43,14 +43,14 @@ docker pull ghcr.io/holo-host/edgenode-harvester
 
 Images are available from [GitHub Packages](https://github.com/Holo-Host/edgenode/pkgs/container/edgenode-harvester).
 
-The image pins [unytco/unyt-sandbox](https://github.com/unytco/unyt-sandbox)'s `unyt.happ` to v0.117.0 via the `UNYT_HAPP_VERSION` build arg; v0.117.0 is a Holochain 0.7.1 build (hdk 0.7.1). To pin a different version, build locally:
+The image pins [unytco/unyt-release](https://github.com/unytco/unyt-release)'s `unyt.happ` to v1.0.1 via the `UNYT_HAPP_VERSION` build arg; v1.0.1 is a Holochain 0.7.1 build (hdk 0.7.1). To pin a different version, build locally:
 
 ```bash
 # Clone log-harvester source first (required for the COPY step)
 git clone --depth 1 --branch feat/adapt-to-holo-hosting-agreement https://github.com/unytco/log-harvester.git docker/log-harvester-src
 
 docker buildx build docker/ --file docker/Dockerfile.harvester \
-  --build-arg UNYT_HAPP_VERSION=v0.117.0 \
+  --build-arg UNYT_HAPP_VERSION=v1.0.1 \
   --tag my-edgenode-harvester \
   --load
 ```
